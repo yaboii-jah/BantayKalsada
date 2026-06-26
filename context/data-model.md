@@ -14,7 +14,7 @@ The database owns all structured application data. It does not store binary cont
 | User display name and role | `profiles` table — application-owned |
 | Road incident reports | `reports` table |
 | Status change notifications | `notifications` table |
-| Report photos | Cloudinary — only the URL strings are stored in the database |
+| Report photos | Cloudinary —  only the URL strings are stored in the database |
 
 ---
 

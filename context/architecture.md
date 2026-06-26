@@ -10,7 +10,7 @@
 | Database   | Supabase (PostgreSQL)                 | Hosted PostgreSQL database — accessed via `@supabase/supabase-js`; schema managed via Supabase CLI migrations; RLS policies enforce access control at the database level |
 | Storage    | Cloudinary                            | Cloud storage and CDN for report photos — direct browser-to-Cloudinary upload via signed preset; EXIF stripping enforced at preset level      |
 | Maps       | Leaflet.js + React Leaflet            | Client-side interactive map for location pinning on report submission and display on report detail pages                                      |
-| Email      | Resend + React Email                  | Transactional email delivery for report status notifications only (approved, rejected, resolved) — auth emails (verification, password reset) are sent by Supabase Auth |
+| Email      | Brevo + React Email                  | Transactional email delivery for report status notifications only (approved, rejected, resolved) — auth emails (verification, password reset) are sent by Supabase Auth |
 | Validation | Zod                                   | Runtime schema validation on all API route handler inputs and report submission form fields                                                   |
 
 ---
@@ -19,7 +19,7 @@
 
 - `app/(public)/` — Guest-accessible pages requiring no authentication: landing page (`/`), public report feed (`/browse`), and individual report detail pages (`/reports/[id]`). All pages in this group are Next.js Server Components and render only `APPROVED` or `RESOLVED` reports. The Supabase server client used here is initialized with the anon key and relies on RLS to enforce the status filter at the database level.
 
-- `app/(auth)/` — Unauthenticated-only pages: registration (`/register`), login (`/login`), and password reset (`/reset-password`). Email verification is handled by a Supabase-generated link — no custom `/verify-email` route is needed. Authenticated users are redirected away from these routes.
+- `app/(auth)/` — Unauthenticated-only pages: registration (`/register`), login (`/login`), and password reset (`/reset-password`). Email verification is handled by a Supabase-generated link — no custom `/verify-email` route is needed. Aloouthenticated users are redirected away from these routes.
 
 - `app/(citizen)/` — Protected pages requiring an authenticated Supabase session with a verified email: report submission form (`/submit`), personal report history (`/my-reports`), and individual own-report detail (`/my-reports/[id]`). Unverified users attempting to access `/submit` are redirected to a prompt to verify their email. Session is read server-side via the Supabase server client.
 
