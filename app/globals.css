@@ -90,6 +90,15 @@
   --status-resolved: #2563eb;
 }
 
+@utility bg-auth-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.965 0.01 260),
+    oklch(1 0 0),
+    oklch(0.96 0.008 250)
+  );
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

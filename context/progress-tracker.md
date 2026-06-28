@@ -35,29 +35,37 @@ change.
 
 ## In Progress
 
-- None yet.
+- Auth pages (login, register, reset-password) — built.
+- Browse page with empty state — built.
+- Route protection via proxy.ts — built.
+- Hallmark design principles applied (utilitarian tone, token discipline, mobile-first, no AI slop).
 
 ## Next Up
 
-- Feature routes and pages (landing, report submission, admin panel)
+- Landing page polish (`/`)
+- Report submission form
+- Admin panel
+- Report feed with actual data
 
 ## Open Questions
 
 - None.
 
-## Architecture Decisions
+## Architecture Decisions (new)
 
-- **shadcn/ui Nova preset** — chosen for its Radix-based primitives, Tailwind v4 compatibility, and accessible defaults. Matches the civic/public-service design language.
-- **No dark mode in MVP** — tokens only define `:root` light colors; dark class not used.
-- **Status tokens as CSS custom properties** — enables 10% opacity backgrounds via `color-mix()` or `--status-*/10` in status badges.
-- **Supabase SSR pattern** — three client factories follow the standard `@supabase/ssr` pattern: `server.ts` (per-request `createServerClient` with `next/headers` cookies), `client.ts` (module-level `createBrowserClient` singleton), and `middleware.ts` (request-scoped `createServerClient` with cookie passthrough for proxy refresh).
-- **proxy.ts over middleware.ts** — Next.js 16 deprecates `middleware.ts` in favor of `proxy.ts`. The API is identical; only the file name and export name change.
-- **Service role key kept server-only** — `NEXT_PUBLIC_` prefix removed from `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` to prevent accidental client-side exposure.
+- **Auth gradient** — `bg-auth-gradient` utility added to `globals.css`: a subtle three-stop gradient using project OKLCH tokens (light blue to white to light indigo).
+- **Auth card layout** — `components/auth/auth-card.tsx` contains the split layout: branding panel (left 45%) + form (right 55%) on desktop, stacked on mobile. The card IS the container (no nested cards).
+- **Branding panel** — `components/auth/branding-panel.tsx` shows logo, tagline, and feature highlights on a subtle primary-tinted background. Hidden on mobile; replaced with a minimal footer note in the form column.
+- **ErrorMessage handling** — `Alert` banner at top of form for Supabase errors. Inline Zod validation to be added with react-hook-form later (not installed yet).
+- **proxy.ts route protection** — three rules added: (1) authenticated users on auth routes → `/browse`, (2) unauthenticated on protected routes → `/login` (with `?redirect=` param), (3) unverified on `/submit` → `/verify-email`.
+- **Post-login redirect** — defaults to `/browse` (configurable via `DEFAULT_AUTH_REDIRECT` constant or env var in future).
+- **/verify-email page** — standalone page outside route groups, uses same gradient background, explains user needs to verify before submitting.
+- **Social login** — omitted from v1.
 
-## Session Notes
+## Session Notes (new)
 
-- shadcn initialized with `--base radix --template next --preset Nova`.
-- "Form family" maps to the new `Field` component (Field, FieldLabel, FieldDescription, FieldError, FieldGroup, FieldSet, FieldLegend, FieldContent) — the legacy `form` component no longer exists in this shadcn version.
-- `components/ui/` files are not modified per spec rules.
-- Supabase client factories use the standard `@supabase/ssr` v1.x API (`createServerClient`, `createBrowserClient`).
-- The `updateSession` function in `lib/supabase/middleware.ts` is imported by `proxy.ts` which runs on every matched route to refresh the Supabase auth session cookie.
+- Login page wraps `useSearchParams()` in `<Suspense>` per Next.js requirement.
+- Reset-password page detects recovery token via `window.location.hash` in `useState` initializer (not `useEffect`) to avoid cascading renders lint error.
+- Branding panel uses `lucide-react` ShieldCheck icon as logo placeholder — to be replaced with actual logo SVG when available.
+- Browse empty state shows "No reports yet" with Map icon and CTA to `/submit` (protected by proxy.ts).
+- Pre-existing lint error in `carousel.tsx` (Shadcn/ui component) ignored — not in scope.
