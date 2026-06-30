@@ -99,7 +99,7 @@ export default function Home() {
             Every report goes through an administrator review before going
             public. Only verified, accurate information reaches the feed.
           </p>
-          <Link href="/register" className="mt-8">
+          <Link href="/submit" className="mt-8">
             <Button size="lg">
               Start reporting today
             </Button>

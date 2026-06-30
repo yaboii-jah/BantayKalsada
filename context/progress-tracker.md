@@ -9,10 +9,13 @@ change.
 - [x] Supabase Auth — Complete
 - [x] Auth Pages & Route Protection — Complete
 - [x] Public Report Feed — Complete
+- [x] Report Submission Form — Complete
 
 ## Current Goal
 
-- Report submission form
+- Cloudinary integration (photo upload)
+- Admin panel
+- Email notifications
 
 ## Completed
 
@@ -73,16 +76,33 @@ change.
 - [x] Update `app/globals.css` — add `overflow-x: clip` on html/body per Hallmark
 - [x] Fix SelectItem empty string value bug in filter bar
 
+### Report Submission Form
+
+- [x] Install `react-hook-form`, `@hookform/resolvers`, `zod` as direct dependencies
+- [x] Create `lib/cloudinary.ts` — Cloudinary config and signature generator
+- [x] Create `lib/validations/report.ts` — Zod schema + derived types aligned with DB reports table
+- [x] Create `app/api/uploads/sign/route.ts` — GET handler returning signed Cloudinary upload preset
+- [x] Create `app/actions.ts` — `submitReport` Server Action (auth → email check → rate limit → Zod validation → insert)
+- [x] Create `app/(citizen)/layout.tsx` — route group layout sharing PublicNav + Ft2 footer
+- [x] Create `app/(citizen)/submit/page.tsx` — Server Component page rendering ReportForm
+- [x] Create `app/(citizen)/submit/loading.tsx` — skeleton loading state
+- [x] Create `app/(citizen)/submit/error.tsx` — error boundary with retry button
+- [x] Create `components/reports/photo-upload.tsx` — Cloudinary direct-upload widget with dropzone, per-photo progress spinners, remove buttons
+- [x] Create `components/maps/location-picker.tsx` — Leaflet map with click-to-pin, drag, GPS "Use My Location" via lucide LocateFixed icon
+- [x] Create `components/maps/location-picker-wrapper.tsx` — dynamic import wrapper with `{ ssr: false }`
+- [x] Create `components/reports/report-form.tsx` — main client form wiring react-hook-form, Zod resolver, Controller for Select, useTransition for pending state
+- [x] Add `<Toaster />` to root layout for Sonner toast notifications
+- [x] Build passes with zero errors
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Report submission form
-- Cloudinary integration
-- Admin panel
-- Email notifications
+- Admin panel (moderation queue, approve/reject/resolve)
+- Email notifications (Brevo + React Email templates)
+- Personal report history page (`/my-reports`)
 
 ## Open Questions
 
@@ -114,3 +134,10 @@ change.
 - Leaflet + React Leaflet installed. Interactive map on detail page uses `next/dynamic` with `{ ssr: false }` via a client wrapper (`components/maps/report-map-wrapper.tsx`).
 - `npm run build` passes with zero errors.
 - **Layout shift fix**: Radix Portal triggers body scroll lock (`overflow: hidden`) in `radix-ui@1.5.0` with no `modal` prop to disable it. Replaced portaled DropdownMenu (avatar) and portaled Select (filter bar) with custom inline button+popup components. CSS-only approaches (`scrollbar-gutter: stable`, `overflow-y: scroll` on `html`) don't work because Radix inline styles override them.
+- **Server Action over API Route** — Submission uses a Server Action (`app/actions.ts`) instead of the originally planned `POST /api/reports` route handler, following Next.js v16's recommended pattern for form mutations in first-party apps.
+- **Photo upload flow** — Browser uploads directly to Cloudinary using a signed preset from `/api/uploads/sign`. Photos never pass through Next.js. Cloudinary URLs are stored on the report record.
+- **useTransition for pending state** — The form uses React's `useTransition` (not `useActionState`) because react-hook-form handles form state and the Server Action accepts structured data, not FormData.
+- **Hallmark design applied** — Utilitarian tone (civic safety tool), locked tokens (no inline hex), mobile-first (photo upload + map touch-interactive), per-photo loading states, no AI-slop copy or fabricated content. Pre-emit critique: P5 H4 E5 S4 R4 V5.
+- **Zod v4** — The project uses Zod v4. `ZodError` uses `.issues` (not deprecated `.errors`).
+- **Post-submit redirect** — Currently redirects to `/browse` (not `/my-reports`) because the personal report history page hasn't been built yet.
+- **Rate limiting** — 5 reports per 24h, enforced server-side in the Server Action by counting the authenticated user's `reports` rows with `submitted_at` within the window.
