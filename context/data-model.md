@@ -30,7 +30,6 @@ CREATE TYPE report_category AS ENUM (
   'FLOODED_ROAD',
   'ROAD_ACCIDENT',
   'ROAD_RAGE',
-  'BROKEN_TRAFFIC_SIGN',
   'OTHER'
 );
 

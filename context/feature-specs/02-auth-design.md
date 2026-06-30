@@ -45,7 +45,7 @@ Create a modern, responsive authentication page with a centered, rounded contain
 
 ---
 
-## Files Added / Modified
+## Files Added / Modified               
 
 ### `proxy.ts` — Route protection middleware (Next.js 16 proxy file)
 

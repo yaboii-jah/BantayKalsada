@@ -83,7 +83,7 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 
 - **Navbar**: Fixed top bar, full width, white background, bottom border (`border-border`). Contains the Bantay Kalsada logo/wordmark on the left, and primary navigation links + auth buttons on the right. Height: `h-16`. On mobile, navigation collapses into a Shadcn/ui `Sheet` (drawer) triggered by a hamburger icon.
 - **Page container**: Centered, `max-w-7xl`, horizontal padding `px-4 sm:px-6 lg:px-8`. All public pages use this container.
-- **Public feed**: Two-column grid on desktop (`grid-cols-2`), single column on mobile. Report cards are equal height within their row. Filter bar sits above the grid as a single horizontal row of dropdowns and a search input (Should Have).
+- **Public feed**: Responsive card grid — 1 column on mobile, 2 at `sm`, 3 at `lg`, 4 at `xl`, 5 at `2xl`. Report cards are equal height within their row. Filter bar sits above the grid as a single horizontal row of dropdowns with a result count. Filtering is driven by URL search params (`?category=&status=&page=`).
 - **Report detail page**: Single centered column, `max-w-3xl`. Photo gallery above the fold, map below the description, metadata (category, date, status) displayed as a sidebar panel on desktop and stacked below the description on mobile.
 
 ### Report Submission Form

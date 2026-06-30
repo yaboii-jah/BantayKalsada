@@ -8,10 +8,11 @@ change.
 - [x] Design System — Complete
 - [x] Supabase Auth — Complete
 - [x] Auth Pages & Route Protection — Complete
+- [x] Public Report Feed — Complete
 
 ## Current Goal
 
-- Landing page polish and report submission form
+- Report submission form
 
 ## Completed
 
@@ -48,16 +49,40 @@ change.
 - [x] Update `app/globals.css` — add `bg-auth-gradient` utility class
 - [x] Apply Hallmark design principles (utilitarian tone, token discipline, mobile-first, no AI slop)
 
+### Public Report Feed
+
+- [x] Create `app/(public)/layout.tsx` — route group with N9 nav + Ft2 footer
+- [x] Create `components/public-nav.tsx` — session-aware nav with auth/avatar states, Sheet on mobile
+- [x] Create `app/(public)/page.tsx` — landing page with Marquee Hero macrostructure (hero + 3-step + CTA)
+- [x] Create `app/(public)/browse/page.tsx` — feed page with Portfolio Grid, URL-param filters, pagination
+- [x] Create `app/(public)/browse/loading.tsx` — skeleton grid
+- [x] Create `app/(public)/browse/error.tsx` — error boundary with retry
+- [x] Create `app/(public)/reports/[id]/page.tsx` — detail page with carousel gallery, metadata, interactive map
+- [x] Create `app/(public)/reports/[id]/not-found.tsx` — custom 404 with back button
+- [x] Create `app/(public)/reports/[id]/error.tsx` — error boundary
+- [x] Create `components/reports/report-status-badge.tsx` — status badge with project tokens
+- [x] Create `components/reports/report-card.tsx` — feed card with thumbnail, category, title, location, status
+- [x] Create `components/browse/filter-bar.tsx` — category + status selects driving URL params
+- [x] Create `components/browse/pagination-bar.tsx` — page numbers with prev/next links
+- [x] Create `components/browse/photo-gallery.tsx` — Shadcn Carousel wrapper for report photos
+- [x] Create `components/maps/report-map.tsx` — Leaflet MapContainer + Marker (client)
+- [x] Create `components/maps/report-map-wrapper.tsx` — dynamic import wrapper with `{ ssr: false }`
+- [x] Create `lib/mock-data.ts` — 36 mock reports for development
+- [x] Create `lib/date-utils.ts` — fil-PH relative/absolute date formatting
+- [x] Install leaflet, react-leaflet, @types/leaflet
+- [x] Update `app/globals.css` — add `overflow-x: clip` on html/body per Hallmark
+- [x] Fix SelectItem empty string value bug in filter bar
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Landing page polish (`/`)
 - Report submission form
+- Cloudinary integration
 - Admin panel
-- Report feed with actual data
+- Email notifications
 
 ## Open Questions
 
@@ -81,3 +106,11 @@ change.
 - Branding panel uses `lucide-react` ShieldCheck icon as logo placeholder — to be replaced with actual logo SVG when available.
 - Browse empty state shows "No reports yet" with Map icon and CTA to `/submit` (protected by proxy.ts).
 - Pre-existing lint error in `carousel.tsx` (Shadcn/ui component) ignored — not in scope.
+- Hallmark applied throughout: Portfolio Grid macrostructure for browse, Marquee Hero for landing, N9 edge-aligned nav, Ft2 inline footer, token discipline, overflow-x: clip, no hardcoded hex values.
+- Mock data in `lib/mock-data.ts` provides 36 mock reports for development — swap with real Supabase query when DB is live.
+- `app/page.tsx` moved to `app/(public)/` route group to inherit public nav + footer.
+- Old `app/browse/page.tsx` deleted in favor of `app/(public)/browse/page.tsx`.
+- URL search params drive filtering and pagination (`?category=POTHOLE&status=APPROVED&page=2`).
+- Leaflet + React Leaflet installed. Interactive map on detail page uses `next/dynamic` with `{ ssr: false }` via a client wrapper (`components/maps/report-map-wrapper.tsx`).
+- `npm run build` passes with zero errors.
+- **Layout shift fix**: Radix Portal triggers body scroll lock (`overflow: hidden`) in `radix-ui@1.5.0` with no `modal` prop to disable it. Replaced portaled DropdownMenu (avatar) and portaled Select (filter bar) with custom inline button+popup components. CSS-only approaches (`scrollbar-gutter: stable`, `overflow-y: scroll` on `html`) don't work because Radix inline styles override them.

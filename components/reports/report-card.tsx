@@ -1,0 +1,62 @@
+import Link from "next/link";
+import type { Database } from "@/types/database.types";
+import { ReportStatusBadge } from "@/components/reports/report-status-badge";
+import { cn } from "@/lib/utils";
+
+type ReportRow = Database["public"]["Tables"]["reports"]["Row"];
+
+const categoryLabels: Record<string, string> = {
+  POTHOLE: "Pothole",
+  FLOODED_ROAD: "Flooded Road",
+  ROAD_ACCIDENT: "Road Accident",
+  ROAD_RAGE: "Road Rage",
+  OTHER: "Other",
+};
+
+export function ReportCard({
+  report,
+  className,
+}: {
+  report: ReportRow;
+  className?: string;
+}) {
+  const thumbnail =
+    report.photo_urls.length > 0 ? report.photo_urls[0] : null;
+
+  return (
+    <Link
+      href={`/reports/${report.id}`}
+      className={cn(
+        "group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/40",
+        className,
+      )}
+    >
+      {thumbnail && (
+        <div className="aspect-[4/3] overflow-hidden bg-muted">
+          <img
+            src={thumbnail}
+            alt={report.title}
+            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+        </div>
+      )}
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            {categoryLabels[report.category] ?? report.category}
+          </span>
+          <ReportStatusBadge status={report.status} />
+        </div>
+        <h3 className="line-clamp-2 text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+          {report.title}
+        </h3>
+        {report.location_label && (
+          <p className="mt-auto text-xs text-muted-foreground">
+            {report.location_label}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
