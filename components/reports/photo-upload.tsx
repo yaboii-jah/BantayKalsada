@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ImagePlus, X, Loader2 } from "lucide-react";
+import { ImagePlus, X, Loader2, Camera } from "lucide-react";
 
 interface PhotoItem {
   id: string;
@@ -47,7 +47,8 @@ async function uploadToCloudinary(file: File): Promise<string> {
 export function PhotoUpload({ onChange }: PhotoUploadProps) {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
 
   useEffect(() => {
@@ -173,14 +174,25 @@ export function PhotoUpload({ onChange }: PhotoUploadProps) {
           </div>
         ))}
         {canAddMore && (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="flex size-24 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-border bg-input text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-            aria-label="Add photo"
-          >
-            <ImagePlus className="size-6" />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-border bg-input text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              aria-label="Take a picture"
+            >
+              <Camera className="size-6" />
+              <span className="text-[10px] leading-tight">Camera</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="flex size-24 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-border bg-input text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              aria-label="Add photo from gallery"
+            >
+              <ImagePlus className="size-6" />
+            </button>
+          </>
         )}
       </div>
 
@@ -194,10 +206,18 @@ export function PhotoUpload({ onChange }: PhotoUploadProps) {
       </p>
 
       <input
-        ref={inputRef}
+        ref={galleryInputRef}
         type="file"
         accept={ACCEPTED_TYPES.join(",")}
         multiple
+        className="hidden"
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />

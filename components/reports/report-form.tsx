@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Send, Loader2 } from "lucide-react";
@@ -14,13 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PhotoUpload } from "@/components/reports/photo-upload";
 import { LocationPickerWrapper } from "@/components/maps/location-picker-wrapper";
 
@@ -41,7 +34,6 @@ export function ReportForm() {
   const {
     register,
     handleSubmit,
-    control,
     setValue,
     formState: { errors },
   } = useForm<CreateReportInput>({
@@ -101,31 +93,22 @@ export function ReportForm() {
 
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>
-        <Controller
-          name="category"
-          control={control}
-          render={({ field }) => (
-            <Select
-              value={field.value}
-              onValueChange={(value: CreateReportInput["category"]) => {
-                field.onChange(value);
-              }}
-            >
-              <SelectTrigger id="category" className="w-full">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(categoryLabels) as CreateReportInput["category"][]).map(
-                  (key) => (
-                    <SelectItem key={key} value={key}>
-                      {categoryLabels[key]}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
+        <select
+          id="category"
+          className="flex h-8 w-full items-center justify-between rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&>option]:text-foreground"
+          {...register("category")}
+        >
+          <option value="" disabled>
+            Select a category
+          </option>
+          {(Object.keys(categoryLabels) as CreateReportInput["category"][]).map(
+            (key) => (
+              <option key={key} value={key}>
+                {categoryLabels[key]}
+              </option>
+            ),
           )}
-        />
+        </select>
         {errors.category && (
           <p className="text-xs text-destructive">{errors.category.message}</p>
         )}

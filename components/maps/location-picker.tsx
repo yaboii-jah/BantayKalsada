@@ -122,7 +122,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         type="button"
         onClick={handleUseMyLocation}
         disabled={locating}
-        className="absolute left-3 top-3 z-[1000] flex items-center gap-1.5 rounded-md bg-background px-2.5 py-1.5 text-xs font-medium text-foreground shadow-md ring-1 ring-border transition-colors hover:bg-muted disabled:opacity-50"
+        className="absolute right-3 top-3 z-[1000] flex items-center gap-1.5 rounded-md bg-background px-2.5 py-1.5 text-xs font-medium text-foreground shadow-md ring-1 ring-border transition-colors hover:bg-muted disabled:opacity-50"
       >
         {locating ? (
           <>
