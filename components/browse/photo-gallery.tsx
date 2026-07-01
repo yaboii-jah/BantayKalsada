@@ -7,6 +7,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { getDisplayUrl } from "@/lib/cloudinary-url";
 
 export function PhotoGallery({ urls }: { urls: string[] }) {
   if (urls.length === 0) return null;
@@ -18,7 +19,7 @@ export function PhotoGallery({ urls }: { urls: string[] }) {
           <CarouselItem key={index}>
             <div className="aspect-[16/10] overflow-hidden rounded-lg bg-muted">
               <img
-                src={url}
+                src={getDisplayUrl(url)}
                 alt={`Photo ${index + 1}`}
                 className="size-full object-cover"
               />

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MOCK_REPORTS } from "@/lib/mock-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
@@ -23,7 +23,14 @@ export default async function ReportDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const report = MOCK_REPORTS.find((r) => r.id === id);
+  const supabase = await createSupabaseServerClient();
+
+  const { data: report } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("id", id)
+    .in("status", ["APPROVED", "RESOLVED"])
+    .single();
 
   if (!report) {
     notFound();

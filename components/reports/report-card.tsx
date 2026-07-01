@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Database } from "@/types/database.types";
 import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { cn } from "@/lib/utils";
+import { getDisplayUrl } from "@/lib/cloudinary-url";
 
 type ReportRow = Database["public"]["Tables"]["reports"]["Row"];
 
@@ -21,7 +22,7 @@ export function ReportCard({
   className?: string;
 }) {
   const thumbnail =
-    report.photo_urls.length > 0 ? report.photo_urls[0] : null;
+    report.photo_urls.length > 0 ? getDisplayUrl(report.photo_urls[0]) : null;
 
   return (
     <Link

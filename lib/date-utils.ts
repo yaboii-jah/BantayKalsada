@@ -4,33 +4,22 @@ const formatter = new Intl.DateTimeFormat("fil-PH", {
   day: "numeric",
 });
 
-const RELATIVE_UNITS: Array<{ label: string; ms: number }> = [
-  { label: "minute", ms: 60_000 },
-  { label: "hour", ms: 3_600_000 },
-  { label: "day", ms: 86_400_000 },
-];
-
 export function formatReportDate(isoString: string): string {
   const now = Date.now();
   const date = new Date(isoString).getTime();
   const diff = now - date;
 
-  if (diff < 0) return formatter.format(new Date(isoString));
+  if (diff < 0 || Number.isNaN(diff)) return formatter.format(new Date(isoString));
+  if (diff < 60_000) return "Just now";
 
-  if (diff < RELATIVE_UNITS[0].ms * 2) return "Just now";
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
 
-  for (const unit of RELATIVE_UNITS) {
-    if (diff < unit.ms) {
-      const count = Math.floor(diff / (unit.ms / 60_000));
-      return `${count} ${unit.label}${count > 1 ? "s" : ""} ago`;
-    }
-  }
+  const hours = Math.floor(diff / 3_600_000);
+  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
 
-  const days = Math.floor(diff / RELATIVE_UNITS[2].ms);
-  if (days < 1) {
-    const hours = Math.floor(diff / RELATIVE_UNITS[1].ms);
-    return `${hours} ${hours > 1 ? "hours" : "hour"} ago`;
-  }
+  const days = Math.floor(diff / 86_400_000);
+  if (days < 30) return `${days} day${days > 1 ? "s" : ""} ago`;
 
   return formatter.format(new Date(isoString));
 }

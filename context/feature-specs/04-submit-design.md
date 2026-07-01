@@ -68,11 +68,20 @@
 - `lib/validations/report.ts` — Zod schema + inferred types
 - `lib/cloudinary.ts` — Cloudinary config and SHA-256 signature helper
 
+### New
+- `lib/cloudinary-url.ts` — Cloudinary CDN URL utility, rewrites `res.cloudinary.com` → `res-3.cloudinary.com` for Asia/Pacific regional routing
+
 ### Modified
 - `app/layout.tsx` — added `<Toaster />` for Sonner toast notifications
-- `app/(public)/browse/page.tsx` — added "Submit a report" CTA in header
+- `app/(public)/browse/page.tsx` — added "Submit a report" CTA in header; fixed RLS query returning 0 rows (removed redundant `.in()` filter); added diagnostic logging (later removed)
 - `app/(public)/page.tsx` — "Start reporting today" CTA links to `/submit` instead of `/register`
 - `components/public-nav.tsx` — nav z-index bumped to `z-[1000]` to stay above Leaflet layers
+- `components/reports/report-card.tsx` — applied `getDisplayUrl()` to thumbnail src for Cloudinary CDN rewrite
+- `components/browse/photo-gallery.tsx` — applied `getDisplayUrl()` to carousel image srcs for Cloudinary CDN rewrite
+- `components/maps/report-map.tsx` — added `L.Icon.Default.mergeOptions()` with explicit unpkg CDN URLs to fix Leaflet default marker icon not rendering in bundler
+- `app/actions.ts` — changed `status` from `"APPROVED"` to `"PENDING"` so new reports require admin review
+- `app/(public)/browse/page.tsx` — re-added `.in("status", baseStatusFilter)` filter for default "all" view (defense-in-depth alongside RLS)
+- `lib/date-utils.ts` — rewrote `formatReportDate` with correct cascade logic (replaced broken loop that produced inflated counts)
 - `context/progress-tracker.md` — updated with completed phase
 
 ## Implementation
@@ -110,6 +119,12 @@
 | CTA buttons on browse + landing pages | ✅ Built |
 | Nav z-index fix for Leaflet overlap | ✅ Built |
 | Fix Radix Select scroll-lock (replaced with native `<select>`) | ✅ Built |
+| RLS policy fix — add `authenticated` role to browse policy + diagnostic logging removed | ✅ Built |
+| Cloudinary CDN rewrite — `lib/cloudinary-url.ts` with `getDisplayUrl()` for Asia/Pacific regional endpoint | ✅ Built |
+| Leaflet default marker icon — `L.Icon.Default.mergeOptions()` in `report-map.tsx` | ✅ Built |
+| Report status changed from `"APPROVED"` to `"PENDING"` in `app/actions.ts` | ✅ Built |
+| Browse page re-added `.in("status")` filter for default "all" view (defense-in-depth) | ✅ Built |
+| Fix `formatReportDate` broken loop logic in `lib/date-utils.ts` | ✅ Built |
 
 ## Check When Done
 
@@ -118,7 +133,7 @@
 - [x] Camera button opens device camera on mobile, file picker on desktop
 - [x] Map pin drops on click, draggable, GPS button works
 - [x] Form validates all fields client-side before submit
-- [x] Server Action re-validates and inserts report with `PENDING` status
+- [x] Server Action re-validates and inserts report with `PENDING` status (not auto-approved)
 - [x] Rate limit blocks >5 submissions in 24h
 - [x] Unauthenticated users redirected to `/login`
 - [x] Unverified users redirected to `/verify-email`
@@ -129,6 +144,12 @@
 - [x] Nav stays above Leaflet map when scrolling
 - [x] Category select does not shift page layout when opened
 - [x] `npm run build` passes with zero errors
+- [x] RLS browse fix — `authenticated` role added to policy
+- [x] Cloudinary CDN rewrite — `lib/cloudinary-url.ts` rewrites `res.cloudinary.com` → `res-3.cloudinary.com`
+- [x] Leaflet marker icons — `L.Icon.Default.mergeOptions()` with unpkg CDN URLs in `report-map.tsx`
+- [x] Report status set to `PENDING` (not auto-approved) in Server Action
+- [x] Browse page applies `.in("status", ["APPROVED","RESOLVED"])` filter at app level
+- [x] `formatReportDate` correctly shows relative times (no more inflated numbers)
 
 ## Files Added / Modified
 
@@ -159,7 +180,7 @@ The `submitReport` action performs five steps in order:
 2. **Email verification** — checks `user.email_confirmed_at`. Returns error if null.
 3. **Rate limiting** — queries `reports` table for the user's submissions in the past 24 hours. Returns error if count >= 5.
 4. **Validation** — runs `createReportSchema.safeParse()` on the input. Returns combined error messages if invalid.
-5. **Insert** — writes to `reports` table with `status: "PENDING"`. Returns the new report ID on success.
+5. **Insert** — writes to `reports` table with `status: "PENDING"` (requires admin approval before appearing on browse feed). Returns the new report ID on success.
 
 Uses a `try/catch` wrapper so any unexpected error returns a user-friendly message.
 
@@ -233,3 +254,20 @@ Added a "Submit a report" button in the page header, right-aligned on desktop (`
 ### `app/(public)/page.tsx` — Landing page CTA
 
 Changed the "Start reporting today" button link from `/register` to `/submit`. This redirects authenticated users to the form, unauthenticated users to login, and unverified users to the verify-email prompt — all managed by `proxy.ts`.
+
+### `lib/cloudinary-url.ts` — Cloudinary CDN URL utility
+
+Exports `getDisplayUrl(url: string): string` that rewrites `res.cloudinary.com` → `res-3.cloudinary.com` (Asia/Pacific regional CDN endpoint). Uses a regex check to only rewrite Cloudinary URLs, leaving all other image URLs untouched. Created because the user's ISP in the Philippines cannot reach the default `res.cloudinary.com` CDN. Applied in `report-card.tsx` (thumbnail) and `photo-gallery.tsx` (carousel images).
+
+### `components/maps/report-map.tsx` — Leaflet default marker icon fix
+
+Added `L.Icon.Default.mergeOptions()` with explicit unpkg CDN URLs for `iconUrl`, `iconRetinaUrl`, and `shadowUrl`. Leaflet's default icon uses relative image paths that break in bundler environments (Next.js, webpack). The mergeOptions call globally fixes all default Leaflet markers in the app. This applies to the detail page map where `<Marker>` uses the default icon (the submit page's `location-picker.tsx` already used a custom `L.icon()` and was unaffected).
+
+### `lib/date-utils.ts` — `formatReportDate` bug fix
+
+The original implementation used a loop over `RELATIVE_UNITS` (minute → hour → day) with two bugs:
+
+1. **Wrong iteration order** — The loop checked `diff < unit.ms` from smallest unit first, making the minutes case (< 60s) unreachable because `"Just now"` already caught diffs < 120s.
+2. **Wrong count calculation** — `Math.floor(diff / (unit.ms / 60_000))` divided by minutes-per-unit instead of the unit's milliseconds, producing wildly inflated counts (e.g., 40 minutes showed as "40000 hours ago").
+
+Rewritten as a clean cascade: < 1m → "Just now", < 1h → minutes, < 24h → hours, < 30d → days, 30d+ → formatted Filipino date via `Intl.DateTimeFormat("fil-PH")`.

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { MOCK_REPORTS } from "@/lib/mock-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReportCard } from "@/components/reports/report-card";
 import { FilterBar } from "@/components/browse/filter-bar";
 import { PaginationBar } from "@/components/browse/pagination-bar";
@@ -8,14 +8,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const PAGE_SIZE = 12;
-
-const categoryLabels: Record<string, string> = {
-  POTHOLE: "Pothole",
-  FLOODED_ROAD: "Flooded Road",
-  ROAD_ACCIDENT: "Road Accident",
-  ROAD_RAGE: "Road Rage",
-  OTHER: "Other",
-};
 
 export default async function BrowsePage({
   searchParams,
@@ -27,20 +19,41 @@ export default async function BrowsePage({
   const statusFilter = params.status ?? "all";
   const currentPage = Math.max(1, Number(params.page) || 1);
 
-  let filtered = [...MOCK_REPORTS];
+  const supabase = await createSupabaseServerClient();
 
-  if (categoryFilter && categoryFilter !== "all") {
-    filtered = filtered.filter((r) => r.category === categoryFilter);
+  let countQuery = supabase
+    .from("reports")
+    .select("*", { count: "exact", head: true });
+
+  let dataQuery = supabase
+    .from("reports")
+    .select("*")
+    .order("submitted_at", { ascending: false });
+
+  const baseStatusFilter = ["APPROVED", "RESOLVED"];
+
+  if (statusFilter !== "all") {
+    countQuery = countQuery.in("status", [statusFilter]);
+    dataQuery = dataQuery.in("status", [statusFilter]);
+  } else {
+    countQuery = countQuery.in("status", baseStatusFilter);
+    dataQuery = dataQuery.in("status", baseStatusFilter);
   }
 
-  if (statusFilter && statusFilter !== "all") {
-    filtered = filtered.filter((r) => r.status === statusFilter);
+  if (categoryFilter !== "all") {
+    countQuery = countQuery.eq("category", categoryFilter);
+    dataQuery = dataQuery.eq("category", categoryFilter);
   }
 
-  const totalCount = filtered.length;
+  const { count } = await countQuery;
+
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const { data: reportsData } = await dataQuery.range(from, to);
+  const pageReports = reportsData ?? [];
+
+  const totalCount = count ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const pageReports = filtered.slice(start, start + PAGE_SIZE);
 
   function buildHref(page: number) {
     const p = new URLSearchParams();

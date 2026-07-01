@@ -93,6 +93,13 @@ change.
 - [x] Create `components/reports/report-form.tsx` — main client form wiring react-hook-form, Zod resolver, Controller for Select, useTransition for pending state
 - [x] Add `<Toaster />` to root layout for Sonner toast notifications
 - [x] Build passes with zero errors
+- [x] Diagnose and fix browse query returning 0 rows — root cause: RLS policy only covered `anon` role, but `createSupabaseServerClient()` returns an `authenticated` session when user is logged in. Fixed by adding `authenticated` to policy.
+- [x] Remove diagnostic logging after fix confirmed
+- [x] Fix Cloudinary CDN timeout — created `lib/cloudinary-url.ts` with `getDisplayUrl()` rewriting `res.cloudinary.com` → `res-3.cloudinary.com` (Asia/Pacific regional CDN), applied in `report-card.tsx` and `photo-gallery.tsx`
+- [x] Fix Leaflet default marker icon not rendering in bundler — added `L.Icon.Default.mergeOptions()` with explicit unpkg CDN URLs in `report-map.tsx`
+- [x] Change report submission status from hardcoded `"APPROVED"` to `"PENDING"` in `app/actions.ts` — requires admin approval before appearing on browse feed
+- [x] Re-add `.in("status", baseStatusFilter)` to browse page default query — defense-in-depth alongside RLS to ensure PENDING reports never appear
+- [x] Fix `formatReportDate` in `lib/date-utils.ts` — rewrote broken loop logic (wrong iteration order, incorrect count calculation) with clean cascade: <1m "Just now", <1h minutes, <24h hours, <30d days, 30d+ formatted date
 
 ## In Progress
 
@@ -141,3 +148,8 @@ change.
 - **Zod v4** — The project uses Zod v4. `ZodError` uses `.issues` (not deprecated `.errors`).
 - **Post-submit redirect** — Currently redirects to `/browse` (not `/my-reports`) because the personal report history page hasn't been built yet.
 - **Rate limiting** — 5 reports per 24h, enforced server-side in the Server Action by counting the authenticated user's `reports` rows with `submitted_at` within the window.
+- **RLS for authenticated users** — `createSupabaseServerClient()` returns an `authenticated` session when the user is logged in. The original browse RLS policy only covered `anon`, causing 0 rows for logged-in users. Fixed by adding `authenticated` to the `"Public can read approved and resolved reports"` policy.
+- **Cloudinary Asia/Pacific CDN** — The user's ISP cannot reach `res.cloudinary.com`. Fixed by creating `lib/cloudinary-url.ts` with `getDisplayUrl()` that rewrites to `res-3.cloudinary.com` (regional CDN). Applied at render sites in `report-card.tsx` and `photo-gallery.tsx`.
+- **Leaflet default marker icon** — In bundler environments, Leaflet's default marker icon fails because CSS-expected image paths don't exist. Fixed by calling `L.Icon.Default.mergeOptions()` with unpkg CDN URLs in `report-map.tsx`.
+- **date-utils formatReportDate** — Original implementation had a buggy loop: iterated smallest→largest unit but checked `diff < unit.ms`, making minutes unreachable, and calculated count as `diff / (unit.ms / 60_000)` producing wildly inflated numbers. Rewritten as a clean cascade with correct unit division.
+- **Leaflet default marker icon** — In bundler environments (Next.js), Leaflet's default marker icon fails because the CSS-expected image paths don't exist. Fixed by calling `L.Icon.Default.mergeOptions()` with explicit unpkg CDN URLs in `report-map.tsx`. The submit page's `location-picker.tsx` already used a custom `L.icon()` and was unaffected.
