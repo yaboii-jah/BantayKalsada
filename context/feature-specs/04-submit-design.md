@@ -82,6 +82,8 @@
 - `app/actions.ts` — changed `status` from `"APPROVED"` to `"PENDING"` so new reports require admin review
 - `app/(public)/browse/page.tsx` — re-added `.in("status", baseStatusFilter)` filter for default "all" view (defense-in-depth alongside RLS)
 - `lib/date-utils.ts` — rewrote `formatReportDate` with correct cascade logic (replaced broken loop that produced inflated counts)
+- `components/reports/report-card.tsx` — added date display using `formatReportDate()`, right-aligned with `ml-auto` on the badge row
+- `components/public-nav.tsx` — bumped z-index from `z-[1000]` to `z-[1100]` to stay above Leaflet zoom controls and location picker button when scrolling past map
 - `context/progress-tracker.md` — updated with completed phase
 
 ## Implementation
@@ -125,6 +127,8 @@
 | Report status changed from `"APPROVED"` to `"PENDING"` in `app/actions.ts` | ✅ Built |
 | Browse page re-added `.in("status")` filter for default "all" view (defense-in-depth) | ✅ Built |
 | Fix `formatReportDate` broken loop logic in `lib/date-utils.ts` | ✅ Built |
+| Date display on report cards (`/browse`) with `ml-auto` alignment | ✅ Built |
+| Nav z-index bumped `z-[1000]` → `z-[1100]` (above Leaflet zoom controls and location button) | ✅ Built |
 
 ## Check When Done
 
@@ -150,6 +154,8 @@
 - [x] Report status set to `PENDING` (not auto-approved) in Server Action
 - [x] Browse page applies `.in("status", ["APPROVED","RESOLVED"])` filter at app level
 - [x] `formatReportDate` correctly shows relative times (no more inflated numbers)
+- [x] Report cards on `/browse` show date right-aligned on the badge row
+- [x] Nav stays above Leaflet zoom controls and location picker when scrolling (<tt>z-[1100]</tt>)
 
 ## Files Added / Modified
 

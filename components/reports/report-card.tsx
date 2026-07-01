@@ -3,6 +3,7 @@ import type { Database } from "@/types/database.types";
 import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { cn } from "@/lib/utils";
 import { getDisplayUrl } from "@/lib/cloudinary-url";
+import { formatReportDate } from "@/lib/date-utils";
 
 type ReportRow = Database["public"]["Tables"]["reports"]["Row"];
 
@@ -48,6 +49,9 @@ export function ReportCard({
             {categoryLabels[report.category] ?? report.category}
           </span>
           <ReportStatusBadge status={report.status} />
+          <span className="ml-auto text-xs text-muted-foreground">
+            {formatReportDate(report.submitted_at)}
+          </span>
         </div>
         <h3 className="line-clamp-2 text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
           {report.title}

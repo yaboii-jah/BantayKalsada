@@ -100,6 +100,8 @@ change.
 - [x] Change report submission status from hardcoded `"APPROVED"` to `"PENDING"` in `app/actions.ts` — requires admin approval before appearing on browse feed
 - [x] Re-add `.in("status", baseStatusFilter)` to browse page default query — defense-in-depth alongside RLS to ensure PENDING reports never appear
 - [x] Fix `formatReportDate` in `lib/date-utils.ts` — rewrote broken loop logic (wrong iteration order, incorrect count calculation) with clean cascade: <1m "Just now", <1h minutes, <24h hours, <30d days, 30d+ formatted date
+- [x] Add date display to report cards on `/browse` — `formatReportDate(report.submitted_at)` rendered with `ml-auto` on the badge row right side
+- [x] Bump nav z-index from `z-[1000]` to `z-[1100]` — Leaflet zoom controls and "Use My Location" button both use `z-1000`, causing overlap when scrolling past map
 
 ## In Progress
 
