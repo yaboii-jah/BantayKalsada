@@ -14,9 +14,7 @@ change.
 
 ## Current Goal
 
-- Cloudinary integration (photo upload)
-- Admin panel
-- Email notifications
+- Email notifications (Brevo + React Email templates)
 
 ## Completed
 
@@ -118,13 +116,36 @@ change.
 - [x] Change post-submit redirect from `/browse` to `/my-reports` in `report-form.tsx`
 - [x] `npm run build` passes with zero errors
 
+### Admin Panel
+
+- [x] Create `lib/supabase/service-role.ts` — service role client factory for admin DB ops
+- [x] Create `app/admin/layout.tsx` — sidebar layout with admin role guard + pending count fetch
+- [x] Create `components/admin/admin-sidebar.tsx` — nav sidebar with active state, pending badge, sign out
+- [x] Create `app/admin/page.tsx` — dashboard with 4 status count cards
+- [x] Create `app/admin/loading.tsx` — skeleton loading state
+- [x] Create `components/admin/status-count-cards.tsx` — colored card grid for status counts
+- [x] Create `components/admin/admin-queue-table.tsx` — reusable Shadcn Table with status, submitter, category, title, date
+- [x] Create `app/admin/pending/page.tsx` — pending queue (oldest-first, paginated)
+- [x] Create `app/admin/pending/loading.tsx` — skeleton table
+- [x] Create `app/admin/approved/page.tsx` — approved queue (newest-first, paginated)
+- [x] Create `app/admin/rejected/page.tsx` — rejected queue with rejection_reason column
+- [x] Create `app/admin/resolved/page.tsx` — resolved queue
+- [x] Create `app/admin/reports/[id]/page.tsx` — full review page with photos, description, map, submitter info, action buttons
+- [x] Create `app/admin/reports/[id]/loading.tsx` — review page skeleton
+- [x] Create `app/admin/reports/[id]/error.tsx` — error boundary
+- [x] Create `app/admin/reports/[id]/not-found.tsx` — custom 404
+- [x] Create `components/admin/action-buttons.tsx` — conditional Approve/Reject/Resolve with loading states, rejection dialog
+- [x] Create `app/admin/actions.ts` — Server Actions: approveReport, rejectReport, resolveReport (auth → role check → Zod → service-role update)
+- [x] Add admin Zod schemas to `lib/validations/report.ts` — approveReportSchema, rejectReportSchema, resolveReportSchema
+- [x] Admin uses Server Actions (not API routes), following the same pattern as `app/actions.ts`
+- [x] `npm run build` passes with zero errors; lint clean for all admin code
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Admin panel (moderation queue, approve/reject/resolve)
 - Email notifications (Brevo + React Email templates)
 
 ## Open Questions
@@ -146,6 +167,12 @@ change.
 - **Status pill tabs** — `MyReportsFilter` uses inline `<button>` elements with primary/ghost styling, no Radix dependencies, avoiding the portal scroll-lock issue that affected the browse filter bar. Filters driven by `?status=` URL param.
 - **Rejection reason display** — Shown as an amber-tinted Alert banner (`bg-status-rejected/10 text-status-rejected border-status-rejected/20`) with XCircle icon, only on the `/my-reports/[id]` detail page when `status === "REJECTED"`. Not shown on the list card.
 - **My Reports matches browse macrostructure** — Same responsive card grid (1→2→3→4→5 cols), same `PaginationBar` component, same page container. Consistent with the Hallmark utilitarian civic-safety aesthetic: no novel layout for novelty's sake.
+- **Admin panel — Server Actions over API routes** — All admin mutations (approve, reject, resolve) use Server Actions in `app/admin/actions.ts`, consistent with the citizen `submitReport` pattern. Each action is a dedicated function with hard-coded target status — status is never a free-form client-supplied value, satisfying the architecture invariant.
+- **Admin panel — service role client** — `lib/supabase/service-role.ts` provides `createAdminClient()` using `SUPABASE_SERVICE_ROLE_KEY` for operations that bypass RLS (reading all reports, reading all profiles, performing status transitions). The regular server client (anon key) is used only for auth verification and role checking.
+- **Admin panel — layout guards** — `app/admin/layout.tsx` verifies `profile.role === 'ADMIN'` server-side on every page request, redirecting non-admins to `/browse`. Server Actions independently re-verify the admin role. This satisfies the "verify in every handler" invariant without middleware complexity.
+- **Admin panel — Hallmark Workbench macrostructure** — Admin uses a persistent sidebar + content canvas layout (utilitarian genre). Token discipline: 100% `var(--*)` references, zero inline hex. All states defined: loading (skeleton), empty (icon + message), error (error boundary), success (toast). No fabricated metrics, no italic headers, no re-drawn chrome.
+- **Admin panel — review page** — Single-column layout (`max-w-4xl`): header → photo carousel → description → map → submitter info → reviewer history → rejection reason alert → action buttons. Reuses `PhotoGallery`, `ReportMapWrapper`, `ReportStatusBadge`, and `PaginationBar` from existing components.
+- **Admin panel — rejection dialog** — Inline Shadcn Dialog within `action-buttons.tsx`, not a separate component file. Handles states: closed, open, textarea-empty (confirm disabled), valid (≥10 chars), submitting, error. Follows the Hallmark component-scope 8-state discipline.
 
 ## Session Notes
 
@@ -174,3 +201,9 @@ change.
 - **Leaflet default marker icon** — In bundler environments, Leaflet's default marker icon fails because CSS-expected image paths don't exist. Fixed by calling `L.Icon.Default.mergeOptions()` with unpkg CDN URLs in `report-map.tsx`.
 - **date-utils formatReportDate** — Original implementation had a buggy loop: iterated smallest→largest unit but checked `diff < unit.ms`, making minutes unreachable, and calculated count as `diff / (unit.ms / 60_000)` producing wildly inflated numbers. Rewritten as a clean cascade with correct unit division.
 - **Leaflet default marker icon** — In bundler environments (Next.js), Leaflet's default marker icon fails because the CSS-expected image paths don't exist. Fixed by calling `L.Icon.Default.mergeOptions()` with explicit unpkg CDN URLs in `report-map.tsx`. The submit page's `location-picker.tsx` already used a custom `L.icon()` and was unaffected.
+- **Admin panel — Hallmark pre-emit critique** — P5 H5 E4 S5 R5 V3. Variety scored lower intentionally: admin UIs should be consistent, not varied. Audit: completed /grilling with Hallmark plan before implementation. Every design choice was gated through the user (Server Actions vs API routes, single-column review, status column in tables, submitter info display).
+- **Admin panel — pending queue badge** — Count fetched server-side in `layout.tsx` using service role client, passed as prop to `AdminSidebar`. Shown as an amber pill `bg-status-pending/10 text-status-pending`. Only visible when count > 0.
+- **Admin panel — post-action redirect** — After approve/reject, redirects to `/admin/pending`. After resolve, redirects to `/admin/approved`. Uses `router.push()` + `router.refresh()` in client component callbacks.
+- **Admin panel — no proxy role check** — The proxy (`proxy.ts`) protects `/admin` from unauthenticated access but does not check admin role. Role verification is handled in the layout (page-level) and in every Server Action (mutation-level), satisfying the architecture's "verify in every handler" invariant without adding a DB read to middleware.
+- **Admin panel — queue raw vs paginated** — All four queue pages fetch paginated data using URL search params (`?page=N`), 20 items per page. Uses existing `PaginationBar` component. Total count shown in page header.
+- **Admin panel — Sign Out** — Uses client-side `supabase.auth.signOut()` + `router.refresh()`, matching the pattern in `components/public-nav.tsx`. No custom sign-out endpoint needed.
