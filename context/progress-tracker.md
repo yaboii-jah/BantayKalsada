@@ -207,3 +207,5 @@ change.
 - **Admin panel — no proxy role check** — The proxy (`proxy.ts`) protects `/admin` from unauthenticated access but does not check admin role. Role verification is handled in the layout (page-level) and in every Server Action (mutation-level), satisfying the architecture's "verify in every handler" invariant without adding a DB read to middleware.
 - **Admin panel — queue raw vs paginated** — All four queue pages fetch paginated data using URL search params (`?page=N`), 20 items per page. Uses existing `PaginationBar` component. Total count shown in page header.
 - **Admin panel — Sign Out** — Uses client-side `supabase.auth.signOut()` + `router.refresh()`, matching the pattern in `components/public-nav.tsx`. No custom sign-out endpoint needed.
+- **Admin login redirect** — `proxy.ts` now reads `profiles.role` after auth on auth routes. Admin users are redirected to `/admin` instead of `/browse` after login. Change is in proxy.ts only.
+- **Admin sidebar sticky** — Sidebar uses `sticky top-0 h-screen` so it stays fixed on scroll. Main content area uses `overflow-y-auto` for independent scrolling.

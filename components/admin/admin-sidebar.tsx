@@ -39,7 +39,7 @@ export function AdminSidebar({
   };
 
   return (
-    <aside className="flex w-64 flex-col border-r border-border bg-sidebar">
+    <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-border bg-sidebar">
       <div className="flex items-center gap-2 border-b border-border px-6 py-4">
         <ShieldCheck className="h-6 w-6 text-primary" />
         <span className="text-sm font-semibold text-foreground">

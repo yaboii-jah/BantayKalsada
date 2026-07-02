@@ -39,7 +39,7 @@ export default async function AdminLayout({
         pendingCount={pendingCount ?? 0}
         adminName={profile.full_name}
       />
-      <main className="flex-1 bg-muted p-6">{children}</main>
+      <main className="flex-1 overflow-y-auto bg-muted p-6">{children}</main>
     </div>
   );
 }
