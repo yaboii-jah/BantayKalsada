@@ -73,7 +73,7 @@ export function ReportForm() {
         const result = await submitReport(null, data);
         if (result.success && result.data) {
           toast.success("Report submitted successfully! It will be reviewed by an administrator.");
-          router.push("/browse");
+          router.push("/my-reports");
         } else {
           setSubmitError(result.error ?? "Failed to submit report");
           toast.error(result.error ?? "Failed to submit report");

@@ -10,6 +10,7 @@ change.
 - [x] Auth Pages & Route Protection — Complete
 - [x] Public Report Feed — Complete
 - [x] Report Submission Form — Complete
+- [x] Personal Report History — Complete
 
 ## Current Goal
 
@@ -103,6 +104,20 @@ change.
 - [x] Add date display to report cards on `/browse` — `formatReportDate(report.submitted_at)` rendered with `ml-auto` on the badge row right side
 - [x] Bump nav z-index from `z-[1000]` to `z-[1100]` — Leaflet zoom controls and "Use My Location" button both use `z-1000`, causing overlap when scrolling past map
 
+### Personal Report History (`/my-reports`)
+
+- [x] Add optional `href` prop to `ReportCard` — defaults to `/reports/[id]`, overridable for `/my-reports/[id]`
+- [x] Create `MyReportsFilter` component — status pill tabs (All / Pending / Approved / Rejected / Resolved) driven by URL search params
+- [x] Create `app/(citizen)/my-reports/page.tsx` — Server Component list page with Supabase query filtered by `submitted_by_id`, pagination, card grid, empty state with CTA
+- [x] Create `app/(citizen)/my-reports/loading.tsx` — skeleton card grid (6 skeleton cards)
+- [x] Create `app/(citizen)/my-reports/error.tsx` — error boundary with retry
+- [x] Create `app/(citizen)/my-reports/[id]/page.tsx` — Server Component detail page with photo gallery, metadata, rejection reason Alert banner on REJECTED status, interactive map
+- [x] Create `app/(citizen)/my-reports/[id]/loading.tsx` — detail page skeleton
+- [x] Create `app/(citizen)/my-reports/[id]/error.tsx` — detail page error boundary
+- [x] Create `app/(citizen)/my-reports/[id]/not-found.tsx` — custom 404 with back link
+- [x] Change post-submit redirect from `/browse` to `/my-reports` in `report-form.tsx`
+- [x] `npm run build` passes with zero errors
+
 ## In Progress
 
 - None.
@@ -111,7 +126,6 @@ change.
 
 - Admin panel (moderation queue, approve/reject/resolve)
 - Email notifications (Brevo + React Email templates)
-- Personal report history page (`/my-reports`)
 
 ## Open Questions
 
@@ -127,6 +141,11 @@ change.
 - **Post-login redirect** — defaults to `/browse` (configurable via `DEFAULT_AUTH_REDIRECT` constant or env var in future).
 - **Reset-password cooldown** — 60s countdown on "Send again" button to prevent Supabase rate-limit issues. Token detected via `supabase.auth.onAuthStateChange` listening for `PASSWORD_RECOVERY` event.
 - **Social login** — omitted from v1.
+- **Post-submit redirect** — now redirects to `/my-reports` so the citizen sees their PENDING report immediately after submission.
+- **ReportCard href prop** — Added optional `href` prop to `components/reports/report-card.tsx`. When omitted, defaults to `/reports/${id}` (backward compatible with `/browse`). Used in `/my-reports` to link cards to `/my-reports/${id}`.
+- **Status pill tabs** — `MyReportsFilter` uses inline `<button>` elements with primary/ghost styling, no Radix dependencies, avoiding the portal scroll-lock issue that affected the browse filter bar. Filters driven by `?status=` URL param.
+- **Rejection reason display** — Shown as an amber-tinted Alert banner (`bg-status-rejected/10 text-status-rejected border-status-rejected/20`) with XCircle icon, only on the `/my-reports/[id]` detail page when `status === "REJECTED"`. Not shown on the list card.
+- **My Reports matches browse macrostructure** — Same responsive card grid (1→2→3→4→5 cols), same `PaginationBar` component, same page container. Consistent with the Hallmark utilitarian civic-safety aesthetic: no novel layout for novelty's sake.
 
 ## Session Notes
 
@@ -148,7 +167,7 @@ change.
 - **useTransition for pending state** — The form uses React's `useTransition` (not `useActionState`) because react-hook-form handles form state and the Server Action accepts structured data, not FormData.
 - **Hallmark design applied** — Utilitarian tone (civic safety tool), locked tokens (no inline hex), mobile-first (photo upload + map touch-interactive), per-photo loading states, no AI-slop copy or fabricated content. Pre-emit critique: P5 H4 E5 S4 R4 V5.
 - **Zod v4** — The project uses Zod v4. `ZodError` uses `.issues` (not deprecated `.errors`).
-- **Post-submit redirect** — Currently redirects to `/browse` (not `/my-reports`) because the personal report history page hasn't been built yet.
+- **Post-submit redirect** — Now redirects to `/my-reports` so the citizen can see their PENDING report immediately. Updated in `components/reports/report-form.tsx`.
 - **Rate limiting** — 5 reports per 24h, enforced server-side in the Server Action by counting the authenticated user's `reports` rows with `submitted_at` within the window.
 - **RLS for authenticated users** — `createSupabaseServerClient()` returns an `authenticated` session when the user is logged in. The original browse RLS policy only covered `anon`, causing 0 rows for logged-in users. Fixed by adding `authenticated` to the `"Public can read approved and resolved reports"` policy.
 - **Cloudinary Asia/Pacific CDN** — The user's ISP cannot reach `res.cloudinary.com`. Fixed by creating `lib/cloudinary-url.ts` with `getDisplayUrl()` that rewrites to `res-3.cloudinary.com` (regional CDN). Applied at render sites in `report-card.tsx` and `photo-gallery.tsx`.

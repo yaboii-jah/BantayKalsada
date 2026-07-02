@@ -18,16 +18,18 @@ const categoryLabels: Record<string, string> = {
 export function ReportCard({
   report,
   className,
+  href,
 }: {
   report: ReportRow;
   className?: string;
+  href?: string;
 }) {
   const thumbnail =
     report.photo_urls.length > 0 ? getDisplayUrl(report.photo_urls[0]) : null;
 
   return (
     <Link
-      href={`/reports/${report.id}`}
+      href={href ?? `/reports/${report.id}`}
       className={cn(
         "group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/40",
         className,
