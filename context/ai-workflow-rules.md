@@ -35,7 +35,7 @@ Implement in this order. Do not advance to the next unit until the current one i
 9. **Admin report resolution** — `/admin/approved` list with "Mark as Resolved" action. `/api/admin/reports/[id]/resolve` endpoint. Status updates to `RESOLVED`.
 10. **Admin dashboard** — `/admin` showing count cards for `PENDING`, `APPROVED`, `REJECTED`, and `RESOLVED` reports. No charts. Links to each queue.
 11. **Public feed** — `/browse` listing all `APPROVED` and `RESOLVED` reports. Filter by category and status. Paginated. `/reports/[id]` public detail page with photo gallery and map.
-12. **Email notifications** — Resend integrated. React Email templates created. Emails sent on: report approved, report rejected (with reason), report resolved. Delivery verified in staging.
+12. **Email notifications** — Brevo integrated. Email templates created. Emails sent on: report approved, report rejected (with reason), report resolved.
 
 ---
 

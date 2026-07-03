@@ -11,10 +11,11 @@ change.
 - [x] Public Report Feed — Complete
 - [x] Report Submission Form — Complete
 - [x] Personal Report History — Complete
+- [x] Email & In-App Notifications — Complete
 
 ## Current Goal
 
-- Email notifications (Brevo + React Email templates)
+- None.
 
 ## Completed
 
@@ -116,6 +117,16 @@ change.
 - [x] Change post-submit redirect from `/browse` to `/my-reports` in `report-form.tsx`
 - [x] `npm run build` passes with zero errors
 
+### Email & In-App Notifications
+
+- [x] Create `lib/email.ts` — Brevo client wrapper using `@getbrevo/brevo` SDK
+- [x] Create `lib/notifications.ts` — shared utility for notification creation + message/subject formatting
+- [x] Create `lib/admin-notifications.tsx` — report submitter lookup + email dispatch orchestration
+- [x] Create `emails/render.ts` — template string-based email HTML generators (approved, rejected, resolved)
+- [x] Update `app/admin/actions.ts` — all three actions (`approveReport`, `rejectReport`, `resolveReport`) now send emails + insert notification rows after status update
+- [x] Extract `verifyAdmin` helper to reduce duplication in admin actions
+- [x] `npm run build` passes with zero errors
+
 ### Admin Panel
 
 - [x] Create `lib/supabase/service-role.ts` — service role client factory for admin DB ops
@@ -146,13 +157,21 @@ change.
 
 ## Next Up
 
-- Email notifications (Brevo + React Email templates)
+- In-app notification center (bell icon, dropdown, mark-as-read) — v1.1
 
 ## Open Questions
 
 - None.
 
 ## Architecture Decisions
+
+### Email + In-App Notifications
+
+- **Template strings over React Email** — `react-dom/server` is not importable in Next.js App Router Server Components/Server Actions. `@react-email/components` was not installed. Instead, email HTML is generated via template string functions in `emails/render.ts`. Each returns a full HTML document with inline styles — minimal, deliverable, and dependency-free.
+- **Fire-and-forget notification dispatch** — Email + notification insertion happens after the status update succeeds, wrapped in `.catch()` so failures are logged but never block the status transition. This ensures report moderation is never gated on email deliverability.
+- **Separate server-only module for JSX** — `lib/admin-notifications.tsx` uses `.tsx` extension because it contains JSX (React.createElement calls from the email template functions). The `"use server"` actions file (`app/admin/actions.ts`) stays `.ts` and delegates JSX work to this helper.
+- **`verifyAdmin()` extracted** — The auth + admin role check was duplicated across all three actions. Extracted into a shared helper with explicit discriminated union return type for clean TypeScript narrowing.
+- **Notifications table populated** — The `notifications` table (already designed in `data-model.md` and created on live DB) is now written to by all three admin actions. Ready for v1.1 notification center with zero schema changes.
 
 - **Auth gradient** — `bg-auth-gradient` utility added to `globals.css`: a subtle three-stop gradient using project OKLCH tokens (light blue to white to light indigo).
 - **Auth card layout** — `components/auth/auth-card.tsx` contains the split layout: branding panel (left 45%) + form (right 55%) on desktop, stacked on mobile. The card IS the container (no nested cards).
@@ -209,3 +228,8 @@ change.
 - **Admin panel — Sign Out** — Uses client-side `supabase.auth.signOut()` + `router.refresh()`, matching the pattern in `components/public-nav.tsx`. No custom sign-out endpoint needed.
 - **Admin login redirect** — `proxy.ts` now reads `profiles.role` after auth on auth routes. Admin users are redirected to `/admin` instead of `/browse` after login. Change is in proxy.ts only.
 - **Admin sidebar sticky** — Sidebar uses `sticky top-0 h-screen` so it stays fixed on scroll. Main content area uses `overflow-y-auto` for independent scrolling.
+- **Notifications — Brevo SDK v5 client** — Uses the new `@getbrevo/brevo` SDK (class-based `BrevoClient` with `apiKey` auth, not the old `TransactionalEmailsApi` static class). The SDK wraps the Brevo REST API with typed request/response objects. Sender name set to "Bantay Kalsada".
+- **Notifications — template strings over React Email** — `react-dom/server` (`renderToStaticMarkup`) is rejected by Next.js 16 App Router. `@react-email/components` was not installed. Email HTML is built via template literal functions in `emails/render.ts`, each producing a complete HTML document with inline styles. Avoids the render pipeline conflict entirely.
+- **Notifications — `.ts` vs `.tsx` lesson** — Turbopack cannot parse JSX in files with `.ts` extension even when the JSX is in server-only modules. `lib/admin-notifications.tsx` uses `.tsx` because it renders email template functions. `app/admin/actions.ts` and `emails/render.ts` stay `.ts` (no JSX). `emails/render.ts` was originally `render.tsx` then reverted to `.ts` after switching to template strings.
+- **Notifications — fire-and-forget email dispatch** — Email + notification insertion is fire-and-forget (`.catch()`), not awaited. The admin gets `{ success: true }` immediately after the status update. Failed emails are logged server-side. This decision was made to prevent transient Brevo API failures from blocking report moderation.
+- **Notifications — `verifyAdmin()` extraction** — The auth + role check pattern (getUser → profiles.role → return error) was identical across all three admin actions. Extracted into a shared helper returning a discriminated union type for clean narrowing.
