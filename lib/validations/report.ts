@@ -37,3 +37,23 @@ export const createReportSchema = z.object({
 });
 
 export type CreateReportInput = z.infer<typeof createReportSchema>;
+
+export const approveReportSchema = z.object({
+  reportId: z.string().uuid(),
+});
+
+export const rejectReportSchema = z.object({
+  reportId: z.string().uuid(),
+  rejectionReason: z
+    .string()
+    .trim()
+    .min(10, "Rejection reason must be at least 10 characters"),
+});
+
+export const resolveReportSchema = z.object({
+  reportId: z.string().uuid(),
+});
+
+export type ApproveReportInput = z.infer<typeof approveReportSchema>;
+export type RejectReportInput = z.infer<typeof rejectReportSchema>;
+export type ResolveReportInput = z.infer<typeof resolveReportSchema>;

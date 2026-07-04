@@ -29,6 +29,15 @@ export async function proxy(request: NextRequest) {
   const user = data.user;
 
   if (user && isAuthRoute) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
     return NextResponse.redirect(new URL("/browse", request.url));
   }
 

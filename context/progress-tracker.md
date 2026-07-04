@@ -10,12 +10,12 @@ change.
 - [x] Auth Pages & Route Protection — Complete
 - [x] Public Report Feed — Complete
 - [x] Report Submission Form — Complete
+- [x] Personal Report History — Complete
+- [x] Email & In-App Notifications — Complete
 
 ## Current Goal
 
-- Cloudinary integration (photo upload)
-- Admin panel
-- Email notifications
+- None.
 
 ## Completed
 
@@ -103,21 +103,75 @@ change.
 - [x] Add date display to report cards on `/browse` — `formatReportDate(report.submitted_at)` rendered with `ml-auto` on the badge row right side
 - [x] Bump nav z-index from `z-[1000]` to `z-[1100]` — Leaflet zoom controls and "Use My Location" button both use `z-1000`, causing overlap when scrolling past map
 
+### Personal Report History (`/my-reports`)
+
+- [x] Add optional `href` prop to `ReportCard` — defaults to `/reports/[id]`, overridable for `/my-reports/[id]`
+- [x] Create `MyReportsFilter` component — status pill tabs (All / Pending / Approved / Rejected / Resolved) driven by URL search params
+- [x] Create `app/(citizen)/my-reports/page.tsx` — Server Component list page with Supabase query filtered by `submitted_by_id`, pagination, card grid, empty state with CTA
+- [x] Create `app/(citizen)/my-reports/loading.tsx` — skeleton card grid (6 skeleton cards)
+- [x] Create `app/(citizen)/my-reports/error.tsx` — error boundary with retry
+- [x] Create `app/(citizen)/my-reports/[id]/page.tsx` — Server Component detail page with photo gallery, metadata, rejection reason Alert banner on REJECTED status, interactive map
+- [x] Create `app/(citizen)/my-reports/[id]/loading.tsx` — detail page skeleton
+- [x] Create `app/(citizen)/my-reports/[id]/error.tsx` — detail page error boundary
+- [x] Create `app/(citizen)/my-reports/[id]/not-found.tsx` — custom 404 with back link
+- [x] Change post-submit redirect from `/browse` to `/my-reports` in `report-form.tsx`
+- [x] `npm run build` passes with zero errors
+
+### Email & In-App Notifications
+
+- [x] Create `lib/email.ts` — Brevo client wrapper using `@getbrevo/brevo` SDK
+- [x] Create `lib/notifications.ts` — shared utility for notification creation + message/subject formatting
+- [x] Create `lib/admin-notifications.tsx` — report submitter lookup + email dispatch orchestration
+- [x] Create `emails/render.ts` — template string-based email HTML generators (approved, rejected, resolved)
+- [x] Update `app/admin/actions.ts` — all three actions (`approveReport`, `rejectReport`, `resolveReport`) now send emails + insert notification rows after status update
+- [x] Extract `verifyAdmin` helper to reduce duplication in admin actions
+- [x] `npm run build` passes with zero errors
+
+### Admin Panel
+
+- [x] Create `lib/supabase/service-role.ts` — service role client factory for admin DB ops
+- [x] Create `app/admin/layout.tsx` — sidebar layout with admin role guard + pending count fetch
+- [x] Create `components/admin/admin-sidebar.tsx` — nav sidebar with active state, pending badge, sign out
+- [x] Create `app/admin/page.tsx` — dashboard with 4 status count cards
+- [x] Create `app/admin/loading.tsx` — skeleton loading state
+- [x] Create `components/admin/status-count-cards.tsx` — colored card grid for status counts
+- [x] Create `components/admin/admin-queue-table.tsx` — reusable Shadcn Table with status, submitter, category, title, date
+- [x] Create `app/admin/pending/page.tsx` — pending queue (oldest-first, paginated)
+- [x] Create `app/admin/pending/loading.tsx` — skeleton table
+- [x] Create `app/admin/approved/page.tsx` — approved queue (newest-first, paginated)
+- [x] Create `app/admin/rejected/page.tsx` — rejected queue with rejection_reason column
+- [x] Create `app/admin/resolved/page.tsx` — resolved queue
+- [x] Create `app/admin/reports/[id]/page.tsx` — full review page with photos, description, map, submitter info, action buttons
+- [x] Create `app/admin/reports/[id]/loading.tsx` — review page skeleton
+- [x] Create `app/admin/reports/[id]/error.tsx` — error boundary
+- [x] Create `app/admin/reports/[id]/not-found.tsx` — custom 404
+- [x] Create `components/admin/action-buttons.tsx` — conditional Approve/Reject/Resolve with loading states, rejection dialog
+- [x] Create `app/admin/actions.ts` — Server Actions: approveReport, rejectReport, resolveReport (auth → role check → Zod → service-role update)
+- [x] Add admin Zod schemas to `lib/validations/report.ts` — approveReportSchema, rejectReportSchema, resolveReportSchema
+- [x] Admin uses Server Actions (not API routes), following the same pattern as `app/actions.ts`
+- [x] `npm run build` passes with zero errors; lint clean for all admin code
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Admin panel (moderation queue, approve/reject/resolve)
-- Email notifications (Brevo + React Email templates)
-- Personal report history page (`/my-reports`)
+- In-app notification center (bell icon, dropdown, mark-as-read) — v1.1
 
 ## Open Questions
 
 - None.
 
 ## Architecture Decisions
+
+### Email + In-App Notifications
+
+- **Template strings over React Email** — `react-dom/server` is not importable in Next.js App Router Server Components/Server Actions. `@react-email/components` was not installed. Instead, email HTML is generated via template string functions in `emails/render.ts`. Each returns a full HTML document with inline styles — minimal, deliverable, and dependency-free.
+- **Fire-and-forget notification dispatch** — Email + notification insertion happens after the status update succeeds, wrapped in `.catch()` so failures are logged but never block the status transition. This ensures report moderation is never gated on email deliverability.
+- **Separate server-only module for JSX** — `lib/admin-notifications.tsx` uses `.tsx` extension because it contains JSX (React.createElement calls from the email template functions). The `"use server"` actions file (`app/admin/actions.ts`) stays `.ts` and delegates JSX work to this helper.
+- **`verifyAdmin()` extracted** — The auth + admin role check was duplicated across all three actions. Extracted into a shared helper with explicit discriminated union return type for clean TypeScript narrowing.
+- **Notifications table populated** — The `notifications` table (already designed in `data-model.md` and created on live DB) is now written to by all three admin actions. Ready for v1.1 notification center with zero schema changes.
 
 - **Auth gradient** — `bg-auth-gradient` utility added to `globals.css`: a subtle three-stop gradient using project OKLCH tokens (light blue to white to light indigo).
 - **Auth card layout** — `components/auth/auth-card.tsx` contains the split layout: branding panel (left 45%) + form (right 55%) on desktop, stacked on mobile. The card IS the container (no nested cards).
@@ -127,6 +181,17 @@ change.
 - **Post-login redirect** — defaults to `/browse` (configurable via `DEFAULT_AUTH_REDIRECT` constant or env var in future).
 - **Reset-password cooldown** — 60s countdown on "Send again" button to prevent Supabase rate-limit issues. Token detected via `supabase.auth.onAuthStateChange` listening for `PASSWORD_RECOVERY` event.
 - **Social login** — omitted from v1.
+- **Post-submit redirect** — now redirects to `/my-reports` so the citizen sees their PENDING report immediately after submission.
+- **ReportCard href prop** — Added optional `href` prop to `components/reports/report-card.tsx`. When omitted, defaults to `/reports/${id}` (backward compatible with `/browse`). Used in `/my-reports` to link cards to `/my-reports/${id}`.
+- **Status pill tabs** — `MyReportsFilter` uses inline `<button>` elements with primary/ghost styling, no Radix dependencies, avoiding the portal scroll-lock issue that affected the browse filter bar. Filters driven by `?status=` URL param.
+- **Rejection reason display** — Shown as an amber-tinted Alert banner (`bg-status-rejected/10 text-status-rejected border-status-rejected/20`) with XCircle icon, only on the `/my-reports/[id]` detail page when `status === "REJECTED"`. Not shown on the list card.
+- **My Reports matches browse macrostructure** — Same responsive card grid (1→2→3→4→5 cols), same `PaginationBar` component, same page container. Consistent with the Hallmark utilitarian civic-safety aesthetic: no novel layout for novelty's sake.
+- **Admin panel — Server Actions over API routes** — All admin mutations (approve, reject, resolve) use Server Actions in `app/admin/actions.ts`, consistent with the citizen `submitReport` pattern. Each action is a dedicated function with hard-coded target status — status is never a free-form client-supplied value, satisfying the architecture invariant.
+- **Admin panel — service role client** — `lib/supabase/service-role.ts` provides `createAdminClient()` using `SUPABASE_SERVICE_ROLE_KEY` for operations that bypass RLS (reading all reports, reading all profiles, performing status transitions). The regular server client (anon key) is used only for auth verification and role checking.
+- **Admin panel — layout guards** — `app/admin/layout.tsx` verifies `profile.role === 'ADMIN'` server-side on every page request, redirecting non-admins to `/browse`. Server Actions independently re-verify the admin role. This satisfies the "verify in every handler" invariant without middleware complexity.
+- **Admin panel — Hallmark Workbench macrostructure** — Admin uses a persistent sidebar + content canvas layout (utilitarian genre). Token discipline: 100% `var(--*)` references, zero inline hex. All states defined: loading (skeleton), empty (icon + message), error (error boundary), success (toast). No fabricated metrics, no italic headers, no re-drawn chrome.
+- **Admin panel — review page** — Single-column layout (`max-w-4xl`): header → photo carousel → description → map → submitter info → reviewer history → rejection reason alert → action buttons. Reuses `PhotoGallery`, `ReportMapWrapper`, `ReportStatusBadge`, and `PaginationBar` from existing components.
+- **Admin panel — rejection dialog** — Inline Shadcn Dialog within `action-buttons.tsx`, not a separate component file. Handles states: closed, open, textarea-empty (confirm disabled), valid (≥10 chars), submitting, error. Follows the Hallmark component-scope 8-state discipline.
 
 ## Session Notes
 
@@ -148,10 +213,23 @@ change.
 - **useTransition for pending state** — The form uses React's `useTransition` (not `useActionState`) because react-hook-form handles form state and the Server Action accepts structured data, not FormData.
 - **Hallmark design applied** — Utilitarian tone (civic safety tool), locked tokens (no inline hex), mobile-first (photo upload + map touch-interactive), per-photo loading states, no AI-slop copy or fabricated content. Pre-emit critique: P5 H4 E5 S4 R4 V5.
 - **Zod v4** — The project uses Zod v4. `ZodError` uses `.issues` (not deprecated `.errors`).
-- **Post-submit redirect** — Currently redirects to `/browse` (not `/my-reports`) because the personal report history page hasn't been built yet.
+- **Post-submit redirect** — Now redirects to `/my-reports` so the citizen can see their PENDING report immediately. Updated in `components/reports/report-form.tsx`.
 - **Rate limiting** — 5 reports per 24h, enforced server-side in the Server Action by counting the authenticated user's `reports` rows with `submitted_at` within the window.
 - **RLS for authenticated users** — `createSupabaseServerClient()` returns an `authenticated` session when the user is logged in. The original browse RLS policy only covered `anon`, causing 0 rows for logged-in users. Fixed by adding `authenticated` to the `"Public can read approved and resolved reports"` policy.
 - **Cloudinary Asia/Pacific CDN** — The user's ISP cannot reach `res.cloudinary.com`. Fixed by creating `lib/cloudinary-url.ts` with `getDisplayUrl()` that rewrites to `res-3.cloudinary.com` (regional CDN). Applied at render sites in `report-card.tsx` and `photo-gallery.tsx`.
 - **Leaflet default marker icon** — In bundler environments, Leaflet's default marker icon fails because CSS-expected image paths don't exist. Fixed by calling `L.Icon.Default.mergeOptions()` with unpkg CDN URLs in `report-map.tsx`.
 - **date-utils formatReportDate** — Original implementation had a buggy loop: iterated smallest→largest unit but checked `diff < unit.ms`, making minutes unreachable, and calculated count as `diff / (unit.ms / 60_000)` producing wildly inflated numbers. Rewritten as a clean cascade with correct unit division.
 - **Leaflet default marker icon** — In bundler environments (Next.js), Leaflet's default marker icon fails because the CSS-expected image paths don't exist. Fixed by calling `L.Icon.Default.mergeOptions()` with explicit unpkg CDN URLs in `report-map.tsx`. The submit page's `location-picker.tsx` already used a custom `L.icon()` and was unaffected.
+- **Admin panel — Hallmark pre-emit critique** — P5 H5 E4 S5 R5 V3. Variety scored lower intentionally: admin UIs should be consistent, not varied. Audit: completed /grilling with Hallmark plan before implementation. Every design choice was gated through the user (Server Actions vs API routes, single-column review, status column in tables, submitter info display).
+- **Admin panel — pending queue badge** — Count fetched server-side in `layout.tsx` using service role client, passed as prop to `AdminSidebar`. Shown as an amber pill `bg-status-pending/10 text-status-pending`. Only visible when count > 0.
+- **Admin panel — post-action redirect** — After approve/reject, redirects to `/admin/pending`. After resolve, redirects to `/admin/approved`. Uses `router.push()` + `router.refresh()` in client component callbacks.
+- **Admin panel — no proxy role check** — The proxy (`proxy.ts`) protects `/admin` from unauthenticated access but does not check admin role. Role verification is handled in the layout (page-level) and in every Server Action (mutation-level), satisfying the architecture's "verify in every handler" invariant without adding a DB read to middleware.
+- **Admin panel — queue raw vs paginated** — All four queue pages fetch paginated data using URL search params (`?page=N`), 20 items per page. Uses existing `PaginationBar` component. Total count shown in page header.
+- **Admin panel — Sign Out** — Uses client-side `supabase.auth.signOut()` + `router.refresh()`, matching the pattern in `components/public-nav.tsx`. No custom sign-out endpoint needed.
+- **Admin login redirect** — `proxy.ts` now reads `profiles.role` after auth on auth routes. Admin users are redirected to `/admin` instead of `/browse` after login. Change is in proxy.ts only.
+- **Admin sidebar sticky** — Sidebar uses `sticky top-0 h-screen` so it stays fixed on scroll. Main content area uses `overflow-y-auto` for independent scrolling.
+- **Notifications — Brevo SDK v5 client** — Uses the new `@getbrevo/brevo` SDK (class-based `BrevoClient` with `apiKey` auth, not the old `TransactionalEmailsApi` static class). The SDK wraps the Brevo REST API with typed request/response objects. Sender name set to "Bantay Kalsada".
+- **Notifications — template strings over React Email** — `react-dom/server` (`renderToStaticMarkup`) is rejected by Next.js 16 App Router. `@react-email/components` was not installed. Email HTML is built via template literal functions in `emails/render.ts`, each producing a complete HTML document with inline styles. Avoids the render pipeline conflict entirely.
+- **Notifications — `.ts` vs `.tsx` lesson** — Turbopack cannot parse JSX in files with `.ts` extension even when the JSX is in server-only modules. `lib/admin-notifications.tsx` uses `.tsx` because it renders email template functions. `app/admin/actions.ts` and `emails/render.ts` stay `.ts` (no JSX). `emails/render.ts` was originally `render.tsx` then reverted to `.ts` after switching to template strings.
+- **Notifications — fire-and-forget email dispatch** — Email + notification insertion is fire-and-forget (`.catch()`), not awaited. The admin gets `{ success: true }` immediately after the status update. Failed emails are logged server-side. This decision was made to prevent transient Brevo API failures from blocking report moderation.
+- **Notifications — `verifyAdmin()` extraction** — The auth + role check pattern (getUser → profiles.role → return error) was identical across all three admin actions. Extracted into a shared helper returning a discriminated union type for clean narrowing.
