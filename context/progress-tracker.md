@@ -15,7 +15,7 @@ change.
 
 ## Current Goal
 
-- None.
+- In-app notification center — bell icon, unread badge, lazy-loaded dropdown, mark-as-read.
 
 ## Completed
 
@@ -151,13 +151,35 @@ change.
 - [x] Admin uses Server Actions (not API routes), following the same pattern as `app/actions.ts`
 - [x] `npm run build` passes with zero errors; lint clean for all admin code
 
+### In-App Notification Center
+
+- [x] Create `app/actions.ts` — `markNotificationAsRead` Server Action (auth → RLS-guarded update)
+- [x] Create `app/actions.ts` — `markAllNotificationsAsRead` Server Action (auth → bulk update all unread)
+- [x] Create `components/notification-bell.tsx` — client component with 8 Hallmark states (loading, empty, unread, all-read, open, marking-one, marking-all, error)
+- [x] Unread count fetched eagerly on mount via lightweight `COUNT(*)` query with `head: true`
+- [x] Notification list fetched lazily on first click of the bell (10 most recent)
+- [x] Each notification item shows correct `lucide-react` icon per type (CheckCircle, XCircle, CheckCheck)
+- [x] Unread vs read visual distinction: `bg-muted/50` + `border-l-primary` + `font-medium` vs transparent + `text-muted-foreground`
+- [x] Unread count badge caps at `99+` to prevent layout overflow
+- [x] Clicking a notification marks it read (`startTransition` → Server Action) and navigates to `/my-reports/[id]`
+- [x] "Mark all as read" button in dropdown header when unread exist
+- [x] Dropdown closes on click outside (mousedown), Escape key, notification click, or mark-all click
+- [x] Bell + dropdown only renders in desktop nav (mobile sheet left unchanged for v1)
+- [x] No new CSS tokens — all styling uses existing design system variables
+- [x] `deleteNotification` Server Action — service-role client, ownership guarded by `eq("user_id", user.id)`
+- [x] `clearAllNotifications` Server Action — single bulk delete, same ownership guard
+- [x] Per-item `X` button on each notification item — `group-hover:opacity-100`, stops propagation, optimistic removal
+- [x] "Clear all" button in header when any notifications exist
+- [x] `context/feature-specs/08-in-app-notification.md` written with full spec
+- [x] `context/progress-tracker.md` updated
+
 ## In Progress
 
-- None.
+- In-app notification center — bell icon, unread badge, lazy-loaded dropdown, mark-as-read.
 
 ## Next Up
 
-- In-app notification center (bell icon, dropdown, mark-as-read) — v1.1
+- None.
 
 ## Open Questions
 

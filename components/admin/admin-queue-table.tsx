@@ -35,7 +35,7 @@ const categoryLabels: Record<string, string> = {
   FLOODED_ROAD: "Flooded Road",
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage",
-dwa  OTHER: "Other",
+  OTHER: "Other",
 };
 
 export function AdminQueueTable({

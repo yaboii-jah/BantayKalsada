@@ -1,12 +1,120 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/service-role";
 import { createReportSchema, type CreateReportInput } from "@/lib/validations/report";
 
 export interface ActionResponse {
   success: boolean;
   data?: { id: string };
   error?: string;
+}
+
+export async function markNotificationAsRead(
+  notificationId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { success: false, error: "Failed to mark notification as read" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function markAllNotificationsAsRead(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+
+    if (error) {
+      return { success: false, error: "Failed to mark notifications as read" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function deleteNotification(
+  notificationId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const adminClient = createAdminClient();
+    const { error } = await adminClient
+      .from("notifications")
+      .delete()
+      .eq("id", notificationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { success: false, error: "Failed to delete notification" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function clearAllNotifications(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const adminClient = createAdminClient();
+    const { error } = await adminClient
+      .from("notifications")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { success: false, error: "Failed to clear notifications" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
 }
 
 export async function submitReport(

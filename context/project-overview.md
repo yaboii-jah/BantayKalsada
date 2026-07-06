@@ -73,12 +73,12 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Image upload to Cloudinary with EXIF metadata stripped on upload.
 - Interactive map using Leaflet.js and OpenStreetMap tiles.
 - Rate limiting: maximum 5 report submissions per citizen per 24-hour window.
+- In-app notification center: bell icon with unread badge, lazy-loaded dropdown, mark as read, and delete/clear all.
 
 ### Out of Scope
 
 - Native iOS or Android mobile applications.
 - SMS notifications.
-- In-app notification center (bell icon with unread notifications) — planned for v1.1.
 - Full-text keyword search on the public feed — planned for v1.1.
 - Filter by location or geographic bounding box on the public feed — planned for v1.1.
 - Admin analytics dashboard with charts or graphs — planned for v1.1.
