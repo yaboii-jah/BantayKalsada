@@ -10,7 +10,6 @@ const categories = [
   { value: "FLOODED_ROAD", label: "Flooded Road" },
   { value: "ROAD_ACCIDENT", label: "Road Accident" },
   { value: "ROAD_RAGE", label: "Road Rage" },
-
   { value: "OTHER", label: "Other" },
 ];
 

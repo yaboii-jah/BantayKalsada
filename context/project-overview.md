@@ -30,7 +30,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 
 - Browse all approved and resolved road incident reports in a paginated list.
 - View the full details of any approved report: title, category, status badge, description, photo gallery (up to 3 photos), pinned map location, and submission date.
-- Filter reports by category (Pothole, Flooded Road, Road Accident, Road Rage, Broken Traffic Sign, Other Road Hazard).
+- Filter reports by category (Pothole, Flooded Road, Road Accident, Road Rage, Other Road Hazard).
 - Filter reports by status (Approved, Resolved).
 
 ### Citizen Reporting
@@ -63,7 +63,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 
 - User registration, email verification, login, and password reset via Supabase Auth.
 - Road incident report submission with a minimum of 1 and a maximum of 3 photos (each max 5 MB per file) and a required map pin.
-- Six predefined report categories: Pothole, Flooded Road, Road Accident, Road Rage Incident, Broken Traffic Sign, Other Road Hazard.
+- Five predefined report categories: Pothole, Flooded Road, Road Accident, Road Rage Incident, Other Road Hazard.
 - Admin moderation queue with approve, reject (with reason), and resolve actions.
 - Report status lifecycle: `PENDING → APPROVED → RESOLVED` and `PENDING → REJECTED`.
 - Public report feed with category and status filters.

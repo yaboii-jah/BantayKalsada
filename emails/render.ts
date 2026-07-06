@@ -20,7 +20,7 @@ export function renderApprovedEmail(citizenName: string, reportTitle: string, re
 <p>Hi ${citizenName},</p>
 <p>Your road incident report <strong>"${reportTitle}"</strong> has been reviewed and <strong>approved</strong>.</p>
 <p>It is now visible on the public feed so fellow motorists and pedestrians can be aware of the hazard.</p>
-<p style="margin:24px 0">${button(`https://bantay-kalsada.vercel.app/reports/${reportId}`, "View Report")}</p>
+<p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/reports/${reportId}`, "View Report")}</p>
 <p style="color:#64748B;font-size:13px">Thank you for helping keep our roads safe.</p>`;
   return baseLayout(content);
 }
@@ -32,7 +32,7 @@ export function renderRejectedEmail(citizenName: string, reportTitle: string, re
 <p><strong>Reason:</strong></p>
 <div style="background-color:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:12px;color:#991B1B;font-size:13px">${rejectionReason}</div>
 <p style="color:#64748B;font-size:13px">You may submit a new report with additional information or supporting evidence.</p>
-<p style="margin:24px 0">${button(`https://bantay-kalsada.vercel.app/my-reports/${reportId}`, "View Details")}</p>`;
+<p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/my-reports/${reportId}`, "View Details")}</p>`;
   return baseLayout(content);
 }
 
@@ -41,6 +41,6 @@ export function renderResolvedEmail(citizenName: string, reportTitle: string, re
 <p>Hi ${citizenName},</p>
 <p>Your road incident report <strong>"${reportTitle}"</strong> has been marked as <strong>resolved</strong>.</p>
 <p>The reported issue has been addressed. Thank you for bringing it to attention — your report helped make the road safer for everyone.</p>
-<p style="margin:24px 0">${button(`https://bantay-kalsada.vercel.app/reports/${reportId}`, "View Report")}</p>`;
+<p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/reports/${reportId}`, "View Report")}</p>`;
   return baseLayout(content);
 }
