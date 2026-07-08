@@ -17,7 +17,7 @@
 
 ## System Boundaries
 
-- `app/(public)/` — Guest-accessible pages requiring no authentication: landing page (`/`), public report feed (`/browse`), and individual report detail pages (`/reports/[id]`). All pages in this group are Next.js Server Components and render only `APPROVED` or `RESOLVED` reports. The Supabase server client used here is initialized with the anon key and relies on RLS to enforce the status filter at the database level.
+- `app/(public)/` — Guest-accessible pages requiring no authentication: landing page (`/`), public report feed (`/browse`), and individual report detail pages (`/reports/[id]`). The browse feed supports keyword search via ILIKE on title + description, category filtering, status filtering, map view (all filtered results as Leaflet markers), and pagination — all driven by URL search params. All pages in this group are Next.js Server Components and render only `APPROVED` or `RESOLVED` reports. The Supabase server client used here is initialized with the anon key and relies on RLS to enforce the status filter at the database level.
 
 - `app/(auth)/` — Unauthenticated-only pages: registration (`/register`), login (`/login`), and password reset (`/reset-password`). Email verification is handled by a Supabase-generated link — no custom `/verify-email` route is needed. All Unauthenticated users are redirected away from these routes.
 
@@ -27,7 +27,9 @@
 
 - `app/api/` — API route handlers. Owns no UI. Responsible for Cloudinary signed upload preset generation (`/api/uploads/sign`). Mutations (report submission, admin approve/reject/resolve) are implemented as Server Actions (`app/actions.ts`, `app/admin/actions.ts`), not API routes. Every handler validates its input with Zod before touching the database.
 
-- `components/` — Shared UI components not tied to a single route. Subdivided into `components/ui/` (Shadcn/ui primitives), `components/maps/` (Leaflet map components — always client-side only), `components/reports/` (report card, report form, photo upload widget, photo gallery, status badge), `components/admin/` (admin queue table, rejection modal, action buttons), and `components/notification-bell.tsx` (in-app notification dropdown with lazy fetch, mark-as-read, delete).
+- `app/auth/callback/route.ts` — OAuth callback route. Receives the authorization code from Supabase after Google OAuth consent, exchanges it for a session via `exchangeCodeForSession()`, and redirects the user to the app.
+
+- `components/` — Shared UI components not tied to a single route. Subdivided into `components/ui/` (Shadcn/ui primitives), `components/maps/` (Leaflet map components — always client-side only), `components/browse/` (filter bar, pagination, photo gallery, browse map), `components/reports/` (report card, report form, photo upload widget, status badge), `components/admin/` (admin queue table, rejection modal, action buttons), and `components/notification-bell.tsx` (in-app notification dropdown).
 
 - `lib/` — Shared utilities and Supabase client factories. Contains: `lib/supabase/server.ts` (Supabase server client factory — creates a per-request client using `@supabase/ssr`'s `createServerClient`), `lib/supabase/client.ts` (Supabase browser client — created once using `createBrowserClient`), `lib/supabase/middleware.ts` (session refresh helper called in `middleware.ts`), `lib/email.ts` (Brevo client), `lib/cloudinary.ts` (Cloudinary config and signing helper), `lib/validations/` (all Zod schemas), `lib/notifications.ts` (in-app notification creation helper), `lib/admin-notifications.tsx` (report submitter lookup + email dispatch), and `lib/utils.ts` (general helpers).
 
@@ -47,7 +49,7 @@
 
 ## Auth and Access Model
 
-- **Authentication**: Users authenticate via Supabase Auth (email + password). Supabase manages the full auth lifecycle natively: registration, email verification link delivery, session issuance, token refresh, and password reset link delivery. Sessions are stored as access and refresh token pairs in `httpOnly` cookies, managed automatically by `@supabase/ssr`. Application code never handles passwords or auth tokens directly.
+- **Authentication**: Users authenticate via Supabase Auth (email + password or Google OAuth). Supabase manages the full auth lifecycle natively: registration, email verification link delivery, session issuance, token refresh, password reset link delivery, and OAuth token exchange. Sessions are stored as access and refresh token pairs in `httpOnly` cookies, managed automatically by `@supabase/ssr`. Application code never handles passwords or auth tokens directly. The OAuth callback is handled by `app/auth/callback/route.ts`, which exchanges the authorization code for a session via `exchangeCodeForSession()`.
 
 - **Email verification**: After registration, Supabase Auth sends a verification email automatically using the template configured in the Supabase dashboard. No custom token storage or Resend integration is needed for this flow. A user whose email is unverified can log in but is blocked from accessing `/submit` and from calling `POST /api/reports`. This check reads the `email_confirmed_at` field from the Supabase session server-side — it is never enforced client-side alone.
 

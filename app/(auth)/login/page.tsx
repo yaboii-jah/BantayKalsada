@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { GoogleSignIn } from "@/components/auth/google-sign-in";
 
 function LoginForm() {
   const router = useRouter();
@@ -58,6 +59,17 @@ function LoginForm() {
         <p className="mt-1 text-sm text-muted-foreground">
           Welcome back to Bantay Kalsada.
         </p>
+      </div>
+
+      <GoogleSignIn redirect={redirect} />
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">or</span>
+        </div>
       </div>
 
       {error && (

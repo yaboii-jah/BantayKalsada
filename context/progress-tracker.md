@@ -15,7 +15,7 @@ change.
 
 ## Current Goal
 
-- In-app notification center — bell icon, unread badge, lazy-loaded dropdown, mark-as-read.
+- Google OAuth login — branded button, callback route, divider on login/register pages.
 
 ## Completed
 
@@ -173,9 +173,50 @@ change.
 - [x] `context/feature-specs/08-in-app-notification.md` written with full spec
 - [x] `context/progress-tracker.md` updated
 
+### Full-Text Keyword Search
+
+- [x] `app/(public)/browse/page.tsx` — read `q` from searchParams, apply ILIKE `.or()` filter on title + description
+- [x] `components/browse/filter-bar.tsx` — search input with magnifying glass icon, Enter to search, X to clear
+- [x] Search query combines with existing category/status filters via AND
+- [x] `q` param preserved in pagination links; changing `q` resets page to 1
+- [x] Empty/whitespace query treated as no filter
+- [x] No database changes (ILIKE only, no migration needed)
+- [x] `context/feature-specs/09-search-design.md` written with full spec
+- [x] `context/project-overview.md` — moved search from Out of Scope to In Scope
+- [x] `context/architecture.md` — search noted
+- [x] `npm run build` passes with zero errors
+
+### Map View on Browse Feed
+
+- [x] `components/browse/browse-map.tsx` — Leaflet map with marker clustering (`react-leaflet-cluster`), popups (thumbnail/title/category/status/link), FitBounds
+- [x] `components/browse/browse-map-wrapper.tsx` — dynamic import with `{ ssr: false }` + loading skeleton
+- [x] `app/(public)/browse/page.tsx` — `view` param, conditional fetch (all results for map, paginated for grid), conditional render, pagination hidden in map view
+- [x] `components/browse/filter-bar.tsx` — `LayoutGrid` / `Map` toggle button group, active state, drives `?view=` param
+- [x] All filters (category, status, search) apply to both views
+- [x] Installed `react-leaflet-cluster` — markers grouped into numbered clusters, handles duplicate coordinates and dense areas
+- [x] No database changes
+- [x] `context/feature-specs/10-map-view.md` written with full spec
+- [x] `context/project-overview.md` — map view noted
+- [x] `context/architecture.md` — map view noted
+- [x] `npm run build` passes with zero errors
+
+### Google OAuth Login
+
+- [x] `app/auth/callback/route.ts` — exchanges OAuth code for session via `exchangeCodeForSession()`
+- [x] `components/auth/google-sign-in.tsx` — branded button with Google SVG logo, loading/error states
+- [x] `app/(auth)/login/page.tsx` — Google button + "or" divider above form
+- [x] `app/(auth)/register/page.tsx` — "Sign up with Google" button + "or" divider
+- [x] OAuth sessions handled by existing auth model — no proxy/layout/Server Action changes needed
+- [x] Database trigger creates profiles from Google's `full_name` metadata automatically
+- [x] No server-side packages added
+- [x] `context/feature-specs/11-oauth-google.md` written with full spec
+- [x] `context/project-overview.md` — moved OAuth to In Scope
+- [x] `context/architecture.md` — OAuth noted
+- [x] `npm run build` passes with zero errors
+
 ## In Progress
 
-- In-app notification center — bell icon, unread badge, lazy-loaded dropdown, mark-as-read.
+- Google OAuth — branded button on login/register, callback route, divider.
 
 ## Next Up
 
