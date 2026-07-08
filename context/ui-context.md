@@ -135,7 +135,8 @@ Lucide React — already included as a Shadcn/ui dependency, no additional insta
 | Filter               | `SlidersHorizontal`   |
 | Admin dashboard      | `LayoutDashboard`     |
 | My reports           | `FileText`            |
-| Notification bell    | `Bell`                |
+| Notification bell (no unread) | `Bell`       |
+| Notification bell (unread)    | `BellRing`     |
 | Browse / public feed | `Map`                 |
 | Logout               | `LogOut`              |
 

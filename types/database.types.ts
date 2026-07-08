@@ -150,7 +150,6 @@ export type Database = {
         | "FLOODED_ROAD"
         | "ROAD_ACCIDENT"
         | "ROAD_RAGE"
-        | "BROKEN_TRAFFIC_SIGN"
         | "OTHER"
       report_status: "PENDING" | "APPROVED" | "REJECTED" | "RESOLVED"
       user_role: "CITIZEN" | "ADMIN"
@@ -291,7 +290,6 @@ export const Constants = {
         "FLOODED_ROAD",
         "ROAD_ACCIDENT",
         "ROAD_RAGE",
-        "BROKEN_TRAFFIC_SIGN",
         "OTHER",
       ],
       report_status: ["PENDING", "APPROVED", "REJECTED", "RESOLVED"],

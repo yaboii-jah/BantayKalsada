@@ -13,6 +13,31 @@ export default function AdminLoading() {
           </div>
         ))}
       </div>
+      <div className="mt-10">
+        <div className="mb-6 h-7 w-32 animate-pulse rounded-md bg-muted-foreground/10" />
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={`metric-${i}`}
+              className="rounded-lg border border-border bg-card p-5"
+            >
+              <div className="mb-2 h-8 w-20 animate-pulse rounded-md bg-muted-foreground/10" />
+              <div className="h-4 w-28 animate-pulse rounded-md bg-muted-foreground/10" />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={`chart-${i}`}
+              className="rounded-lg border border-border bg-card p-5"
+            >
+              <div className="mb-4 h-4 w-40 animate-pulse rounded-md bg-muted-foreground/10" />
+              <div className="h-[250px] animate-pulse rounded-md bg-muted-foreground/5" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

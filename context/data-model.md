@@ -158,7 +158,7 @@ CREATE TABLE reports (
 
 ### `notifications`
 
-Stores in-app notification records created when a report's status changes. One row per status change event per user. Used for the notification center (v1.1) and provides a record of all status change events.
+Stores in-app notification records created when a report's status changes. One row per status change event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
 
 ```sql
 CREATE TABLE notifications (
@@ -362,7 +362,7 @@ CREATE POLICY "Citizens can update own notifications"
   WITH CHECK (auth.uid() = user_id);
 ```
 
-Note: Notifications are created by admin API route handlers using the service role client. There is no insert policy for authenticated users — citizens cannot create notifications directly.
+Note: Notifications are created by admin Server Actions using the service role client. There is no insert policy for authenticated users — citizens cannot create notifications directly. Citizens can read and update (mark as read) their own notifications via the anon-key server client, governed by the SELECT and UPDATE RLS policies. DELETE operations use the service role client because no DELETE RLS policy exists on the `notifications` table — ownership is enforced server-side by filtering `user_id` in the query.
 
 ---
 

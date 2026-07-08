@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Map, Menu, LogOut, FileText } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
 import type { User } from "@supabase/supabase-js";
 
 export function PublicNav() {
@@ -83,7 +84,9 @@ export function PublicNav() {
           {!loading && (
             <>
               {user ? (
-                <div ref={menuRef} className="relative">
+                <>
+                  <NotificationBell userId={user.id} />
+                  <div ref={menuRef} className="relative">
                   <button
                     type="button"
                     onClick={() => setMenuOpen((p) => !p)}
@@ -117,6 +120,7 @@ export function PublicNav() {
                     </div>
                   )}
                 </div>
+                </>
               ) : (
                 <div className="flex items-center gap-3">
                   <Link href="/login">

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal, ChevronDown } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, Search, X, LayoutGrid, Map } from "lucide-react";
 
 const categories = [
   { value: "all", label: "All categories" },
@@ -10,7 +10,6 @@ const categories = [
   { value: "FLOODED_ROAD", label: "Flooded Road" },
   { value: "ROAD_ACCIDENT", label: "Road Accident" },
   { value: "ROAD_RAGE", label: "Road Rage" },
-
   { value: "OTHER", label: "Other" },
 ];
 
@@ -65,7 +64,7 @@ function InlineSelect({
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-36 origin-top overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10">
+        <div className="absolute left-0 top-full z-[1000] mt-1 min-w-36 origin-top overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -87,12 +86,13 @@ function InlineSelect({
   );
 }
 
-export function FilterBar({ totalCount }: { totalCount: number }) {
+export function FilterBar({ view }: { view: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentCategory = searchParams.get("category") ?? "all";
   const currentStatus = searchParams.get("status") ?? "all";
+  const currentQ = searchParams.get("q") ?? "";
 
   function buildHref(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -108,6 +108,31 @@ export function FilterBar({ totalCount }: { totalCount: number }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            defaultValue={currentQ}
+            placeholder="Search by keyword..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const value = (e.target as HTMLInputElement).value.trim();
+                router.push(buildHref("q", value));
+              }
+            }}
+            className={`h-8 w-48 rounded-lg border border-input bg-transparent pl-8 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${currentQ ? "pr-8" : "pr-2.5"}`}
+          />
+          {currentQ && (
+            <button
+              type="button"
+              onClick={() => router.push(buildHref("q", ""))}
+              className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
         <SlidersHorizontal className="size-4 text-muted-foreground" />
         <InlineSelect
           value={currentCategory}
@@ -121,10 +146,33 @@ export function FilterBar({ totalCount }: { totalCount: number }) {
           onSelect={(value) => router.push(buildHref("status", value))}
           className="w-40"
         />
+        <div className="flex overflow-hidden rounded-lg border border-input">
+          <button
+            type="button"
+            onClick={() => router.push(buildHref("view", "grid"))}
+            className={`flex size-8 items-center justify-center transition-colors ${
+              view === "grid"
+                ? "bg-accent text-foreground"
+                : "bg-transparent text-muted-foreground hover:bg-accent/50"
+            }`}
+            aria-label="Grid view"
+          >
+            <LayoutGrid className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push(buildHref("view", "map"))}
+            className={`flex size-8 items-center justify-center transition-colors ${
+              view === "map"
+                ? "bg-accent text-foreground"
+                : "bg-transparent text-muted-foreground hover:bg-accent/50"
+            }`}
+            aria-label="Map view"
+          >
+            <Map className="size-4" />
+          </button>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {totalCount} {totalCount === 1 ? "report" : "reports"}
-      </p>
     </div>
   );
 }

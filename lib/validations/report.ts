@@ -5,7 +5,6 @@ export const reportCategoryEnum = z.enum([
   "FLOODED_ROAD",
   "ROAD_ACCIDENT",
   "ROAD_RAGE",
-  "BROKEN_TRAFFIC_SIGN",
   "OTHER",
 ]);
 
@@ -14,12 +13,12 @@ export const createReportSchema = z.object({
     .string()
     .trim()
     .min(5, "Title must be at least 5 characters")
-    .max(120, "Title must be at most 120 characters"),
+    .max(100, "Title must be at most 100 characters"),
   description: z
     .string()
     .trim()
     .min(20, "Description must be at least 20 characters")
-    .max(2000, "Description must be at most 2000 characters"),
+    .max(1000, "Description must be at most 1000 characters"),
   category: reportCategoryEnum,
   photo_urls: z
     .array(z.string().url())

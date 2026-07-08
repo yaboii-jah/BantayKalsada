@@ -75,7 +75,7 @@ export default function Home() {
               <MessageSquare className="size-6 text-primary" />
             </div>
             <h3 className="text-base font-semibold text-foreground">
-              3. Submit & track
+              3. Submit &amp; track
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Your report is reviewed by moderators. Get notified when it&apos;s

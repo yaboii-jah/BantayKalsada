@@ -30,7 +30,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 
 - Browse all approved and resolved road incident reports in a paginated list.
 - View the full details of any approved report: title, category, status badge, description, photo gallery (up to 3 photos), pinned map location, and submission date.
-- Filter reports by category (Pothole, Flooded Road, Road Accident, Road Rage, Broken Traffic Sign, Other Road Hazard).
+- Filter reports by category (Pothole, Flooded Road, Road Accident, Road Rage, Other Road Hazard).
 - Filter reports by status (Approved, Resolved).
 
 ### Citizen Reporting
@@ -55,34 +55,32 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Reject a report with a mandatory written reason, changing its status to `REJECTED` and sending the reason to the reporter via email.
 - Mark an approved report as `RESOLVED`, triggering an email notification to the reporter.
 - View separate lists of approved, rejected, and resolved reports for audit and record-keeping.
-- View a simple admin dashboard showing counts of reports in each status.
+- View an admin analytics dashboard with status counts, submission trend chart (30 days), category distribution, status distribution donut, approval rate, and average resolution time.
 
 ## Scope
 
 ### In Scope
 
-- User registration, email verification, login, and password reset via Supabase Auth.
+- User registration, email verification, login, and password reset via Supabase Auth, with Google OAuth login.
 - Road incident report submission with a minimum of 1 and a maximum of 3 photos (each max 5 MB per file) and a required map pin.
-- Six predefined report categories: Pothole, Flooded Road, Road Accident, Road Rage Incident, Broken Traffic Sign, Other Road Hazard.
+- Five predefined report categories: Pothole, Flooded Road, Road Accident, Road Rage Incident, Other Road Hazard.
 - Admin moderation queue with approve, reject (with reason), and resolve actions.
 - Report status lifecycle: `PENDING → APPROVED → RESOLVED` and `PENDING → REJECTED`.
-- Public report feed with category and status filters.
+- Public report feed with category and status filters, keyword search, and map view.
 - Email notifications to reporters on report approval, rejection, and resolution.
 - Citizen personal report history with status and rejection reason visibility.
-- Admin panel with report counts and status-separated lists.
+- Admin panel with report counts and status-separated lists, plus analytics dashboard (charts for submissions over time, category/status distribution, approval rate, and average resolution time).
 - Image upload to Cloudinary with EXIF metadata stripped on upload.
 - Interactive map using Leaflet.js and OpenStreetMap tiles.
 - Rate limiting: maximum 5 report submissions per citizen per 24-hour window.
+- In-app notification center: bell icon with unread badge, lazy-loaded dropdown, mark as read, and delete/clear all.
+- Map-view bounding box filter: as the user pans/zooms the map on `/browse?view=map`, markers and report count auto-constrain to the current viewport.
 
 ### Out of Scope
 
 - Native iOS or Android mobile applications.
 - SMS notifications.
-- In-app notification center (bell icon with unread notifications) — planned for v1.1.
-- Full-text keyword search on the public feed — planned for v1.1.
-- Filter by location or geographic bounding box on the public feed — planned for v1.1.
-- Admin analytics dashboard with charts or graphs — planned for v1.1.
-- OAuth login providers (Google, Facebook, etc.) — planned for v1.1.
+- Facebook or other OAuth login providers — planned for v1.1.
 - Report upvoting, confirmations, or community interactions.
 - User account management by admins (suspend, ban, or delete users).
 - Integration with government systems such as MMDA, DPWH, or LGU APIs.
@@ -98,6 +96,6 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 2. An administrator can log in to the admin panel, open a pending report, and approve it; the approved report immediately appears on the public feed and the reporter receives an approval email.
 3. An administrator can reject a pending report with a written reason; the reporter sees the rejection reason in their personal report history.
 4. An administrator can mark an approved report as resolved; the report displays a "Resolved" badge on the public feed and the reporter receives a resolution email.
-5. Any visitor without an account can browse the public feed, filter reports by category and status, and view the full details of an approved report including its photo gallery.
+5. Any visitor without an account can browse the public feed in grid or map view, search by keyword, filter by category and status, and view the full details of an approved report including its photo gallery.
 6. No report submitted by a citizen is visible on the public feed until an administrator explicitly approves it.
 7. A citizen who submits more than 5 reports within a 24-hour window is blocked from submitting additional reports until the window resets.
