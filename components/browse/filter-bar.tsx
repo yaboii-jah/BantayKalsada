@@ -89,6 +89,26 @@ function InlineSelect({
 export function FilterBar({ view }: { view: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showRightFade, setShowRightFade] = useState(false);
+
+  useEffect(() => {
+    function check() {
+      const el = scrollRef.current;
+      if (!el) return;
+      setShowRightFade(el.scrollWidth - el.scrollLeft - el.clientWidth > 8);
+    }
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    el.addEventListener("scroll", check, { passive: true });
+    check();
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("scroll", check);
+    };
+  }, []);
 
   const currentCategory = searchParams.get("category") ?? "all";
   const currentStatus = searchParams.get("status") ?? "all";
@@ -106,8 +126,8 @@ export function FilterBar({ view }: { view: string }) {
   }
 
   return (
-    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-      <div className="flex w-max items-center gap-2 sm:w-auto sm:flex-wrap">
+    <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div ref={scrollRef} className="flex items-center gap-2 overflow-x-auto sm:flex-wrap">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -173,6 +193,9 @@ export function FilterBar({ view }: { view: string }) {
           </button>
         </div>
       </div>
+      {showRightFade && (
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-background via-background/80 to-transparent sm:hidden" />
+      )}
     </div>
   );
 }
