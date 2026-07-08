@@ -15,8 +15,7 @@ change.
 
 ## Current Goal
 
-- Google OAuth login — branded button, callback route fix, divider on login/register pages.
-- Loading spinner on filter navigation — Suspense + skeleton grid on `/browse` and `/my-reports`.
+- None — pending next feature selection.
 
 ## Completed
 
