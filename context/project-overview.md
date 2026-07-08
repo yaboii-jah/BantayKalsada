@@ -55,7 +55,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Reject a report with a mandatory written reason, changing its status to `REJECTED` and sending the reason to the reporter via email.
 - Mark an approved report as `RESOLVED`, triggering an email notification to the reporter.
 - View separate lists of approved, rejected, and resolved reports for audit and record-keeping.
-- View a simple admin dashboard showing counts of reports in each status.
+- View an admin analytics dashboard with status counts, submission trend chart (30 days), category distribution, status distribution donut, approval rate, and average resolution time.
 
 ## Scope
 
@@ -69,18 +69,17 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Public report feed with category and status filters, keyword search, and map view.
 - Email notifications to reporters on report approval, rejection, and resolution.
 - Citizen personal report history with status and rejection reason visibility.
-- Admin panel with report counts and status-separated lists.
+- Admin panel with report counts and status-separated lists, plus analytics dashboard (charts for submissions over time, category/status distribution, approval rate, and average resolution time).
 - Image upload to Cloudinary with EXIF metadata stripped on upload.
 - Interactive map using Leaflet.js and OpenStreetMap tiles.
 - Rate limiting: maximum 5 report submissions per citizen per 24-hour window.
 - In-app notification center: bell icon with unread badge, lazy-loaded dropdown, mark as read, and delete/clear all.
+- Map-view bounding box filter: as the user pans/zooms the map on `/browse?view=map`, markers and report count auto-constrain to the current viewport.
 
 ### Out of Scope
 
 - Native iOS or Android mobile applications.
 - SMS notifications.
-- Filter by location or geographic bounding box on the public feed — planned for v1.1.
-- Admin analytics dashboard with charts or graphs — planned for v1.1.
 - Facebook or other OAuth login providers — planned for v1.1.
 - Report upvoting, confirmations, or community interactions.
 - User account management by admins (suspend, ban, or delete users).

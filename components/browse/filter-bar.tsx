@@ -86,7 +86,7 @@ function InlineSelect({
   );
 }
 
-export function FilterBar({ totalCount, view }: { totalCount: number; view: string }) {
+export function FilterBar({ view }: { view: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -173,9 +173,6 @@ export function FilterBar({ totalCount, view }: { totalCount: number; view: stri
           </button>
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {totalCount} {totalCount === 1 ? "report" : "reports"}
-      </p>
     </div>
   );
 }

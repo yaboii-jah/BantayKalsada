@@ -4,21 +4,20 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReportCard } from "@/components/reports/report-card";
 import { MyReportsFilter } from "@/components/reports/my-reports-filter";
 import { PaginationBar } from "@/components/browse/pagination-bar";
+import { ReportsGridSkeleton } from "@/components/reports/reports-grid-skeleton";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const PAGE_SIZE = 12;
 
-export default async function MyReportsPage({
-  searchParams,
+async function MyReportsContent({
+  statusFilter,
+  currentPage,
 }: {
-  searchParams: Promise<{ status?: string; page?: string }>;
+  statusFilter: string;
+  currentPage: number;
 }) {
-  const params = await searchParams;
-  const statusFilter = params.status ?? "all";
-  const currentPage = Math.max(1, Number(params.page) || 1);
-
   const supabase = await createSupabaseServerClient();
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -63,6 +62,84 @@ export default async function MyReportsPage({
   const isFiltered = statusFilter !== "all";
   const isNewUser = totalCount === 0 && !isFiltered;
 
+  if (pageReports.length > 0) {
+    return (
+      <>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {totalCount} {totalCount === 1 ? "report" : "reports"}
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {pageReports.map((report) => (
+            <ReportCard
+              key={report.id}
+              report={report}
+              href={`/my-reports/${report.id}`}
+            />
+          ))}
+        </div>
+        {totalPages > 1 && (
+          <div className="mt-8">
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              buildHref={buildHref}
+            />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
+      <div className="mb-6 inline-flex size-16 items-center justify-center rounded-2xl bg-muted">
+        <FileText className="size-8 text-muted-foreground" />
+      </div>
+      {isNewUser ? (
+        <>
+          <h2 className="text-lg font-semibold text-foreground">
+            No reports yet
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            You haven&apos;t submitted any road hazard reports yet. Be the
+            first to report an issue in your community.
+          </p>
+          <Link href="/submit" className="mt-6">
+            <Button>Submit a report</Button>
+          </Link>
+        </>
+      ) : (
+        <>
+          <h2 className="text-lg font-semibold text-foreground">
+            No reports for this status
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {isFiltered
+              ? "Try selecting a different status filter to see more reports."
+              : "You haven&apos;t submitted any road hazard reports yet."}
+          </p>
+          {isFiltered && (
+            <Link href="/my-reports" className="mt-6">
+              <Button variant="outline">Clear all filters</Button>
+            </Link>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default async function MyReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const statusFilter = params.status ?? "all";
+  const currentPage = Math.max(1, Number(params.page) || 1);
+
+  const suspenseKey = `${statusFilter}-${currentPage}`;
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -74,67 +151,16 @@ export default async function MyReportsPage({
 
       <div className="mb-6">
         <Suspense fallback={null}>
-          <MyReportsFilter totalCount={totalCount} />
+          <MyReportsFilter />
         </Suspense>
       </div>
 
-      {pageReports.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {pageReports.map((report) => (
-            <ReportCard
-              key={report.id}
-              report={report}
-              href={`/my-reports/${report.id}`}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-          <div className="mb-6 inline-flex size-16 items-center justify-center rounded-2xl bg-muted">
-            <FileText className="size-8 text-muted-foreground" />
-          </div>
-          {isNewUser ? (
-            <>
-              <h2 className="text-lg font-semibold text-foreground">
-                No reports yet
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                You haven&apos;t submitted any road hazard reports yet. Be the
-                first to report an issue in your community.
-              </p>
-              <Link href="/submit" className="mt-6">
-                <Button>Submit a report</Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold text-foreground">
-                No reports for this status
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {isFiltered
-                  ? "Try selecting a different status filter to see more reports."
-                  : "You haven&apos;t submitted any road hazard reports yet."}
-              </p>
-              {isFiltered && (
-                <Link href="/my-reports" className="mt-6">
-                  <Button variant="outline">Clear all filters</Button>
-                </Link>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div className="mt-8">
-          <PaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            buildHref={buildHref}
-          />
-        </div>
-      )}
+      <Suspense key={suspenseKey} fallback={<ReportsGridSkeleton />}>
+        <MyReportsContent
+          statusFilter={statusFilter}
+          currentPage={currentPage}
+        />
+      </Suspense>
     </div>
   );
 }

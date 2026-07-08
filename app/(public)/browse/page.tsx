@@ -4,25 +4,27 @@ import { ReportCard } from "@/components/reports/report-card";
 import { FilterBar } from "@/components/browse/filter-bar";
 import { PaginationBar } from "@/components/browse/pagination-bar";
 import { BrowseMapWrapper } from "@/components/browse/browse-map-wrapper";
-import { Map, LayoutGrid } from "lucide-react";
+import { ReportsGridSkeleton, MapSkeleton } from "@/components/reports/reports-grid-skeleton";
+import { Map } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/types/database.types";
 
 const PAGE_SIZE = 12;
 
-export default async function BrowsePage({
-  searchParams,
+async function BrowseReports({
+  categoryFilter,
+  statusFilter,
+  query,
+  view,
+  currentPage,
 }: {
-  searchParams: Promise<{ category?: string; status?: string; page?: string; q?: string; view?: string }>;
+  categoryFilter: string;
+  statusFilter: string;
+  query: string;
+  view: "grid" | "map";
+  currentPage: number;
 }) {
-  const params = await searchParams;
-  const categoryFilter = params.category ?? "all";
-  const statusFilter = params.status ?? "all";
-  const query = params.q?.trim() ?? "";
-  const view = params.view === "map" ? "map" : "grid";
-  const currentPage = Math.max(1, Number(params.page) || 1);
-
   const supabase = await createSupabaseServerClient();
 
   let countQuery = supabase
@@ -90,6 +92,97 @@ export default async function BrowsePage({
     (categoryFilter && categoryFilter !== "all") ||
     (statusFilter && statusFilter !== "all");
 
+  if (view === "map" && pageReports.length > 0) {
+    return (
+      <>
+        <BrowseMapWrapper
+          reports={pageReports.map((r) => ({
+            id: r.id,
+            title: r.title,
+            category: r.category,
+            status: r.status,
+            latitude: r.latitude,
+            longitude: r.longitude,
+            photo_urls: r.photo_urls,
+          }))}
+        />
+      </>
+    );
+  }
+
+  if (view === "grid" && pageReports.length > 0) {
+    return (
+      <>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {totalCount} {totalCount === 1 ? "report" : "reports"}
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {pageReports.map((report) => (
+            <ReportCard key={report.id} report={report} />
+          ))}
+        </div>
+        {totalPages > 1 && (
+          <div className="mt-8">
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              buildHref={buildHref}
+            />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
+      <div className="mb-6 inline-flex size-16 items-center justify-center rounded-2xl bg-muted">
+        <Map className="size-8 text-muted-foreground" />
+      </div>
+      {isFiltered ? (
+        <>
+          <h2 className="text-lg font-semibold text-foreground">
+            No reports match your filters
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Try changing or clearing the filters to see more reports.
+          </p>
+          <Link href="/browse" className="mt-6">
+            <Button variant="outline">Clear all filters</Button>
+          </Link>
+        </>
+      ) : (
+        <>
+          <h2 className="text-lg font-semibold text-foreground">
+            No reports yet
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            There are no road hazard reports to show right now. Be the first
+            to report an issue in your community.
+          </p>
+          <Link href="/submit" className="mt-6">
+            <Button>Submit a report</Button>
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default async function BrowsePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; status?: string; page?: string; q?: string; view?: string }>;
+}) {
+  const params = await searchParams;
+  const categoryFilter = params.category ?? "all";
+  const statusFilter = params.status ?? "all";
+  const query = params.q?.trim() ?? "";
+  const view = params.view === "map" ? "map" : "grid";
+  const currentPage = Math.max(1, Number(params.page) || 1);
+
+  const suspenseKey = `${view}-${categoryFilter}-${statusFilter}-${query}-${currentPage}`;
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -108,71 +201,22 @@ export default async function BrowsePage({
 
       <div className="mb-6">
         <Suspense fallback={null}>
-          <FilterBar totalCount={view === "map" ? totalCount : totalCount} view={view} />
+          <FilterBar view={view} />
         </Suspense>
       </div>
 
-      {view === "map" && pageReports.length > 0 ? (
-        <BrowseMapWrapper
-          reports={pageReports.map((r) => ({
-            id: r.id,
-            title: r.title,
-            category: r.category,
-            status: r.status,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            photo_urls: r.photo_urls,
-          }))}
+      <Suspense
+        key={suspenseKey}
+        fallback={view === "map" ? <MapSkeleton /> : <ReportsGridSkeleton />}
+      >
+        <BrowseReports
+          categoryFilter={categoryFilter}
+          statusFilter={statusFilter}
+          query={query}
+          view={view}
+          currentPage={currentPage}
         />
-      ) : view === "grid" && pageReports.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {pageReports.map((report) => (
-            <ReportCard key={report.id} report={report} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-          <div className="mb-6 inline-flex size-16 items-center justify-center rounded-2xl bg-muted">
-            <Map className="size-8 text-muted-foreground" />
-          </div>
-          {isFiltered ? (
-            <>
-              <h2 className="text-lg font-semibold text-foreground">
-                No reports match your filters
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Try changing or clearing the filters to see more reports.
-              </p>
-              <Link href="/browse" className="mt-6">
-                <Button variant="outline">Clear all filters</Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold text-foreground">
-                No reports yet
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                There are no road hazard reports to show right now. Be the first
-                to report an issue in your community.
-              </p>
-              <Link href="/submit" className="mt-6">
-                <Button>Submit a report</Button>
-              </Link>
-            </>
-          )}
-        </div>
-      )}
-
-      {totalPages > 1 && view === "grid" && (
-        <div className="mt-8">
-          <PaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            buildHref={buildHref}
-          />
-        </div>
-      )}
+      </Suspense>
     </div>
   );
 }

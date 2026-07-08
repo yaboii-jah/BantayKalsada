@@ -15,7 +15,7 @@ export default function BrowseLoading() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {Array.from({ length: 10 }).map((_, i) => (
+        {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="overflow-hidden rounded-lg border border-border">
             <Skeleton className="aspect-[4/3] rounded-none" />
             <div className="space-y-2 p-4">

@@ -1,6 +1,6 @@
-# Bantay Kalsada — v1 Codebase Context
+# Bantay Kalsada — Codebase Context
 
-This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Read this before implementing any v1.1 features.
+This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete v1 implementation including Google OAuth, in-app notifications, keyword search, map view with bounding box filter, admin analytics, and Suspense-boundary loading for filter navigation.
 
 ---
 
@@ -13,7 +13,7 @@ The app uses Next.js App Router **route groups** to enforce access tiers. Each g
 | `(public)` | `/`, `/browse`, `/reports/[id]` | Anyone — no auth needed | Shared nav + footer (Ft2 inline) |
 | `(auth)` | `/login`, `/register`, `/reset-password` | Unauthenticated only | Centered card on gradient bg |
 | `(citizen)` | `/submit`, `/my-reports`, `/my-reports/[id]` | Auth + verified email | Same nav/footer as public |
-| `admin/` | `/admin/*` (dashboard, queues, review) | Auth + `role: ADMIN` | Sidebar + content canvas |
+| `admin/` | `/admin/*` (dashboard with analytics, queues, review) | Auth + `role: ADMIN` | Sidebar + content canvas |
 
 ---
 
@@ -169,9 +169,11 @@ Two layers prevent unapproved reports from leaking:
 1. **RLS policy** at the database level: `USING (status IN ('APPROVED', 'RESOLVED'))` for anonymous reads
 2. **Application filter** via `.in("status", ...)` — defense in depth
 
-The page renders a responsive card grid (1→5 columns), with:
-- Category + status filter bar (driven by URL search params: `?category=POTHOLE&status=APPROVED&page=2`)
-- Pagination bar (12 per page)
+The page renders a responsive card grid (1→5 columns) or a map with clustered markers, with:
+- Category + status filter bar, keyword search input, grid/map view toggle (all driven by URL search params: `?category=POTHOLE&status=APPROVED&q=pothole&view=map&page=2`)
+- Map view: shows all filtered results as Leaflet markers with clustering via `react-leaflet-cluster`; a purely client-side bounding box filter constrains markers and count to the current viewport as the user pans/zooms; a dynamic count bar displays "Showing X of Y reports in this area" with a Reset button
+- Pagination bar (12 per page, hidden in map view)
+- Suspense-boundary loading: data-fetching sub-components wrapped in `<Suspense key={serializedParams}>` show skeleton cards or map spinner when filters change
 - Loading skeleton (`loading.tsx`)
 - Error boundary with retry (`error.tsx`)
 - Empty state (no reports / no filter matches)
@@ -190,6 +192,16 @@ not-found.tsx     — Custom 404 (detail pages only)
 ```
 
 Client components are used only when required (Leaflet maps, form interactions, `usePathname`, `useSearchParams`, `useState`). Sub-components live in `components/{feature}/`.
+
+### Suspense-Boundary Loading for Filter Navigation
+
+In addition to `loading.tsx` (skeleton while the page bundle loads), browse and my-reports pages wrap their data-fetching sub-components in `<Suspense key={serializedParams}>`. When any filter/pagination/search param changes, the key changes and the Suspense fallback (skeleton cards or map spinner) is shown while the server re-fetches data. The report count text was moved inside the Suspense boundary so it updates with each filter — the `FilterBar` and `MyReportsFilter` no longer receive a `totalCount` prop.
+
+```
+page.tsx (Server)
+  └─ Suspense key={serializedParams} fallback={<ReportsGridSkeleton />}
+       └─ AsyncContent (Server, fetches data + renders grid/map/pagination)
+```
 
 ### Server Component → Client Island
 
@@ -264,6 +276,7 @@ The backend for a v1.1 notification center is fully in place — only the citize
 app/                     — Next.js App Router pages, layouts, loading states, error boundaries
   actions.ts             — citizen Server Actions (submitReport)
   (auth)/                — login, register, reset-password
+  auth/callback/         — OAuth callback (exchanges Google code for session)
   (citizen)/             — submit, my-reports
   (public)/              — landing, browse, reports/[id]
   admin/                 — dashboard, queues, review, admin Server Actions
@@ -271,11 +284,11 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   verify-email/          — email verification prompt
 
 components/
-  admin/                 — sidebar, queue table, action buttons, status count cards
-  auth/                  — auth card, branding panel
-  browse/                — filter bar, pagination bar, photo gallery
+  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts
+  auth/                  — auth card, branding panel, Google sign-in button
+  browse/                — filter bar, pagination bar, photo gallery, browse map (clustered, bounding box filter)
   maps/                  — Leaflet map, location picker (all client-side, dynamic import)
-  reports/               — report form, card, status badge, photo upload, my-reports filter
+  reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton
   ui/                    — Shadcn/ui primitives (DO NOT EDIT)
 
 lib/

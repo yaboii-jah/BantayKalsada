@@ -15,7 +15,8 @@ change.
 
 ## Current Goal
 
-- Google OAuth login — branded button, callback route, divider on login/register pages.
+- Google OAuth login — branded button, callback route fix, divider on login/register pages.
+- Loading spinner on filter navigation — Suspense + skeleton grid on `/browse` and `/my-reports`.
 
 ## Completed
 
@@ -214,13 +215,74 @@ change.
 - [x] `context/architecture.md` — OAuth noted
 - [x] `npm run build` passes with zero errors
 
-## In Progress
+### Google OAuth Callback Fix
 
-- Google OAuth — branded button on login/register, callback route, divider.
+- [x] Fix `app/auth/callback/route.ts` — replaced `NextResponse.next()` (unsupported in route handlers) with `request.cookies.set()` for session cookies during `exchangeCodeForSession`, then copied cookies to redirect response
+- [x] Added error handling — failed exchange falls through to `/login?error=OAuth failed` redirect
+- [x] `npm run build` passes with zero errors
+
+### Loading Spinner on Filter Navigation
+
+- [x] Created `components/reports/reports-grid-skeleton.tsx` — skeleton cards matching ReportCard layout (thumbnail, badge row, title lines) + `MapSkeleton` with spinning loader
+- [x] Refactored `app/(public)/browse/page.tsx` — extracted data fetching + rendering into `BrowseReports` async sub-component, wrapped in `<Suspense>` with `key` derived from search params, fallback shows `<ReportsGridSkeleton />` or `<MapSkeleton />` depending on view
+- [x] Refactored `app/(citizen)/my-reports/page.tsx` — same pattern: `MyReportsContent` async sub-component in `<Suspense key={...}>` with skeleton fallback
+- [x] Moved report count text from filter bars into the Suspense-wrapped content components so count updates accurately with each filter change
+- [x] Removed `totalCount` prop from `FilterBar` and `MyReportsFilter` (count now rendered inside async content)
+- [x] `npm run build` passes with zero errors
+
+### Map-Driven Bounding Box Filter
+
+- [x] `components/browse/browse-map.tsx` — Added `MapContent` component that tracks map viewport via `useMapEvents`, computes `visibleReports` client-side via `bounds.contains()`, renders only visible markers in `MarkerClusterGroup`, and shows a dynamic count bar ("Showing X of Y reports in this area") with a Reset button
+- [x] Removed `FitBounds` component (logic merged into `MapContent`)
+- [x] `app/(public)/browse/page.tsx` — Removed server-rendered count from map view branch (count now lives in the client map component and updates reactively)
+- [x] Pure client-side — no server round-trip on pan/zoom, no URL params pushed
+- [x] `context/feature-specs/13-bounding-box-filter.md` written with full spec
+- [x] `context/project-overview.md` — moved from Out of Scope to In Scope
+- [x] `context/architecture.md` — noted in browse section
+- [x] `npm run build` passes with zero errors
+
+### Admin Analytics Dashboard
+
+- [x] Installed `recharts` — SVG chart library
+- [x] Created `components/admin/analytics-charts.tsx` — client component with 3 charts (area chart for submissions over time, horizontal bar chart for category distribution, donut chart for status distribution) and 4 metric cards (approval rate %, avg resolution hours, total reports, reports this month)
+- [x] Updated `app/admin/page.tsx` — replaced 4 separate `head: true` count queries with a single query fetching `submitted_at, category, status, resolved_at`, computing all metrics server-side
+- [x] Updated `app/admin/loading.tsx` — added skeleton blocks for metric cards and chart areas
+- [x] `context/feature-specs/14-admin-analytics.md` written with full spec
+- [x] `context/project-overview.md` — moved from Out of Scope to In Scope
+- [x] `context/architecture.md` — noted in admin section
+- [x] `npm run build` passes with zero errors
 
 ## Next Up
 
-- None.
+### Quick Wins (v2.0)
+- **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
+- **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
+- **PWA support** — `manifest.json`, service worker, install prompt
+- **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
+- **Export admin reports to CSV** — server-generated CSV download button
+
+### Community Features (v2.1)
+- **Report confirmations ("I saw this too")** — new `confirmations` table, +1 button on reports, credibility badge
+- **Comments on reports** — threaded discussion with admin moderation
+- **Report severity tagging** — Minor / Urgent / Emergency label on submission form
+- **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
+
+### Mobile & Notifications (v2.2)
+- **Push notifications** — service worker + Supabase Realtime for real-time status alerts
+- **Offline submission** — queue report data in localStorage, submit on reconnect
+- **Geographic search / barangay filter** — filter browse feed by location
+
+### Admin Power Tools (v3.0)
+- **Report editing by admin** — allow admins to fix typos, recategorise, adjust map pin
+- **Citizen report flagging** — "Already fixed" / "Wrong location" button on report pages
+- **Activity log / audit trail** — view who approved/rejected each report and when
+- **Report lifecycle timeline** — visual timeline on detail page (submitted → reviewed → resolved)
+
+### Ecosystem (v3.0+)
+- **LGU / DPWH dashboard** — region-scoped admin roles with filtered view
+- **Public REST API** — expose approved reports to third-party consumers
+- **SMS notifications** — integration with Philippine SMS gateway (Semaphore, Chikka)
+- **Multi-language support** — Filipino + English + Cebuano/Ilocano
 
 ## Open Questions
 

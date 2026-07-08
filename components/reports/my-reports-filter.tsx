@@ -11,7 +11,7 @@ const statusTabs = [
   { value: "RESOLVED", label: "Resolved" },
 ];
 
-export function MyReportsFilter({ totalCount }: { totalCount: number }) {
+export function MyReportsFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentStatus = searchParams.get("status") ?? "all";
@@ -46,9 +46,6 @@ export function MyReportsFilter({ totalCount }: { totalCount: number }) {
           </button>
         ))}
       </div>
-      <p className="text-sm text-muted-foreground">
-        {totalCount} {totalCount === 1 ? "report" : "reports"}
-      </p>
     </div>
   );
 }
