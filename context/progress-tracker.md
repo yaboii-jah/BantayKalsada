@@ -229,6 +229,15 @@ change.
 - [x] Removed `totalCount` prop from `FilterBar` and `MyReportsFilter` (count now rendered inside async content)
 - [x] `npm run build` passes with zero errors
 
+### Browse Dropdown Filter Clipping Fix
+
+- [x] Fixed `InlineSelect` in `components/browse/filter-bar.tsx` — dropdown menus were clipped by parent `overflow-x-auto` container on mobile (visible in DOM but invisible to user)
+- [x] Renders dropdown via `createPortal` to `document.body` with `position: fixed` calculated from trigger button's `getBoundingClientRect()`
+- [x] Added scroll/resize listeners to reposition the portal dropdown
+- [x] Click-outside detection checks both the trigger container and the portal menu element
+- [x] Added `shrink-0` to prevent trigger button from collapsing in flex layout
+- [x] `npm run build` passes with zero errors
+
 ### Map-Driven Bounding Box Filter
 
 - [x] `components/browse/browse-map.tsx` — Added `MapContent` component that tracks map viewport via `useMapEvents`, computes `visibleReports` client-side via `bounds.contains()`, renders only visible markers in `MarkerClusterGroup`, and shows a dynamic count bar ("Showing X of Y reports in this area") with a Reset button
