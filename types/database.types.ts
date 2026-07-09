@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -14,35 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      feedback: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          description: string
+          id: string
+          photo_urls: string[]
+          rating: number | null
+          status: Database["public"]["Enums"]["feedback_status"]
+          title: string
+          type: Database["public"]["Enums"]["feedback_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          photo_urls?: string[]
+          rating?: number | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          title: string
+          type: Database["public"]["Enums"]["feedback_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          photo_urls?: string[]
+          rating?: number | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["feedback_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
+          feedback_id: string | null
           id: string
           is_read: boolean
           message: string
-          report_id: string
+          report_id: string | null
           type: Database["public"]["Enums"]["notification_type"]
           user_id: string
         }
         Insert: {
           created_at?: string
+          feedback_id?: string | null
           id?: string
           is_read?: boolean
           message: string
-          report_id: string
+          report_id?: string | null
           type: Database["public"]["Enums"]["notification_type"]
           user_id: string
         }
         Update: {
           created_at?: string
+          feedback_id?: string | null
           id?: string
           is_read?: boolean
           message?: string
-          report_id?: string
+          report_id?: string | null
           type?: Database["public"]["Enums"]["notification_type"]
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "feedback"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_report_id_fkey"
             columns: ["report_id"]
@@ -141,18 +193,22 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      feedback_status: "OPEN" | "ACKNOWLEDGED" | "CLOSED"
+      feedback_type: "BUG_REPORT" | "FEATURE_REQUEST" | "GENERAL"
       notification_type:
+        | "FEEDBACK_ACKNOWLEDGED"
+        | "FEEDBACK_CLOSED"
         | "REPORT_APPROVED"
         | "REPORT_REJECTED"
         | "REPORT_RESOLVED"
       report_category:
-        | "POTHOLE"
         | "FLOODED_ROAD"
+        | "OTHER"
+        | "POTHOLE"
         | "ROAD_ACCIDENT"
         | "ROAD_RAGE"
-        | "OTHER"
-      report_status: "PENDING" | "APPROVED" | "REJECTED" | "RESOLVED"
-      user_role: "CITIZEN" | "ADMIN"
+      report_status: "APPROVED" | "PENDING" | "REJECTED" | "RESOLVED"
+      user_role: "ADMIN" | "CITIZEN"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -280,20 +336,24 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      feedback_status: ["ACKNOWLEDGED", "CLOSED", "OPEN"],
+      feedback_type: ["BUG_REPORT", "FEATURE_REQUEST", "GENERAL"],
       notification_type: [
+        "FEEDBACK_ACKNOWLEDGED",
+        "FEEDBACK_CLOSED",
         "REPORT_APPROVED",
         "REPORT_REJECTED",
         "REPORT_RESOLVED",
       ],
       report_category: [
-        "POTHOLE",
         "FLOODED_ROAD",
+        "OTHER",
+        "POTHOLE",
         "ROAD_ACCIDENT",
         "ROAD_RAGE",
-        "OTHER",
       ],
-      report_status: ["PENDING", "APPROVED", "REJECTED", "RESOLVED"],
-      user_role: ["CITIZEN", "ADMIN"],
+      report_status: ["APPROVED", "PENDING", "REJECTED", "RESOLVED"],
+      user_role: ["ADMIN", "CITIZEN"],
     },
   },
 } as const

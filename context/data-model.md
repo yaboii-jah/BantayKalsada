@@ -9,11 +9,12 @@ This file defines the complete database schema for Bantay Kalsada. It is the aut
 The database owns all structured application data. It does not store binary content, authentication tokens, or session data — those are Supabase's responsibility.
 
 | Data | Location |
-|---|---|
+|---|---|---|
 | User identity (credentials, sessions, email verification) | `auth.users` — Supabase-managed, never written to directly |
 | User display name and role | `profiles` table — application-owned |
 | Road incident reports | `reports` table |
 | Status change notifications | `notifications` table |
+| App feedback submissions | `feedback` table |
 | Report photos | Cloudinary —  only the URL strings are stored in the database |
 
 ---
@@ -43,8 +44,14 @@ CREATE TYPE report_status AS ENUM (
 CREATE TYPE notification_type AS ENUM (
   'REPORT_APPROVED',
   'REPORT_REJECTED',
-  'REPORT_RESOLVED'
+  'REPORT_RESOLVED',
+  'FEEDBACK_ACKNOWLEDGED',
+  'FEEDBACK_CLOSED'
 );
+
+CREATE TYPE feedback_type AS ENUM ('BUG_REPORT', 'FEATURE_REQUEST', 'GENERAL');
+
+CREATE TYPE feedback_status AS ENUM ('OPEN', 'ACKNOWLEDGED', 'CLOSED');
 ```
 
 ---
@@ -158,13 +165,14 @@ CREATE TABLE reports (
 
 ### `notifications`
 
-Stores in-app notification records created when a report's status changes. One row per status change event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
+Stores in-app notification records created when a report's status changes or when feedback is acknowledged/closed. One row per status change event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
 
 ```sql
 CREATE TABLE notifications (
   id          uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     uuid              NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  report_id   uuid              NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  report_id   uuid              NULL REFERENCES reports(id) ON DELETE CASCADE,
+  feedback_id uuid              NULL REFERENCES feedback(id) ON DELETE CASCADE,
   type        notification_type NOT NULL,
   message     text              NOT NULL,
   is_read     boolean           NOT NULL DEFAULT false,
@@ -176,11 +184,50 @@ CREATE TABLE notifications (
 |---|---|---|---|---|
 | `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
 | `user_id` | `uuid` | No | — | FK to `auth.users.id`. The citizen being notified. |
-| `report_id` | `uuid` | No | — | FK to `reports.id`. The report this notification relates to. |
+| `report_id` | `uuid` | Yes | — | FK to `reports.id`. Null for feedback notifications. |
+| `feedback_id` | `uuid` | Yes | — | FK to `feedback.id`. Null for report notifications. |
 | `type` | `notification_type` | No | — | The event type. Determines the message template. |
 | `message` | `text` | No | — | Human-readable notification text generated server-side at creation time. |
 | `is_read` | `boolean` | No | `false` | Flipped to `true` when the citizen views the notification. |
 | `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
+
+### `feedback`
+
+Stores app feedback submissions from logged-in users (bug reports, feature requests, and general feedback). Admins triage submissions by acknowledging or closing them.
+
+```sql
+CREATE TABLE feedback (
+  id              uuid            PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         uuid            NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type            feedback_type   NOT NULL,
+  title           text            NOT NULL,
+  description     text            NOT NULL,
+  rating          smallint        NULL,
+  photo_urls      text[]          NOT NULL DEFAULT '{}',
+  status          feedback_status NOT NULL DEFAULT 'OPEN',
+  admin_note      text            NULL,
+  created_at      timestamptz     NOT NULL DEFAULT now(),
+  updated_at      timestamptz     NOT NULL DEFAULT now(),
+
+  CONSTRAINT feedback_rating_range CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
+  CONSTRAINT feedback_title_length CHECK (char_length(title) >= 10 AND char_length(title) <= 100),
+  CONSTRAINT feedback_description_length CHECK (char_length(description) >= 20 AND char_length(description) <= 2000)
+);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `user_id` | `uuid` | No | — | FK to `auth.users.id`. Cascade deletes when the auth user is deleted. |
+| `type` | `feedback_type` | No | — | Bug Report, Feature Request, or General. |
+| `title` | `text` | No | — | 10–100 characters. Enforced by `feedback_title_length` constraint and Zod. |
+| `description` | `text` | No | — | 20–2000 characters. Enforced by `feedback_description_length` constraint and Zod. |
+| `rating` | `smallint` | Yes | `null` | 1–5 star rating. Optional. Enforced by `feedback_rating_range` constraint. |
+| `photo_urls` | `text[]` | No | `'{}'` | Cloudinary CDN URLs for uploaded photos. 0–3 items, optional. Uploaded client-side before submission. |
+| `status` | `feedback_status` | No | `'OPEN'` | Set by server-side logic only. Never accepted as a client value. |
+| `admin_note` | `text` | Yes | `null` | Internal admin note visible to the citizen on the detail page. Set via admin Server Action. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
+| `updated_at` | `timestamptz` | No | `now()` | Must be updated via trigger whenever the row changes. |
 
 ---
 
@@ -192,10 +239,14 @@ auth.users (Supabase-managed)
   ├── profiles.id                (one-to-one, cascade delete)
   ├── reports.submitted_by_id   (one-to-many, cascade delete)
   ├── reports.reviewed_by_id    (one-to-many, set null on delete)
+  ├── feedback.user_id          (one-to-many, cascade delete)
   └── notifications.user_id     (one-to-many, cascade delete)
 
 reports
   └── notifications.report_id   (one-to-many, cascade delete)
+
+feedback
+  └── notifications.feedback_id (one-to-many, cascade delete)
 ```
 
 ---
@@ -223,6 +274,15 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 
 -- notifications: filtering unread notifications for badge count
 CREATE INDEX idx_notifications_user_id_is_read ON notifications(user_id, is_read);
+
+-- feedback: citizen's own feedback history lookup
+CREATE INDEX idx_feedback_user_id ON feedback(user_id);
+
+-- feedback: admin inbox filtering by status
+CREATE INDEX idx_feedback_status ON feedback(status);
+
+-- feedback: admin inbox sorted newest first
+CREATE INDEX idx_feedback_created_at ON feedback(created_at DESC);
 ```
 
 ---
@@ -286,9 +346,10 @@ CREATE TRIGGER set_profiles_updated_at
 Enable RLS on all application-owned tables. Admin operations use the service role key (bypasses RLS) exclusively in server-side API route handlers — never in client-side code.
 
 ```sql
-ALTER TABLE profiles     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE reports      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feedback      ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
@@ -366,6 +427,26 @@ Note: Notifications are created by admin Server Actions using the service role c
 
 ---
 
+### `feedback` RLS
+
+```sql
+-- Citizens can read their own feedback
+CREATE POLICY "Citizens can read own feedback"
+  ON feedback FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Authenticated users can insert feedback
+CREATE POLICY "Authenticated users can insert feedback"
+  ON feedback FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+```
+
+Note: Feedback entries are inserted by the `submitFeedback` Server Action using the anon-key server client, governed by the INSERT RLS policy. Admin operations (status changes, admin_note updates) use the service role client to bypass RLS. There is no UPDATE or DELETE policy for authenticated users — citizens cannot edit or delete their feedback after submission.
+
+---
+
 ## Business Validation Rules
 
 These rules are enforced at two levels: database constraints (defined above) and Zod schemas (in `lib/validations/`). Both layers must agree. If a constraint exists in the database, the corresponding Zod rule must exist too — and vice versa.
@@ -383,6 +464,12 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `reports.status` | Set server-side only — never accepted from client | API route handler |
 | `profiles.role` | Set via seed or Supabase Studio only — never accepted from client | API route handler + no RLS update policy for role |
 | Report submission rate | Max 5 submissions per user per 24-hour window | API route handler (count query before insert) |
+| `feedback.title` | Required, 10–100 characters | DB constraint + Zod |
+| `feedback.description` | Required, 20–2000 characters | DB constraint + Zod |
+| `feedback.rating` | Optional, 1–5 (if provided) | DB constraint + Zod |
+| `feedback.type` | Must match a valid enum value | DB enum type + Zod |
+| `feedback.status` | Set server-side only — never accepted from client | Server Action handler |
+| Feedback submission rate | Max 3 submissions per user per 24-hour window | Server Action (count query before insert) |
 
 ---
 

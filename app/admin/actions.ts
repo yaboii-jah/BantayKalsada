@@ -8,9 +8,17 @@ import {
   resolveReportSchema,
 } from "@/lib/validations/report";
 import {
+  acknowledgeFeedbackSchema,
+  closeFeedbackSchema,
+} from "@/lib/validations/feedback";
+import {
   fetchReportWithSubmitter,
   sendReportNotifications,
 } from "@/lib/admin-notifications";
+import {
+  fetchFeedbackWithSubmitter,
+  sendFeedbackNotifications,
+} from "@/lib/admin-feedback-notifications";
 
 export interface AdminActionResponse {
   success: boolean;
@@ -206,6 +214,108 @@ export async function resolveReport(
         reportData.submitter,
         "REPORT_RESOLVED",
       ).catch((err) => console.error("Failed to send resolution notification:", err));
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function acknowledgeFeedback(
+  feedbackId: string,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const parsed = acknowledgeFeedbackSchema.safeParse({ feedbackId });
+    if (!parsed.success) {
+      return { success: false, error: "Invalid feedback ID" };
+    }
+
+    const feedbackData = await fetchFeedbackWithSubmitter(parsed.data.feedbackId);
+    if (!feedbackData) {
+      return { success: false, error: "Feedback not found" };
+    }
+
+    if (feedbackData.status !== "OPEN") {
+      return { success: false, error: "Only open feedback can be acknowledged" };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { error: updateError } = await adminClient
+      .from("feedback")
+      .update({
+        status: "ACKNOWLEDGED",
+      })
+      .eq("id", parsed.data.feedbackId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to acknowledge feedback" };
+    }
+
+    if (feedbackData.submitter) {
+      sendFeedbackNotifications(
+        parsed.data.feedbackId,
+        feedbackData.title,
+        feedbackData.submitter,
+        "FEEDBACK_ACKNOWLEDGED",
+      ).catch((err) => console.error("Failed to send feedback acknowledgment:", err));
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function closeFeedback(
+  feedbackId: string,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const parsed = closeFeedbackSchema.safeParse({ feedbackId });
+    if (!parsed.success) {
+      return { success: false, error: "Invalid feedback ID" };
+    }
+
+    const feedbackData = await fetchFeedbackWithSubmitter(parsed.data.feedbackId);
+    if (!feedbackData) {
+      return { success: false, error: "Feedback not found" };
+    }
+
+    if (feedbackData.status === "CLOSED") {
+      return { success: false, error: "Feedback is already closed" };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { error: updateError } = await adminClient
+      .from("feedback")
+      .update({
+        status: "CLOSED",
+      })
+      .eq("id", parsed.data.feedbackId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to close feedback" };
+    }
+
+    if (feedbackData.submitter) {
+      sendFeedbackNotifications(
+        parsed.data.feedbackId,
+        feedbackData.title,
+        feedbackData.submitter,
+        "FEEDBACK_CLOSED",
+      ).catch((err) => console.error("Failed to send feedback closed notification:", err));
     }
 
     return { success: true };

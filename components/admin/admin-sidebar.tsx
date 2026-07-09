@@ -10,6 +10,7 @@ import {
   CheckCircle,
   XCircle,
   CheckCheck,
+  MessageSquare,
   LogOut,
   ShieldCheck,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/admin/approved", label: "Approved", icon: CheckCircle },
   { href: "/admin/rejected", label: "Rejected", icon: XCircle },
   { href: "/admin/resolved", label: "Resolved", icon: CheckCheck },
+  { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
 ] as const;
 
 export function AdminSidebar({

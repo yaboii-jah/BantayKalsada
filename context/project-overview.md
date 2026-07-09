@@ -75,6 +75,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Rate limiting: maximum 5 report submissions per citizen per 24-hour window.
 - In-app notification center: bell icon with unread badge, lazy-loaded dropdown, mark as read, and delete/clear all.
 - Map-view bounding box filter: as the user pans/zooms the map on `/browse?view=map`, markers and report count auto-constrain to the current viewport.
+- App feedback system: any logged-in user can submit bug reports, feature requests, or general feedback with an optional 1–5 star rating. Admins view submissions in a dedicated inbox and can acknowledge or close them. Status changes trigger in-app notifications and emails.
 
 ### Out of Scope
 

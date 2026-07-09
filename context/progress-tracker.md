@@ -15,7 +15,7 @@ change.
 
 ## Current Goal
 
-- None — pending next feature selection.
+- Implement App Feedback feature — see `context/feature-specs/15-feedback-feature.md`
 
 ## Completed
 
@@ -252,6 +252,28 @@ change.
 - [x] `npm run build` passes with zero errors
 
 ## Next Up
+
+### App Feedback (Current Feature — Complete)
+- [x] Migration 1: notification_type enum values (non-transaction)
+- [x] Migration 2: feedback tables, RLS, indexes
+- [x] Supabase types regenerated (`database.types.ts`)
+- [x] Notification bell updated — handles FEEDBACK_ACKNOWLEDGED / FEEDBACK_CLOSED types
+- [x] Zod schemas, Server Actions, email templates
+- [x] Citizen pages (/feedback, /my-feedback, /my-feedback/[id])
+- [x] Admin pages (/admin/feedback, /admin/feedback/[id])
+- [x] Nav + sidebar links, notification bell updates
+- [x] Fixed /my-feedback page layout — added `mx-auto max-w-7xl` centering wrapper
+- [x] Fixed avatar dropdown — "Feedback" renamed to "My Feedback", links to `/my-feedback`
+- [x] Replaced Radix Select in feedback form with inline custom dropdown (fixes body scroll lock layout shift)
+- [x] `/my-feedback` added to middleware `protectedRoutes` — unauthenticated users redirected to `/login?redirect=/my-feedback`
+- [x] Server-side auth guard on both `/my-feedback` and `/my-feedback/[id]` — `return null` replaced with `redirect("/login?redirect=/my-feedback")`
+- [x] Feedback card status badge overflow fix — added `flex-wrap` to badges row
+- [x] **Photo uploads**: Migration 3 adds `photo_urls text[]` to feedback table
+- [x] **Zod**: `createFeedbackSchema` extended with optional `photo_urls` (max 3)
+- [x] **Server Action**: `submitFeedback` now inserts `photo_urls`
+- [x] **Form**: `PhotoUpload` component integrated into `FeedbackForm`, emits URLs on submit
+- [x] **Detail pages**: `PhotoGallery` (reused carousel) shown on citizen + admin feedback detail pages
+- [x] `npm run build` passes
 
 ### Quick Wins (v2.0)
 - **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
