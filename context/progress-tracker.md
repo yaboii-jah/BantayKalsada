@@ -238,6 +238,12 @@ change.
 - [x] Added `shrink-0` to prevent trigger button from collapsing in flex layout
 - [x] `npm run build` passes with zero errors
 
+### Mobile Hamburger Sheet Z-Index Fix
+
+- [x] Fixed `components/ui/sheet.tsx` — Sheet overlay and content were at `z-50`, below the sticky nav header at `z-[1100]`, causing the nav bar to cover the Sheet panel on mobile
+- [x] Bumped Sheet overlay and Sheet content from `z-50` to `z-[1200]` — above the header (`1100`) and Leaflet controls (`1000`)
+- [x] `npm run build` passes with zero errors
+
 ### Map-Driven Bounding Box Filter
 
 - [x] `components/browse/browse-map.tsx` — Added `MapContent` component that tracks map viewport via `useMapEvents`, computes `visibleReports` client-side via `bounds.contains()`, renders only visible markers in `MarkerClusterGroup`, and shows a dynamic count bar ("Showing X of Y reports in this area") with a Reset button
