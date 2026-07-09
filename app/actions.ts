@@ -238,6 +238,7 @@ export async function submitFeedback(
       .single();
 
     if (insertError) {
+      console.error("submitFeedback insert error:", insertError);
       return { success: false, error: "Failed to submit feedback. Please try again." };
     }
 

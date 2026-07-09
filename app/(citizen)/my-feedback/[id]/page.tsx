@@ -73,7 +73,7 @@ export default async function MyFeedbackDetailPage({ params }: PageProps) {
   const TypeIcon = typeInfo.icon;
 
   return (
-    <div className="mx-auto max-w-3xl py-8">
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <Link
         href="/my-feedback"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"

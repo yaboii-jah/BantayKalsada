@@ -157,8 +157,8 @@ export function PublicNav() {
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72">
-            <nav className="mt-8 flex flex-col gap-4">
+          <SheetContent side="right" className="w-64 px-4 pb-6">
+            <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
               {navLinks}
               {!loading && !user && (
                 <>
@@ -187,12 +187,20 @@ export function PublicNav() {
                         Feedback
                       </Link>
                       <Link
+                        href="/my-feedback"
+                        className="text-sm font-medium text-foreground hover:text-primary"
+                        onClick={() => setSheetOpen(false)}
+                      >
+                        My Feedback
+                      </Link>
+                      <Link
                         href="/my-reports"
                         className="text-sm font-medium text-foreground hover:text-primary"
                         onClick={() => setSheetOpen(false)}
                       >
                         My Reports
                       </Link>
+                      <div className="flex-1" />
                       <Button
                     variant="destructive"
                     className="w-full"
