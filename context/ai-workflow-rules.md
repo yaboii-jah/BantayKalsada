@@ -37,6 +37,14 @@ Implement in this order. Do not advance to the next unit until the current one i
 11. **Public feed** — `/browse` listing all `APPROVED` and `RESOLVED` reports. Filter by category and status. Paginated. `/reports/[id]` public detail page with photo gallery and map.
 12. **Email notifications** — Brevo integrated. Email templates created. Emails sent on: report approved, report rejected (with reason), report resolved.
 13. **In-app notification center** — Bell icon in nav with unread badge, lazy-fetched dropdown, mark as read, mark all as read, per-item delete, clear all.
+14. **Google OAuth login** — Google sign-in button on login and register pages. OAuth callback route exchanges code for session. Database trigger handles profile creation from Google metadata.
+15. **Loading spinner on filter navigation** — Suspense-wrapped async content components with skeleton fallbacks on browse and my-reports pages. URL search param changes trigger new Suspense keys.
+16. **Browse dropdown filter clipping fix** — InlineSelect renders dropdown via `createPortal` to `document.body` to avoid clipping by `overflow-x-auto` containers.
+17. **Mobile nav polish** — Hamburger sheet width reduced to `w-64`, links centered, "My Feedback" link added, Sign out moved to bottom via flex spacer, loading skeletons for feedback detail pages.
+18. **Map-driven bounding box filter** — Client-side viewport filtering on `/browse?view=map`. Markers and count auto-constrain as user pans/zooms. No server round-trip.
+19. **Admin analytics dashboard** — `/admin` with metric cards (approval rate, avg resolution hours, total reports, reports this month), area chart (submissions over 30 days), horizontal bar chart (category distribution), donut chart (status distribution). Built with recharts.
+20. **App feedback system** — `/feedback` submission form, `/my-feedback` history, `/my-feedback/[id]` detail. Admin inbox at `/admin/feedback` with acknowledge/close actions. In-app notification + email on status changes. Photo uploads supported. Rate limited to 3/day.
+21. **Admin note on feedback** — `FeedbackNoteEditor` component on admin feedback review page. Server Action updates `admin_note` column independently of status. Notification + email sent only on first-time note add (null → string).
 
 ---
 

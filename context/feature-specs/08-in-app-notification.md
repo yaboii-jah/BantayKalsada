@@ -7,19 +7,22 @@
 - **Fetch strategy:** Lazy — notifications are NOT fetched on mount. The query fires on first click of the bell, matching GitHub/Twitter behavior. This avoids an unnecessary query for users who rarely check notifications.
 - **Types:** Uses `TypeScript` types from `database.types.ts` — no new type definitions. The `notifications` table `Row` type is used directly: `Tables<"notifications">`.
 - **Relative time:** Reuses `formatReportDate()` from `lib/date-utils.ts` — consistent display with report cards.
-- **Icons per type:** `lucide-react` CheckCircle (approved), XCircle (rejected), CheckCheck/Resolve (resolved).
+- **Icons per type:** `lucide-react` CheckCircle (approved), XCircle (rejected), CheckCheck/Resolve (resolved), MessageSquare (feedback acknowledged / note added), Check (feedback closed).
 - **Colors:** Uses existing design tokens — no new CSS variables. Unread items use `font-medium` + left border accent; read items use normal font weight.
 - **Read state visuals:** Unread: `bg-muted/50`, `border-l-2 border-primary`. Read: transparent background, `border-l-2 border-transparent`.
 
 ### Notification Types
 
-Three notification types, each with a corresponding icon and color accent:
+Six notification types, each with a corresponding icon and color accent. Report types and feedback types share the same bell dropdown:
 
 | Type | Icon | Color | Message Example |
 |------|------|-------|-----------------|
 | `REPORT_APPROVED` | `CheckCircle` | `text-status-approved` | "Your report '...' has been approved." |
 | `REPORT_REJECTED` | `XCircle` | `text-status-rejected` | "Your report '...' has been rejected." |
 | `REPORT_RESOLVED` | `CheckCheck` | `text-primary` | "Your report '...' has been marked as resolved." |
+| `FEEDBACK_ACKNOWLEDGED` | `MessageSquare` | `text-status-approved` | "Your feedback '...' has been reviewed and acknowledged." |
+| `FEEDBACK_CLOSED` | `Check` | `text-status-resolved` | "Your feedback '...' has been closed." |
+| `FEEDBACK_NOTE_ADDED` | `MessageSquare` | `text-status-approved` | "An admin has added a note to your feedback '...'." |
 
 ### Dropdown Layout
 
@@ -105,7 +108,7 @@ Citizen opens app
   → Citizen clicks notification item
     → startTransition: markNotificationAsRead(reportId)
       → Server Action: auth → update is_read=true
-    → router.push("/my-reports/[reportId]")
+    → router.push(getNotificationHref(notification)) — navigates to `/my-reports/[reportId]` for report types or `/my-feedback/[feedbackId]` for feedback types
   → Citizen clicks "Mark all as read"
     → markAllNotificationsAsRead()
       → Server Action: auth → update all user's unread is_read=true
@@ -250,5 +253,5 @@ The import path and component placement ensure the bell only renders when the us
 - `lib/admin-notifications.tsx` — no changes
 - `emails/render.ts` — no changes
 - `app/admin/actions.ts` — no changes
-- `types/database.types.ts` — no changes
+- `types/database.types.ts` — no changes (initially; later extended with `FEEDBACK_NOTE_ADDED` in spec 16)
 - `lib/date-utils.ts` — reused, not modified

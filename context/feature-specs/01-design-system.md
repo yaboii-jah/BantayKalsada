@@ -34,6 +34,6 @@ Create `lib/utils.ts` with a reusable `cn()` helper for merging Tailwind classes
 Ensure all components match the existing theme in `global.css`.
 
 ### Check when done 
-- All components import without errors
-- `cn()` works properly 
-- No default styling appears
+- [x] All components import without errors
+- [x] `cn()` works properly 
+- [x] No default styling appears

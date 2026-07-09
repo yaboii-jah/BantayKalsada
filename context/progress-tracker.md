@@ -288,9 +288,21 @@ change.
 - [x] `context/architecture.md` — noted in admin section
 - [x] `npm run build` passes with zero errors
 
-## Next Up
+### Admin Note on Feedback (Complete)
+- [x] Migration: `FEEDBACK_NOTE_ADDED` added to `notification_type` enum (`20250710000001`)
+- [x] Zod schema: `updateFeedbackNoteSchema` in `lib/validations/feedback.ts`
+- [x] Notifications lib: `FEEDBACK_NOTE_ADDED` type, message, subject in `lib/notifications.ts`
+- [x] Email template: `renderFeedbackNoteAddedEmail` in `emails/render.ts`
+- [x] Notification dispatcher: `sendFeedbackNotifications` extended for note type in `lib/admin-feedback-notifications.tsx`
+- [x] Server Action: `updateFeedbackNote` in `app/admin/actions.ts` — only notifies on null→value transition
+- [x] Client component: `FeedbackNoteEditor` in `components/admin/feedback-note-editor.tsx` — editable textarea, Save/Remove buttons, character counter
+- [x] Admin page: read-only textarea replaced with `<FeedbackNoteEditor>` in `app/admin/feedback/[id]/page.tsx`
+- [x] Notification bell: `FEEDBACK_NOTE_ADDED` icon + color added
+- [x] Supabase types: `database.types.ts` updated
+- [x] Feature spec: `context/feature-specs/16-admin-note-feature.md`
+- [x] `npm run build` passes
 
-### App Feedback (Current Feature — Complete)
+## Next Up
 - [x] Migration 1: notification_type enum values (non-transaction)
 - [x] Migration 2: feedback tables, RLS, indexes
 - [x] Supabase types regenerated (`database.types.ts`)
@@ -363,7 +375,7 @@ change.
 - **proxy.ts route protection** — three rules added: (1) authenticated users on auth routes → `/browse`, (2) unauthenticated on protected routes → `/login` (with `?redirect=` param), (3) unverified on `/submit` → `/verify-email`.
 - **Post-login redirect** — defaults to `/browse` (configurable via `DEFAULT_AUTH_REDIRECT` constant or env var in future).
 - **Reset-password cooldown** — 60s countdown on "Send again" button to prevent Supabase rate-limit issues. Token detected via `supabase.auth.onAuthStateChange` listening for `PASSWORD_RECOVERY` event.
-- **Social login** — omitted from v1.
+- **Social login** — Google OAuth added in v1 (see spec 11-oauth-google.md).
 - **Post-submit redirect** — now redirects to `/my-reports` so the citizen sees their PENDING report immediately after submission.
 - **ReportCard href prop** — Added optional `href` prop to `components/reports/report-card.tsx`. When omitted, defaults to `/reports/${id}` (backward compatible with `/browse`). Used in `/my-reports` to link cards to `/my-reports/${id}`.
 - **Status pill tabs** — `MyReportsFilter` uses inline `<button>` elements with primary/ghost styling, no Radix dependencies, avoiding the portal scroll-lock issue that affected the browse filter bar. Filters driven by `?status=` URL param.

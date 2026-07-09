@@ -150,7 +150,7 @@ Pure data helpers with no JSX:
 - `createNotification({ userId, reportId, type, message })` — calls `adminClient.from("notifications").insert(...)` using the service role client. Errors are caught and logged (not propagated) since they should never block the status update.
 - `getMessageForType(type, reportTitle)` — returns `"Your report "..." has been approved.` etc.
 - `getSubjectForType(type)` — returns `"Report Approved — Bantay Kalsada"` etc.
-- `NotificationType` — exported type alias: `"REPORT_APPROVED" | "REPORT_REJECTED" | "REPORT_RESOLVED"`
+- `NotificationType` — exported type alias: `ReportNotificationType | FeedbackNotificationType` where `ReportNotificationType` = `"REPORT_APPROVED" | "REPORT_REJECTED" | "REPORT_RESOLVED"` and `FeedbackNotificationType` = `"FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED"`
 
 ### `lib/admin-notifications.tsx` — Report submitter lookup + dispatch
 

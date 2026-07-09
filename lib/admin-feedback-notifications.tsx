@@ -3,6 +3,7 @@ import { createNotification, getMessageForType, getSubjectForType } from "@/lib/
 import { sendStatusEmail } from "@/lib/email";
 import {
   renderFeedbackAcknowledgedEmail,
+  renderFeedbackNoteAddedEmail,
   renderFeedbackClosedEmail,
 } from "@/emails/render";
 
@@ -12,7 +13,7 @@ interface SubmitterInfo {
   full_name: string;
 }
 
-type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED";
+type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED";
 
 export interface FeedbackWithSubmitter {
   id: string;
@@ -49,6 +50,7 @@ export async function sendFeedbackNotifications(
   feedbackTitle: string,
   submitter: SubmitterInfo,
   type: FeedbackNotificationType,
+  adminNote?: string,
 ): Promise<void> {
   const message = getMessageForType(type, feedbackTitle);
   const subject = getSubjectForType(type);
@@ -65,6 +67,9 @@ export async function sendFeedbackNotifications(
   switch (type) {
     case "FEEDBACK_ACKNOWLEDGED":
       htmlContent = renderFeedbackAcknowledgedEmail(submitter.full_name, feedbackTitle, feedbackId);
+      break;
+    case "FEEDBACK_NOTE_ADDED":
+      htmlContent = renderFeedbackNoteAddedEmail(submitter.full_name, feedbackTitle, feedbackId, adminNote ?? "");
       break;
     case "FEEDBACK_CLOSED":
       htmlContent = renderFeedbackClosedEmail(submitter.full_name, feedbackTitle, feedbackId);

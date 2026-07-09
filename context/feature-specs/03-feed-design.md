@@ -93,15 +93,15 @@ Responsive card grid using Tailwind:
 
 ## Check When Done
 
-- [ ] `/browse` shows paginated grid of APPROVED/RESOLVED reports (with mock data)
-- [ ] Category and status filters work via URL search params
-- [ ] Pagination works (12 per page, prev/next + page numbers)
-- [ ] Loading skeleton shows while fetching
-- [ ] Error boundary catches and displays errors
-- [ ] "/reports/[id]" shows full detail with Carousel gallery
-- [ ] Map renders on detail page via dynamic import
-- [ ] not-found page for invalid report IDs
-- [ ] Landing page at `/` shows Marquee Hero with app description
-- [ ] Public nav adapts to auth state (sign in/get started vs dropdown)
-- [ ] Mobile responsive (single column, Sheet nav, carousel)
-- [ ] `npm run build` passes with zero errors
+- [x] `/browse` shows paginated grid of APPROVED/RESOLVED reports (with mock data)
+- [x] Category and status filters work via URL search params
+- [x] Pagination works (12 per page, prev/next + page numbers)
+- [x] Loading skeleton shows while fetching
+- [x] Error boundary catches and displays errors
+- [x] "/reports/[id]" shows full detail with Carousel gallery
+- [x] Map renders on detail page via dynamic import
+- [x] not-found page for invalid report IDs
+- [x] Landing page at `/` shows Marquee Hero with app description
+- [x] Public nav adapts to auth state (sign in/get started vs dropdown)
+- [x] Mobile responsive (single column, Sheet nav, carousel)
+- [x] `npm run build` passes with zero errors

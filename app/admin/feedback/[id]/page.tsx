@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { FeedbackActions } from "@/components/admin/feedback-actions";
+import { FeedbackNoteEditor } from "@/components/admin/feedback-note-editor";
 import { formatReportDate } from "@/lib/date-utils";
 import { PhotoGallery } from "@/components/browse/photo-gallery";
 import {
@@ -139,15 +140,10 @@ export default async function AdminFeedbackReviewPage({ params }: PageProps) {
           </div>
         )}
 
-        <div className="mb-6 space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">
-            Admin Note (internal — visible to citizen)
-          </label>
-          <textarea
-            readOnly
-            className="w-full rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground resize-none"
-            rows={3}
-            value={feedback.admin_note ?? "No admin note added yet."}
+        <div className="mb-6">
+          <FeedbackNoteEditor
+            feedbackId={feedback.id}
+            initialNote={feedback.admin_note}
           />
         </div>
       </div>

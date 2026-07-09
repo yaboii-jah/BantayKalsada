@@ -139,6 +139,7 @@
 |------|------|-------|
 | `FEEDBACK_ACKNOWLEDGED` | `MessageSquare` | `/my-feedback/[feedback_id]` |
 | `FEEDBACK_CLOSED` | `Check` | `/my-feedback/[feedback_id]` |
+| `FEEDBACK_NOTE_ADDED` | `MessageSquare` | `/my-feedback/[feedback_id]` |
 
 ## Server Actions
 
@@ -251,36 +252,37 @@ Body: "Hi [name], your feedback '[title]' has been closed.
 
 | Item | Status |
 |---|---|
-| Migration 1: notification_type enum values | ⬜ Pending |
-| Migration 2: feedback tables, RLS, indexes | ⬜ Pending |
-| `lib/validations/feedback.ts` — Zod schemas | ⬜ Pending |
-| `lib/notifications.ts` — feedback types | ⬜ Pending |
-| `emails/render.ts` — feedback templates | ⬜ Pending |
-| `lib/admin-feedback-notifications.tsx` — notification dispatcher | ⬜ Pending |
-| `app/actions.ts` — `submitFeedback` | ⬜ Pending |
-| `app/admin/actions.ts` — `acknowledgeFeedback`, `closeFeedback` | ⬜ Pending |
-| `components/reports/feedback-form.tsx` | ⬜ Pending |
-| `components/reports/feedback-card.tsx` | ⬜ Pending |
-| `components/admin/feedback-actions.tsx` | ⬜ Pending |
-| Citizen feedback pages | ⬜ Pending |
-| Admin feedback pages | ⬜ Pending |
-| `public-nav.tsx` — nav link | ⬜ Pending |
-| `admin-sidebar.tsx` — sidebar item | ⬜ Pending |
-| `notification-bell.tsx` — feedback type handling | ⬜ Pending |
-| Context files updated | ⬜ Pending |
-| `npm run build` passes | ⬜ Pending |
+| Migration 1: notification_type enum values | ✅ Done |
+| Migration 2: feedback tables, RLS, indexes | ✅ Done |
+| Migration 3: photo_urls column (20250709000003) | ✅ Done |
+| `lib/validations/feedback.ts` — Zod schemas | ✅ Done |
+| `lib/notifications.ts` — feedback types | ✅ Done |
+| `emails/render.ts` — feedback templates | ✅ Done |
+| `lib/admin-feedback-notifications.tsx` — notification dispatcher | ✅ Done |
+| `app/actions.ts` — `submitFeedback` | ✅ Done |
+| `app/admin/actions.ts` — `acknowledgeFeedback`, `closeFeedback` | ✅ Done |
+| `components/reports/feedback-form.tsx` | ✅ Done |
+| `components/reports/feedback-card.tsx` | ✅ Done |
+| `components/admin/feedback-actions.tsx` | ✅ Done |
+| Citizen feedback pages | ✅ Done |
+| Admin feedback pages | ✅ Done |
+| `public-nav.tsx` — nav link | ✅ Done |
+| `admin-sidebar.tsx` — sidebar item | ✅ Done |
+| `notification-bell.tsx` — feedback type handling | ✅ Done |
+| Context files updated | ✅ Done |
+| `npm run build` passes | ✅ Done |
 
 ## Check When Done
 
-- [ ] Any logged-in user can submit feedback via `/feedback`
-- [ ] Rate limit of 3/day enforced server-side
-- [ ] User sees own feedback on `/my-feedback` with status badges
-- [ ] Admin sees all feedback on `/admin/feedback`
-- [ ] Admin can Acknowledge (OPEN → ACKNOWLEDGED) and Close (any → CLOSED)
-- [ ] In-app notification + email sent on status change
-- [ ] Notification bell navigates to `/my-feedback/[id]` for feedback notifications
-- [ ] Nav bar shows "Feedback" link for authenticated users
-- [ ] Admin sidebar shows "Feedback" nav item
-- [ ] All states covered: loading, empty, error, not-found
-- [ ] `npm run build` passes with zero errors
-- [ ] No hardcoded hex values — all tokens used
+- [x] Any logged-in user can submit feedback via `/feedback`
+- [x] Rate limit of 3/day enforced server-side
+- [x] User sees own feedback on `/my-feedback` with status badges
+- [x] Admin sees all feedback on `/admin/feedback`
+- [x] Admin can Acknowledge (OPEN → ACKNOWLEDGED) and Close (any → CLOSED)
+- [x] In-app notification + email sent on status change
+- [x] Notification bell navigates to `/my-feedback/[id]` for feedback notifications
+- [x] Nav bar shows "Feedback" link for authenticated users
+- [x] Admin sidebar shows "Feedback" nav item
+- [x] All states covered: loading, empty, error, not-found
+- [x] `npm run build` passes with zero errors
+- [x] No hardcoded hex values — all tokens used

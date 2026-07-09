@@ -10,6 +10,7 @@ import {
 import {
   acknowledgeFeedbackSchema,
   closeFeedbackSchema,
+  updateFeedbackNoteSchema,
 } from "@/lib/validations/feedback";
 import {
   fetchReportWithSubmitter,
@@ -265,6 +266,64 @@ export async function acknowledgeFeedback(
         feedbackData.submitter,
         "FEEDBACK_ACKNOWLEDGED",
       ).catch((err) => console.error("Failed to send feedback acknowledgment:", err));
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function updateFeedbackNote(
+  feedbackId: string,
+  adminNote: string | null,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const parsed = updateFeedbackNoteSchema.safeParse({ feedbackId, adminNote });
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
+    const feedbackData = await fetchFeedbackWithSubmitter(parsed.data.feedbackId);
+    if (!feedbackData) {
+      return { success: false, error: "Feedback not found" };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { data: current } = await adminClient
+      .from("feedback")
+      .select("admin_note")
+      .eq("id", parsed.data.feedbackId)
+      .single();
+
+    const wasNull = !current?.admin_note && parsed.data.adminNote !== null;
+
+    const { error: updateError } = await adminClient
+      .from("feedback")
+      .update({ admin_note: parsed.data.adminNote })
+      .eq("id", parsed.data.feedbackId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to update admin note" };
+    }
+
+    if (wasNull && feedbackData.submitter) {
+      sendFeedbackNotifications(
+        parsed.data.feedbackId,
+        feedbackData.title,
+        feedbackData.submitter,
+        "FEEDBACK_NOTE_ADDED",
+        parsed.data.adminNote ?? undefined,
+      ).catch((err) => console.error("Failed to send note notification:", err));
     }
 
     return { success: true };

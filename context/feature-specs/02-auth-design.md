@@ -40,8 +40,8 @@ Create a modern, responsive authentication page with a centered, rounded contain
 
 - [ ] Full round trip works (register → receive verification email → verify → log in)
 - [ ] Password reset email arrives and new password can be set
-- [ ] Profiles row is created automatically on signup
-- [ ] Unverified users cannot access /submit
+- [x] Profiles row is created automatically on signup
+- [x] Unverified users cannot access /submit
 
 ---
 

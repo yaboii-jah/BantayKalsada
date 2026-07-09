@@ -97,9 +97,10 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 ### Admin Panel
 
 - **Layout**: Two-column split. Left sidebar: fixed width `w-64`, white background, right border (`border-border`), full viewport height. Main content area: fills remaining width, light gray background (`bg-muted`), scrollable.
-- **Sidebar navigation**: Vertical list of links — Dashboard, Pending (with a count badge), Approved, Rejected, Resolved. Active link uses `bg-primary/10` background with `text-primary` color. Count badge on Pending uses `--status-pending` color.
+- **Sidebar navigation**: Vertical list of links — Dashboard, Pending (with a count badge), Approved, Rejected, Resolved, Feedback. Active link uses `bg-primary/10` background with `text-primary` color. Count badge on Pending uses `--status-pending` color.
 - **Admin report queue**: Full-width table using Shadcn/ui `Table`. Columns: Submitter name, Category, Title (truncated), Submitted date, Action link. Rows are clickable and navigate to the review page.
 - **Admin report review page**: Single centered column, `max-w-4xl`. Report detail displayed above the action buttons. Approve and Reject buttons are side by side at the bottom, right-aligned. Approve uses the success color; Reject uses the destructive color.
+- **Admin feedback review page**: Single centered column, `max-w-4xl`. Feedback detail displayed with type badge, status badge, description, optional photo gallery. Admin note editor sits below the description with a textarea, Save button, and optional Remove note button. Acknowledge and Close action buttons at the bottom, right-aligned.
 - **Rejection modal**: Shadcn/ui `Dialog`, centered, `max-w-md`. Contains a textarea for the rejection reason (required), a character count, and Confirm / Cancel buttons.
 
 ### Modals and Overlays
@@ -138,6 +139,14 @@ Lucide React — already included as a Shadcn/ui dependency, no additional insta
 | Notification bell (no unread) | `Bell`       |
 | Notification bell (unread)    | `BellRing`     |
 | Browse / public feed | `Map`                 |
+| Feedback (general)   | `MessageSquare`       |
+| Feedback (bug report)| `Bug`                 |
+| Feedback (feature)   | `Lightbulb`           |
+| Rating star          | `Star`                |
+| Acknowledge feedback | `CheckCircle`         |
+| Close feedback       | `XCircle`             |
+| Save note            | `Save`                |
+| Remove note          | `Trash2`              |
 | Logout               | `LogOut`              |
 
 ---

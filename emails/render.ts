@@ -55,6 +55,21 @@ export function renderFeedbackAcknowledgedEmail(citizenName: string, feedbackTit
   return baseLayout(content);
 }
 
+export function renderFeedbackNoteAddedEmail(
+  citizenName: string,
+  feedbackTitle: string,
+  feedbackId: string,
+  adminNote: string,
+): string {
+  const content = `
+<p>Hi ${citizenName},</p>
+<p>An admin has added a note to your feedback <strong>"${feedbackTitle}"</strong>:</p>
+<div style="background-color:#F4F4F5;border:1px solid #E4E4E7;border-radius:6px;padding:12px;color:#0F172A;font-size:13px">${adminNote}</div>
+<p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/my-feedback/${feedbackId}`, "View Feedback")}</p>
+<p style="color:#64748B;font-size:13px">Thank you for helping us improve Bantay Kalsada.</p>`;
+  return baseLayout(content);
+}
+
 export function renderFeedbackClosedEmail(citizenName: string, feedbackTitle: string, feedbackId: string): string {
   const content = `
 <p>Hi ${citizenName},</p>

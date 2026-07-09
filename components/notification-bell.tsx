@@ -38,6 +38,7 @@ const NOTIFICATION_ICONS: Record<
   REPORT_RESOLVED: CheckCheck,
   FEEDBACK_ACKNOWLEDGED: MessageSquare,
   FEEDBACK_CLOSED: Check,
+  FEEDBACK_NOTE_ADDED: MessageSquare,
 };
 
 function getNotificationHref(notification: Notification): string {
@@ -248,9 +249,11 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                               ? "text-status-rejected"
                               : notification.type === "FEEDBACK_ACKNOWLEDGED"
                                 ? "text-status-approved"
-                                : notification.type === "FEEDBACK_CLOSED"
-                                  ? "text-status-resolved"
-                                  : "text-primary"
+                            : notification.type === "FEEDBACK_CLOSED"
+                              ? "text-status-resolved"
+                              : notification.type === "FEEDBACK_NOTE_ADDED"
+                                ? "text-status-approved"
+                                : "text-primary"
                         }`}
                       />
                       <div className="flex-1 space-y-0.5">

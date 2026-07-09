@@ -198,6 +198,7 @@ export type Database = {
       notification_type:
         | "FEEDBACK_ACKNOWLEDGED"
         | "FEEDBACK_CLOSED"
+        | "FEEDBACK_NOTE_ADDED"
         | "REPORT_APPROVED"
         | "REPORT_REJECTED"
         | "REPORT_RESOLVED"
@@ -341,6 +342,7 @@ export const Constants = {
       notification_type: [
         "FEEDBACK_ACKNOWLEDGED",
         "FEEDBACK_CLOSED",
+        "FEEDBACK_NOTE_ADDED",
         "REPORT_APPROVED",
         "REPORT_REJECTED",
         "REPORT_RESOLVED",

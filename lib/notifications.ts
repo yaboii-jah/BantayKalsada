@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/service-role";
 
 export type ReportNotificationType = "REPORT_APPROVED" | "REPORT_REJECTED" | "REPORT_RESOLVED";
-export type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED";
+export type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED";
 export type NotificationType = ReportNotificationType | FeedbackNotificationType;
 
 export function getMessageForType(type: NotificationType, title: string): string {
@@ -16,6 +16,8 @@ export function getMessageForType(type: NotificationType, title: string): string
       return `Your feedback "${title}" has been reviewed and acknowledged.`;
     case "FEEDBACK_CLOSED":
       return `Your feedback "${title}" has been closed.`;
+    case "FEEDBACK_NOTE_ADDED":
+      return `An admin has added a note to your feedback "${title}".`;
   }
 }
 
@@ -31,6 +33,8 @@ export function getSubjectForType(type: NotificationType): string {
       return "Feedback Acknowledged — Bantay Kalsada";
     case "FEEDBACK_CLOSED":
       return "Feedback Closed — Bantay Kalsada";
+    case "FEEDBACK_NOTE_ADDED":
+      return "Admin Note Added to Your Feedback — Bantay Kalsada";
   }
 }
 

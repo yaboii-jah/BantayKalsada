@@ -36,6 +36,16 @@ export const closeFeedbackSchema = z.object({
   feedbackId: z.string().uuid(),
 });
 
+export const updateFeedbackNoteSchema = z.object({
+  feedbackId: z.string().uuid(),
+  adminNote: z
+    .string()
+    .trim()
+    .max(500, "Note must be at most 500 characters")
+    .nullable(),
+});
+
 export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;
 export type AcknowledgeFeedbackInput = z.infer<typeof acknowledgeFeedbackSchema>;
 export type CloseFeedbackInput = z.infer<typeof closeFeedbackSchema>;
+export type UpdateFeedbackNoteInput = z.infer<typeof updateFeedbackNoteSchema>;
