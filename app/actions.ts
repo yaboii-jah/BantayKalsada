@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { createReportSchema, type CreateReportInput } from "@/lib/validations/report";
+import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
 
 export interface ActionResponse {
   success: boolean;
@@ -180,6 +181,68 @@ export async function submitReport(
     }
 
     return { success: true, data: { id: report.id } };
+  } catch {
+    return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
+export async function submitFeedback(
+  formData: CreateFeedbackInput,
+): Promise<ActionResponse> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in to submit feedback" };
+    }
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count, error: countError } = await supabase
+      .from("feedback")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", twentyFourHoursAgo);
+
+    if (countError) {
+      return { success: false, error: "Failed to verify submission limit" };
+    }
+
+    if (count !== null && count >= 3) {
+      return {
+        success: false,
+        error: "You have reached the maximum of 3 feedback submissions in 24 hours. Please try again tomorrow.",
+      };
+    }
+
+    const parsed = createFeedbackSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
+    const { data: feedback, error: insertError } = await supabase
+      .from("feedback")
+      .insert({
+        type: parsed.data.type,
+        title: parsed.data.title,
+        description: parsed.data.description,
+        rating: parsed.data.rating ?? null,
+        photo_urls: parsed.data.photo_urls,
+        user_id: user.id,
+        status: "OPEN",
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("submitFeedback insert error:", insertError);
+      return { success: false, error: "Failed to submit feedback. Please try again." };
+    }
+
+    return { success: true, data: { id: feedback.id } };
   } catch {
     return { success: false, error: "An unexpected error occurred. Please try again." };
   }

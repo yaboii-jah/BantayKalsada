@@ -7,7 +7,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Map, Menu, LogOut, FileText } from "lucide-react";
+import { Map, Menu, LogOut, FileText, MessageSquare } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
 import type { User } from "@supabase/supabase-js";
 
@@ -85,6 +85,12 @@ export function PublicNav() {
             <>
               {user ? (
                 <>
+                  <Link
+                    href="/feedback"
+                    className="text-sm font-medium text-foreground transition-colors hover:text-primary"
+                  >
+                    Feedback
+                  </Link>
                   <NotificationBell userId={user.id} />
                   <div ref={menuRef} className="relative">
                   <button
@@ -101,6 +107,14 @@ export function PublicNav() {
                   </button>
                   {menuOpen && (
                     <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10">
+                      <Link
+                        href="/my-feedback"
+                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <MessageSquare className="size-4" />
+                        My Feedback
+                      </Link>
                       <Link
                         href="/my-reports"
                         className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
@@ -143,8 +157,8 @@ export function PublicNav() {
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72">
-            <nav className="mt-8 flex flex-col gap-4">
+          <SheetContent side="right" className="w-64 px-4 pb-6">
+            <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
               {navLinks}
               {!loading && !user && (
                 <>
@@ -163,16 +177,31 @@ export function PublicNav() {
                   </Link>
                 </>
               )}
-              {!loading && user && (
-                <>
-                  <Link
-                    href="/my-reports"
-                    className="text-sm font-medium text-foreground hover:text-primary"
-                    onClick={() => setSheetOpen(false)}
-                  >
-                    My Reports
-                  </Link>
-                  <Button
+                  {!loading && user && (
+                    <>
+                      <Link
+                        href="/feedback"
+                        className="text-sm font-medium text-foreground hover:text-primary"
+                        onClick={() => setSheetOpen(false)}
+                      >
+                        Feedback
+                      </Link>
+                      <Link
+                        href="/my-feedback"
+                        className="text-sm font-medium text-foreground hover:text-primary"
+                        onClick={() => setSheetOpen(false)}
+                      >
+                        My Feedback
+                      </Link>
+                      <Link
+                        href="/my-reports"
+                        className="text-sm font-medium text-foreground hover:text-primary"
+                        onClick={() => setSheetOpen(false)}
+                      >
+                        My Reports
+                      </Link>
+                      <div className="flex-1" />
+                      <Button
                     variant="destructive"
                     className="w-full"
                     onClick={() => {

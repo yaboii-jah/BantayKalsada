@@ -9,6 +9,8 @@ import {
   CheckCircle,
   XCircle,
   CheckCheck,
+  MessageSquare,
+  Check,
   Loader2,
   X,
 } from "lucide-react";
@@ -34,9 +36,14 @@ const NOTIFICATION_ICONS: Record<
   REPORT_APPROVED: CheckCircle,
   REPORT_REJECTED: XCircle,
   REPORT_RESOLVED: CheckCheck,
+  FEEDBACK_ACKNOWLEDGED: MessageSquare,
+  FEEDBACK_CLOSED: Check,
 };
 
 function getNotificationHref(notification: Notification): string {
+  if (notification.type.startsWith("FEEDBACK_") && notification.feedback_id) {
+    return `/my-feedback/${notification.feedback_id}`;
+  }
   return `/my-reports/${notification.report_id}`;
 }
 
@@ -239,7 +246,11 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                             ? "text-status-approved"
                             : notification.type === "REPORT_REJECTED"
                               ? "text-status-rejected"
-                              : "text-primary"
+                              : notification.type === "FEEDBACK_ACKNOWLEDGED"
+                                ? "text-status-approved"
+                                : notification.type === "FEEDBACK_CLOSED"
+                                  ? "text-status-resolved"
+                                  : "text-primary"
                         }`}
                       />
                       <div className="flex-1 space-y-0.5">

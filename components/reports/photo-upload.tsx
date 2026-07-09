@@ -55,12 +55,12 @@ export function PhotoUpload({ onChange }: PhotoUploadProps) {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const syncToParent = useCallback((items: PhotoItem[]) => {
-    const urls = items
+  useEffect(() => {
+    const urls = photos
       .filter((p) => p.cloudinaryUrl)
       .map((p) => p.cloudinaryUrl!);
     onChangeRef.current(urls);
-  }, []);
+  }, [photos]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -94,13 +94,11 @@ export function PhotoUpload({ onChange }: PhotoUploadProps) {
 
         uploadToCloudinary(file)
           .then((url) => {
-            setPhotos((prev) => {
-              const updated = prev.map((p) =>
+            setPhotos((prev) =>
+              prev.map((p) =>
                 p.id === id ? { ...p, cloudinaryUrl: url, uploading: false } : p,
-              );
-              syncToParent(updated);
-              return updated;
-            });
+              ),
+            );
           })
           .catch((err: Error) => {
             setPhotos((prev) =>
@@ -113,7 +111,7 @@ export function PhotoUpload({ onChange }: PhotoUploadProps) {
 
       setPhotos((prev) => [...prev, ...newPhotos]);
     },
-    [photos.length, syncToParent],
+    [photos.length],
   );
 
   const removePhoto = useCallback(
@@ -121,12 +119,10 @@ export function PhotoUpload({ onChange }: PhotoUploadProps) {
       setPhotos((prev) => {
         const item = prev.find((p) => p.id === id);
         if (item) URL.revokeObjectURL(item.localUrl);
-        const updated = prev.filter((p) => p.id !== id);
-        syncToParent(updated);
-        return updated;
+        return prev.filter((p) => p.id !== id);
       });
     },
-    [syncToParent],
+    [],
   );
 
   useEffect(() => {

@@ -15,7 +15,7 @@ change.
 
 ## Current Goal
 
-- None — pending next feature selection.
+- Implement App Feedback feature — see `context/feature-specs/15-feedback-feature.md`
 
 ## Completed
 
@@ -229,6 +229,43 @@ change.
 - [x] Removed `totalCount` prop from `FilterBar` and `MyReportsFilter` (count now rendered inside async content)
 - [x] `npm run build` passes with zero errors
 
+### Browse Dropdown Filter Clipping Fix
+
+- [x] Fixed `InlineSelect` in `components/browse/filter-bar.tsx` — dropdown menus were clipped by parent `overflow-x-auto` container on mobile (visible in DOM but invisible to user)
+- [x] Renders dropdown via `createPortal` to `document.body` with `position: fixed` calculated from trigger button's `getBoundingClientRect()`
+- [x] Added scroll/resize listeners to reposition the portal dropdown
+- [x] Click-outside detection checks both the trigger container and the portal menu element
+- [x] Added `shrink-0` to prevent trigger button from collapsing in flex layout
+- [x] `npm run build` passes with zero errors
+
+### Feedback Form Photo Upload Fixes
+
+- [x] Fixed React warning in `components/reports/photo-upload.tsx` — `syncToParent` was called inside `setPhotos` state updater functions (upload handler + removePhoto), triggering "Cannot update a component while rendering a different component" warning
+- [x] Replaced with a `useEffect` that syncs `photos` to parent via `onChangeRef.current(urls)` whenever `photos` changes — runs outside the render phase
+- [x] Added `console.error("submitFeedback insert error:", insertError)` in `app/actions.ts` to log the actual database error for debugging
+- [x] `npm run build` passes with zero errors
+
+### Mobile Hamburger Sheet Z-Index Fix
+
+- [x] Fixed `components/ui/sheet.tsx` — Sheet overlay and content were at `z-50`, below the sticky nav header at `z-[1100]`, causing the nav bar to cover the Sheet panel on mobile
+- [x] Bumped Sheet overlay and Sheet content from `z-50` to `z-[1200]` — above the header (`1100`) and Leaflet controls (`1000`)
+- [x] `npm run build` passes with zero errors
+
+### Mobile Nav Polish (Issues from current-issues.md)
+
+- [x] Shrunk mobile hamburger sidebar from `w-72` to `w-64` — less screen real estate taken on mobile
+- [x] Centered nav links inside the mobile sheet (`items-center` on flex column)
+- [x] Created `app/(public)/reports/[id]/loading.tsx` — skeleton matching the detail page layout (back button, badges, title, photo, metadata, description, map) to avoid blank page during navigation
+- [x] Fixed `/feedback` page missing horizontal padding on mobile — added `px-4 sm:px-6 lg:px-8` to both `feedback/page.tsx` and `feedback/loading.tsx` (matching `/submit` layout)
+- [x] Removed `NotificationBell` from mobile sheet (component designed for inline desktop nav, not full-width flex layout)
+- [x] Added "My Feedback" link to mobile sheet nav for logged-in users — previously missing, only accessible via desktop avatar dropdown
+- [x] Moved Sign out button to bottom of mobile sheet via `flex-1` spacer — common mobile pattern
+- [x] Added `px-4 pb-6` to mobile `SheetContent` — side padding and bottom margin so content isn't flush to edges
+- [x] Fixed `/my-feedback` loading skeleton missing mobile padding — wrapped `<ReportsGridSkeleton>` in `mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8` container
+- [x] Fixed `/my-feedback/[id]` missing mobile padding — added `px-4 sm:px-6 lg:px-8` to page container
+- [x] Created `/my-feedback/[id]/loading.tsx` — skeleton matching the feedback detail card layout
+- [x] `npm run build` passes with zero errors
+
 ### Map-Driven Bounding Box Filter
 
 - [x] `components/browse/browse-map.tsx` — Added `MapContent` component that tracks map viewport via `useMapEvents`, computes `visibleReports` client-side via `bounds.contains()`, renders only visible markers in `MarkerClusterGroup`, and shows a dynamic count bar ("Showing X of Y reports in this area") with a Reset button
@@ -252,6 +289,28 @@ change.
 - [x] `npm run build` passes with zero errors
 
 ## Next Up
+
+### App Feedback (Current Feature — Complete)
+- [x] Migration 1: notification_type enum values (non-transaction)
+- [x] Migration 2: feedback tables, RLS, indexes
+- [x] Supabase types regenerated (`database.types.ts`)
+- [x] Notification bell updated — handles FEEDBACK_ACKNOWLEDGED / FEEDBACK_CLOSED types
+- [x] Zod schemas, Server Actions, email templates
+- [x] Citizen pages (/feedback, /my-feedback, /my-feedback/[id])
+- [x] Admin pages (/admin/feedback, /admin/feedback/[id])
+- [x] Nav + sidebar links, notification bell updates
+- [x] Fixed /my-feedback page layout — added `mx-auto max-w-7xl` centering wrapper
+- [x] Fixed avatar dropdown — "Feedback" renamed to "My Feedback", links to `/my-feedback`
+- [x] Replaced Radix Select in feedback form with inline custom dropdown (fixes body scroll lock layout shift)
+- [x] `/my-feedback` added to middleware `protectedRoutes` — unauthenticated users redirected to `/login?redirect=/my-feedback`
+- [x] Server-side auth guard on both `/my-feedback` and `/my-feedback/[id]` — `return null` replaced with `redirect("/login?redirect=/my-feedback")`
+- [x] Feedback card status badge overflow fix — added `flex-wrap` to badges row
+- [x] **Photo uploads**: Migration 3 adds `photo_urls text[]` to feedback table
+- [x] **Zod**: `createFeedbackSchema` extended with optional `photo_urls` (max 3)
+- [x] **Server Action**: `submitFeedback` now inserts `photo_urls`
+- [x] **Form**: `PhotoUpload` component integrated into `FeedbackForm`, emits URLs on submit
+- [x] **Detail pages**: `PhotoGallery` (reused carousel) shown on citizen + admin feedback detail pages
+- [x] `npm run build` passes
 
 ### Quick Wins (v2.0)
 - **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`

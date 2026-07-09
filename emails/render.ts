@@ -44,3 +44,23 @@ export function renderResolvedEmail(citizenName: string, reportTitle: string, re
 <p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/reports/${reportId}`, "View Report")}</p>`;
   return baseLayout(content);
 }
+
+export function renderFeedbackAcknowledgedEmail(citizenName: string, feedbackTitle: string, feedbackId: string): string {
+  const content = `
+<p>Hi ${citizenName},</p>
+<p>Your feedback <strong>"${feedbackTitle}"</strong> has been reviewed and <strong>acknowledged</strong>.</p>
+<p>Thank you for taking the time to help us improve Bantay Kalsada. Your input has been noted by our team.</p>
+<p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/my-feedback/${feedbackId}`, "View Feedback")}</p>
+<p style="color:#64748B;font-size:13px">We appreciate your contribution to making the app better for everyone.</p>`;
+  return baseLayout(content);
+}
+
+export function renderFeedbackClosedEmail(citizenName: string, feedbackTitle: string, feedbackId: string): string {
+  const content = `
+<p>Hi ${citizenName},</p>
+<p>Your feedback <strong>"${feedbackTitle}"</strong> has been <strong>closed</strong>.</p>
+<p>The issue you raised has been reviewed and addressed by our team.</p>
+<p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/my-feedback/${feedbackId}`, "View Feedback")}</p>
+<p style="color:#64748B;font-size:13px">Thank you for helping us improve Bantay Kalsada.</p>`;
+  return baseLayout(content);
+}
