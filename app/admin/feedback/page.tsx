@@ -10,15 +10,13 @@ const PAGE_SIZE = 20;
 async function AdminFeedbackContent({
   statusFilter,
   currentPage,
+  totalCount,
 }: {
   statusFilter: string;
   currentPage: number;
+  totalCount: number;
 }) {
   const adminClient = createAdminClient();
-
-  let countQuery = adminClient
-    .from("feedback")
-    .select("*", { count: "exact", head: true });
 
   let dataQuery = adminClient
     .from("feedback")
@@ -26,14 +24,10 @@ async function AdminFeedbackContent({
     .order("created_at", { ascending: false });
 
   if (statusFilter !== "all") {
-    countQuery = countQuery.eq("status", statusFilter as "OPEN" | "ACKNOWLEDGED" | "CLOSED");
     dataQuery = dataQuery.eq("status", statusFilter as "OPEN" | "ACKNOWLEDGED" | "CLOSED");
   }
 
-  const { count } = await countQuery;
-  const totalCount = count ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
   const { data: feedbackList } = await dataQuery.range(from, to);
@@ -41,7 +35,6 @@ async function AdminFeedbackContent({
   return (
     <AdminFeedbackTable
       feedbackList={feedbackList ?? []}
-      totalCount={totalCount}
       currentPage={currentPage}
       totalPages={totalPages}
       statusFilter={statusFilter}
@@ -58,14 +51,25 @@ export default async function AdminFeedbackPage({
   const currentStatus = params.status ?? "all";
   const currentPage = Math.max(1, Number(params.page) || 1);
 
+  const adminClient = createAdminClient();
+  let countQuery = adminClient
+    .from("feedback")
+    .select("*", { count: "exact", head: true });
+  if (currentStatus !== "all") {
+    countQuery = countQuery.eq("status", currentStatus as "OPEN" | "ACKNOWLEDGED" | "CLOSED");
+  }
+  const { count } = await countQuery;
+  const totalCount = count ?? 0;
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Feedback Inbox</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Review and manage app feedback submissions.
-        </p>
-      </div>
+      <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold text-foreground">
+        <MessageSquare className="h-6 w-6 text-primary" />
+        Feedback Inbox
+        <span className="text-base font-normal text-muted-foreground">
+          ({totalCount})
+        </span>
+      </h1>
 
       <div className="mb-6 flex items-center gap-2">
         {[
@@ -95,21 +99,24 @@ export default async function AdminFeedbackPage({
         })}
       </div>
 
-      <Suspense
-        key={`${currentStatus}-${currentPage}`}
-        fallback={
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        }
-      >
-        <AdminFeedbackContent
-          statusFilter={currentStatus}
-          currentPage={currentPage}
-        />
-      </Suspense>
+      <div className="rounded-lg border border-border bg-card">
+        <Suspense
+          key={`${currentStatus}-${currentPage}`}
+          fallback={
+            <div className="space-y-2 p-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          }
+        >
+          <AdminFeedbackContent
+            statusFilter={currentStatus}
+            currentPage={currentPage}
+            totalCount={totalCount}
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }

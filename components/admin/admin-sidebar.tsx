@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -42,11 +43,14 @@ export function AdminSidebar({
 
   return (
     <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-border bg-sidebar">
-      <div className="flex items-center gap-2 border-b border-border px-6 py-4">
-        <ShieldCheck className="h-6 w-6 text-primary" />
-        <span className="text-sm font-semibold text-foreground">
-          Bantay Kalsada
-        </span>
+      <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-6 w-6 text-primary" />
+          <span className="text-sm font-semibold text-foreground">
+            Bantay Kalsada
+          </span>
+        </div>
+        <ThemeToggle />
       </div>
 
       <nav className="flex-1 space-y-1 p-3">

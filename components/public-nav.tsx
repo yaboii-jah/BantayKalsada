@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Map, Menu, LogOut, FileText, MessageSquare } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { User } from "@supabase/supabase-js";
 
 export function PublicNav() {
@@ -81,6 +82,7 @@ export function PublicNav() {
 
         <nav className="hidden items-center gap-6 sm:flex">
           {navLinks}
+          <ThemeToggle />
           {!loading && (
             <>
               {user ? (

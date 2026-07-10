@@ -35,7 +35,6 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 
 interface AdminFeedbackTableProps {
   feedbackList: FeedbackRow[];
-  totalCount: number;
   currentPage: number;
   totalPages: number;
   statusFilter: string;
@@ -43,7 +42,6 @@ interface AdminFeedbackTableProps {
 
 export function AdminFeedbackTable({
   feedbackList,
-  totalCount,
   currentPage,
   totalPages,
   statusFilter,
@@ -78,10 +76,6 @@ export function AdminFeedbackTable({
 
   return (
     <div>
-      <div className="mb-4 text-sm text-muted-foreground">
-        {totalCount} feedback submission{totalCount !== 1 ? "s" : ""}
-      </div>
-
       <div className="overflow-hidden rounded-lg border border-border">
         <table className="w-full">
           <thead>

@@ -12,10 +12,13 @@ change.
 - [x] Report Submission Form — Complete
 - [x] Personal Report History — Complete
 - [x] Email & In-App Notifications — Complete
+- [x] App Feedback — Complete
+- [x] Admin Note on Feedback — Complete
+- [x] Dark Mode (User Side) — Complete
 
 ## Current Goal
 
-- Implement App Feedback feature — see `context/feature-specs/15-feedback-feature.md`
+- Quick wins: PWA support, share report, bulk admin actions, CSV export
 
 ## Completed
 
@@ -302,6 +305,22 @@ change.
 - [x] Feature spec: `context/feature-specs/16-admin-note-feature.md`
 - [x] `npm run build` passes
 
+### Dark Mode
+
+- [x] Added `.dark` CSS variable block in `app/globals.css` — neutral slate dark palette with matching sidebar tokens
+- [x] Added dark variant of `bg-auth-gradient` utility for auth pages
+- [x] Wrapped root layout with `<ThemeProvider>` from `next-themes` (`attribute="class"`, `defaultTheme="system"`, `enableSystem`) + `suppressHydrationWarning` on `<html>`
+- [x] Created `components/theme-toggle.tsx` — cycles Light ↔ Dark (2-state), renders Sun/Moon icon based on `resolvedTheme`, mounted guard to prevent hydration mismatch
+- [x] Added `<ThemeToggle />` to `components/public-nav.tsx` — placed in desktop nav between browse link and auth/user block
+- [x] Lightened dark palette per feedback — background `oklch(0.145→0.21)`, card `oklch(0.205→0.26)`, muted/border `oklch(0.269→0.30)` for easier readability
+- [x] Fixed toggle UX — replaced 3-state cycle (light→dark→system) with 2-state using `resolvedTheme`, one click always switches immediately
+- [x] Reverted map tiles to standard OSM in all themes — dark CartoDB tiles were too hard to read, maps stay light regardless of theme
+- [x] Added `<ThemeToggle />` to `components/admin/admin-sidebar.tsx` — in sidebar header area, right side of logo
+- [x] Added `<ThemeToggle />` to `app/(auth)/layout.tsx` — fixed top-right corner on login/register/reset-password pages for unauthenticated visitors
+- [x] Updated `app/admin/feedback/page.tsx` — colored `MessageSquare` icon heading with inline count `(N)`, wrapped table in `bg-card` container matching queue page pattern
+- [x] Updated `context/ui-context.md` — removed "Light mode only. No dark mode in MVP", documented dark mode support
+- [x] `npm run build` passes with zero errors
+
 ## Next Up
 - [x] Migration 1: notification_type enum values (non-transaction)
 - [x] Migration 2: feedback tables, RLS, indexes
@@ -326,7 +345,7 @@ change.
 
 ### Quick Wins (v2.0)
 - **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
-- **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
+- [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
 - **PWA support** — `manifest.json`, service worker, install prompt
 - **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
 - **Export admin reports to CSV** — server-generated CSV download button
