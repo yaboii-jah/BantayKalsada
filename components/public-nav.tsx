@@ -162,6 +162,7 @@ export function PublicNav() {
           <SheetContent side="right" className="w-64 px-4 pb-6">
             <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
               {navLinks}
+              <ThemeToggle />
               {!loading && !user && (
                 <>
                   <Link
