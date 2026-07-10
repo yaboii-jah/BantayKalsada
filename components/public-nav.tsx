@@ -153,6 +153,9 @@ export function PublicNav() {
           )}
         </nav>
 
+        <div className="flex items-center gap-1 sm:hidden">
+          <ThemeToggle />
+        </div>
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild className="sm:hidden">
             <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -162,7 +165,6 @@ export function PublicNav() {
           <SheetContent side="right" className="w-64 px-4 pb-6">
             <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
               {navLinks}
-              <ThemeToggle />
               {!loading && !user && (
                 <>
                   <Link
