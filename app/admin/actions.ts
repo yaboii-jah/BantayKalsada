@@ -8,6 +8,10 @@ import {
   resolveReportSchema,
 } from "@/lib/validations/report";
 import {
+  bulkActionSchema,
+  bulkRejectSchema,
+} from "@/lib/validations/bulk";
+import {
   acknowledgeFeedbackSchema,
   closeFeedbackSchema,
   updateFeedbackNoteSchema,
@@ -375,6 +379,206 @@ export async function closeFeedback(
         feedbackData.submitter,
         "FEEDBACK_CLOSED",
       ).catch((err) => console.error("Failed to send feedback closed notification:", err));
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function bulkApproveReports(
+  reportIds: string[],
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const parsed = bulkActionSchema.safeParse({ reportIds });
+    if (!parsed.success) {
+      return { success: false, error: "Invalid request" };
+    }
+
+    const adminClient = createAdminClient();
+    let approved = 0;
+    const errors: string[] = [];
+
+    for (const id of parsed.data.reportIds) {
+      const reportData = await fetchReportWithSubmitter(id);
+      if (!reportData) {
+        errors.push(`Report ${id.slice(0, 8)} not found`);
+        continue;
+      }
+      if (reportData.status !== "PENDING") {
+        errors.push(`${reportData.title} is not pending`);
+        continue;
+      }
+
+      const { error: updateError } = await adminClient
+        .from("reports")
+        .update({
+          status: "APPROVED",
+          reviewed_by_id: auth.user.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        errors.push(`Failed to approve ${reportData.title}`);
+        continue;
+      }
+
+      approved++;
+
+      if (reportData.submitter) {
+        sendReportNotifications(
+          id,
+          reportData.title,
+          reportData.submitter,
+          "REPORT_APPROVED",
+        ).catch(() => {});
+      }
+    }
+
+    if (approved === 0) {
+      return { success: false, error: errors.join("; ") || "No reports were approved" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function bulkRejectReports(
+  reportIds: string[],
+  rejectionReason: string,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const parsed = bulkRejectSchema.safeParse({ reportIds, rejectionReason });
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
+    const adminClient = createAdminClient();
+    let rejected = 0;
+    const errors: string[] = [];
+
+    for (const id of parsed.data.reportIds) {
+      const reportData = await fetchReportWithSubmitter(id);
+      if (!reportData) {
+        errors.push(`Report ${id.slice(0, 8)} not found`);
+        continue;
+      }
+      if (reportData.status !== "PENDING") {
+        errors.push(`${reportData.title} is not pending`);
+        continue;
+      }
+
+      const { error: updateError } = await adminClient
+        .from("reports")
+        .update({
+          status: "REJECTED",
+          rejection_reason: parsed.data.rejectionReason,
+          reviewed_by_id: auth.user.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        errors.push(`Failed to reject ${reportData.title}`);
+        continue;
+      }
+
+      rejected++;
+
+      if (reportData.submitter) {
+        sendReportNotifications(
+          id,
+          reportData.title,
+          reportData.submitter,
+          "REPORT_REJECTED",
+          parsed.data.rejectionReason,
+        ).catch(() => {});
+      }
+    }
+
+    if (rejected === 0) {
+      return { success: false, error: errors.join("; ") || "No reports were rejected" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function bulkResolveReports(
+  reportIds: string[],
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const parsed = bulkActionSchema.safeParse({ reportIds });
+    if (!parsed.success) {
+      return { success: false, error: "Invalid request" };
+    }
+
+    const adminClient = createAdminClient();
+    let resolved = 0;
+    const errors: string[] = [];
+
+    for (const id of parsed.data.reportIds) {
+      const reportData = await fetchReportWithSubmitter(id);
+      if (!reportData) {
+        errors.push(`Report ${id.slice(0, 8)} not found`);
+        continue;
+      }
+      if (reportData.status !== "APPROVED") {
+        errors.push(`${reportData.title} is not approved`);
+        continue;
+      }
+
+      const { error: updateError } = await adminClient
+        .from("reports")
+        .update({
+          status: "RESOLVED",
+          resolved_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        errors.push(`Failed to resolve ${reportData.title}`);
+        continue;
+      }
+
+      resolved++;
+
+      if (reportData.submitter) {
+        sendReportNotifications(
+          id,
+          reportData.title,
+          reportData.submitter,
+          "REPORT_RESOLVED",
+        ).catch(() => {});
+      }
+    }
+
+    if (resolved === 0) {
+      return { success: false, error: errors.join("; ") || "No reports were resolved" };
     }
 
     return { success: true };

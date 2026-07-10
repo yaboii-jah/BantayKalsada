@@ -75,7 +75,10 @@ export default async function AdminApprovedPage({ searchParams }: PageProps) {
       ) : (
         <>
           <div className="rounded-lg border border-border bg-card">
-            <AdminQueueTable rows={rows} />
+            <AdminQueueTable
+              rows={rows}
+              bulkActions={{ actions: ["resolve"] }}
+            />
           </div>
           <div className="mt-4">
             <PaginationBar

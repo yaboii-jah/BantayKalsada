@@ -15,6 +15,7 @@ change.
 - [x] App Feedback — Complete
 - [x] Admin Note on Feedback — Complete
 - [x] Dark Mode (User Side) — Complete
+- [x] Bulk Admin Actions — Complete
 
 ## Current Goal
 
@@ -321,6 +322,17 @@ change.
 - [x] Updated `context/ui-context.md` — removed "Light mode only. No dark mode in MVP", documented dark mode support
 - [x] `npm run build` passes with zero errors
 
+### Bulk Admin Actions
+
+- [x] Created `lib/validations/bulk.ts` — `bulkActionSchema` (min 1, max 50 UUIDs), `bulkRejectSchema` (adds 10-char rejection reason)
+- [x] Added `bulkApproveReports`, `bulkRejectReports`, `bulkResolveReports` Server Actions in `app/admin/actions.ts` — verifies admin once, iterates with status checks + per-report notifications, returns processed count
+- [x] Created `components/admin/bulk-action-bar.tsx` — floating bottom bar with item count, Deselect all, action buttons; opens rejection Dialog for bulk reject with shared reason
+- [x] Updated `components/admin/admin-queue-table.tsx` — added "use client", checkbox column with select-all header toggle, selection state via `Set<string>`, renders `<BulkActionBar>` when items selected; accepts optional `bulkActions` prop
+- [x] Updated `app/admin/pending/page.tsx` — passes `bulkActions` with approve + reject to table
+- [x] Updated `app/admin/approved/page.tsx` — passes `bulkActions` with resolve to table
+- [x] Selection is current-page only (clears on page change), rejection uses a single shared reason dialog
+- [x] `npm run build` passes with zero errors
+
 ## Next Up
 - [x] Migration 1: notification_type enum values (non-transaction)
 - [x] Migration 2: feedback tables, RLS, indexes
@@ -347,7 +359,7 @@ change.
 - **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
 - **PWA support** — `manifest.json`, service worker, install prompt
-- **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
+- [x] **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
 - **Export admin reports to CSV** — server-generated CSV download button
 
 ### Community Features (v2.1)
