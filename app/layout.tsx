@@ -18,6 +18,20 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Bantay Kalsada",
   description: "Report road hazards and help keep your community safe.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-icon-180x180.png",
+  },
+};
+
+export const viewport = {
+  themeColor: "#1d4ed8",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

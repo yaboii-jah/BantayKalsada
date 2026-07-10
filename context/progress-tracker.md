@@ -322,6 +322,19 @@ change.
 - [x] Updated `context/ui-context.md` — removed "Light mode only. No dark mode in MVP", documented dark mode support
 - [x] `npm run build` passes with zero errors
 
+### PWA Support
+
+- [x] Installed `@serwist/next` + `serwist` — service worker bundling via webpack
+- [x] Generated app icons (192x192, 512x512, Apple 180x180) from existing logo
+- [x] Created `public/manifest.json` — app name, display mode, theme/background colors, icons
+- [x] Created `app/sw.ts` — service worker entry with `defaultCache`, `skipWaiting`, `clientsClaim`, `navigationPreload`
+- [x] Updated `next.config.ts` — `withSerwist()` plugin, `--webpack` flag for Next.js 16 compatibility
+- [x] Updated `app/layout.tsx` — `manifest` + `icons` in metadata, `viewport` export with `themeColor`
+- [x] Created `components/install-prompt.tsx` — client component with 5 states (hidden, promptable, installing, dismissed, installed)
+- [x] Added `<InstallPrompt />` to `app/(public)/layout.tsx` — bottom banner for non-standalone users
+- [x] Feature spec: `context/feature-specs/17-pwa-support.md`
+- [x] `npm run build` passes with zero errors; SW generated at `public/sw.js` (~50KB)
+
 ### Bulk Admin Actions
 
 - [x] Created `lib/validations/bulk.ts` — `bulkActionSchema` (min 1, max 50 UUIDs), `bulkRejectSchema` (adds 10-char rejection reason)
@@ -358,7 +371,7 @@ change.
 ### Quick Wins (v2.0)
 - **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
-- **PWA support** — `manifest.json`, service worker, install prompt
+- [x] **PWA support** — manifest, service worker, app icons, install prompt
 - [x] **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
 - **Export admin reports to CSV** — server-generated CSV download button
 

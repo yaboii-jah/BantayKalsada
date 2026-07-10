@@ -103,6 +103,13 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 - **Admin feedback review page**: Single centered column, `max-w-4xl`. Feedback detail displayed with type badge, status badge, description, optional photo gallery. Admin note editor sits below the description with a textarea, Save button, and optional Remove note button. Acknowledge and Close action buttons at the bottom, right-aligned.
 - **Rejection modal**: Shadcn/ui `Dialog`, centered, `max-w-md`. Contains a textarea for the rejection reason (required), a character count, and Confirm / Cancel buttons.
 
+### PWA Install Banner
+
+- Rendered in `app/(public)/layout.tsx` as a sticky bottom bar (`fixed inset-x-0 bottom-0 z-[1300]`) with `bg-card` and `border-t border-border`.
+- Contains a `Download` icon in a `bg-primary/10` container, the text "Install Bantay Kalsada" with subtitle "Add to your home screen for quick access", an "Install" button, and an X dismiss button.
+- Only visible when the `beforeinstallprompt` event fires and the app is not already in standalone mode. Hidden once dismissed, installed, or in incognito (browser blocks the event).
+- Not rendered in admin or auth layouts — public pages only.
+
 ### Modals and Overlays
 
 - Centered in the viewport with a semi-transparent backdrop (`bg-black/50`).
@@ -148,6 +155,7 @@ Lucide React — already included as a Shadcn/ui dependency, no additional insta
 | Save note            | `Save`                |
 | Remove note          | `Trash2`              |
 | Logout               | `LogOut`              |
+| Install PWA          | `Download`            |
 
 ---
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { PublicNav } from "@/components/public-nav";
+import { InstallPrompt } from "@/components/install-prompt";
 import Link from "next/link";
 import { Map } from "lucide-react";
 
@@ -8,6 +9,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <PublicNav />
       <main className="flex-1">{children}</main>
+      <InstallPrompt />
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 text-xs text-muted-foreground sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
