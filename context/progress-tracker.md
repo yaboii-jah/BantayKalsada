@@ -312,7 +312,7 @@ change.
 - [x] Added dark variant of `bg-auth-gradient` utility for auth pages
 - [x] Wrapped root layout with `<ThemeProvider>` from `next-themes` (`attribute="class"`, `defaultTheme="system"`, `enableSystem`) + `suppressHydrationWarning` on `<html>`
 - [x] Created `components/theme-toggle.tsx` — cycles Light ↔ Dark (2-state), renders Sun/Moon icon based on `resolvedTheme`, mounted guard to prevent hydration mismatch
-- [x] Added `<ThemeToggle />` to `components/public-nav.tsx` — placed in desktop nav between browse link and auth/user block
+- [x] Added `<ThemeToggle />` to `components/public-nav.tsx` — placed in desktop nav between browse link and auth/user block; on mobile, rendered on the top bar beside the hamburger icon (not inside the sheet)
 - [x] Lightened dark palette per feedback — background `oklch(0.145→0.21)`, card `oklch(0.205→0.26)`, muted/border `oklch(0.269→0.30)` for easier readability
 - [x] Fixed toggle UX — replaced 3-state cycle (light→dark→system) with 2-state using `resolvedTheme`, one click always switches immediately
 - [x] Reverted map tiles to standard OSM in all themes — dark CartoDB tiles were too hard to read, maps stay light regardless of theme
@@ -320,6 +320,7 @@ change.
 - [x] Added `<ThemeToggle />` to `app/(auth)/layout.tsx` — fixed top-right corner on login/register/reset-password pages for unauthenticated visitors
 - [x] Updated `app/admin/feedback/page.tsx` — colored `MessageSquare` icon heading with inline count `(N)`, wrapped table in `bg-card` container matching queue page pattern
 - [x] Updated `context/ui-context.md` — removed "Light mode only. No dark mode in MVP", documented dark mode support
+- [x] Moved mobile ThemeToggle from inside sheet sidebar to top bar beside hamburger — keeps it accessible without opening the drawer; grouped in a single `sm:hidden` flex row with the Sheet trigger
 - [x] `npm run build` passes with zero errors
 
 ### PWA Support
