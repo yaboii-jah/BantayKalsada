@@ -377,6 +377,11 @@ change.
 - [x] Feature spec: `context/feature-specs/18-share-report.md`
 - [x] `npm run build` passes with zero errors
 
+### Photo Lightbox
+
+- [x] Updated `components/browse/photo-gallery.tsx` — added full-screen lightbox overlay with `bg-black/90` backdrop, `object-contain` (no cropping), X close button, keyboard Escape/arrow navigation, prev/next buttons for multi-photo reports, body scroll lock when open, and click-outside-to-close. Lightbox automatically available on all 5 pages that use `PhotoGallery` (public report detail, citizen my-reports, citizen my-feedback, admin report review, admin feedback review).
+- [x] `npm run build` passes with zero errors
+
 ### Quick Wins (v2.0)
 - [x] **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
