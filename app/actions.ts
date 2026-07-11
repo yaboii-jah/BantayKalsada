@@ -186,6 +186,51 @@ export async function submitReport(
   }
 }
 
+export async function toggleConfirmation(
+  reportId: string,
+): Promise<{ success: boolean; confirmed?: boolean; count?: number; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in" };
+    }
+
+    const { data: existing } = await supabase
+      .from("confirmations")
+      .select("id")
+      .eq("report_id", reportId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (existing) {
+      const { error: delError } = await supabase
+        .from("confirmations")
+        .delete()
+        .eq("id", existing.id);
+      if (delError) {
+        return { success: false, error: "Failed to remove confirmation" };
+      }
+    } else {
+      const { error: insError } = await supabase
+        .from("confirmations")
+        .insert({ report_id: reportId, user_id: user.id });
+      if (insError) {
+        return { success: false, error: "Failed to add confirmation" };
+      }
+    }
+
+    const { count } = await supabase
+      .from("confirmations")
+      .select("id", { count: "exact", head: true })
+      .eq("report_id", reportId);
+
+    return { success: true, confirmed: !existing, count: count ?? 0 };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
 export async function submitFeedback(
   formData: CreateFeedbackInput,
 ): Promise<ActionResponse> {

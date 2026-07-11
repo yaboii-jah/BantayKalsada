@@ -6,6 +6,19 @@ import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { AdminReportActions } from "./admin-report-actions";
 import { formatReportDate } from "@/lib/date-utils";
 import { MapPin, Calendar, User, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const severityLabels: Record<string, string> = {
+  MINOR: "Minor",
+  URGENT: "Urgent",
+  EMERGENCY: "Emergency",
+};
+
+const severityStyles: Record<string, string> = {
+  MINOR: "border-status-approved/30 bg-status-approved/10 text-status-approved",
+  URGENT: "border-yellow-500/30 bg-yellow-500/10 text-yellow-500",
+  EMERGENCY: "border-status-rejected/30 bg-status-rejected/10 text-status-rejected",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +68,9 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {categoryLabels[report.category] ?? report.category}
+          </span>
+          <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium", severityStyles[report.severity])}>
+            {severityLabels[report.severity]}
           </span>
           <ReportStatusBadge status={report.status} />
           <span className="ml-auto text-sm text-muted-foreground">

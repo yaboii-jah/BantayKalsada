@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Send, Loader2 } from "lucide-react";
 
-import { createReportSchema, type CreateReportInput } from "@/lib/validations/report";
+import { createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
 import { submitReport } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ export function ReportForm() {
     defaultValues: {
       title: "",
       description: "",
+      severity: "MINOR",
       photo_urls: [],
       latitude: undefined,
       longitude: undefined,
@@ -137,6 +138,26 @@ export function ReportForm() {
           <p className="text-xs text-destructive">{errors.description.message}</p>
         )}
       </div>
+
+      <fieldset className="space-y-3">
+        <Label>Severity</Label>
+        <div className="flex gap-3">
+          {reportSeverityEnum.options.map((value) => (
+            <label
+              key={value}
+              className="flex cursor-pointer items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+            >
+              <input
+                type="radio"
+                value={value}
+                {...register("severity")}
+                className="size-4 accent-primary"
+              />
+              {value.charAt(0) + value.slice(1).toLowerCase()}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div className="space-y-2">
         <Label>Photos</Label>

@@ -16,10 +16,11 @@ change.
 - [x] Admin Note on Feedback — Complete
 - [x] Dark Mode (User Side) — Complete
 - [x] Bulk Admin Actions — Complete
+- [x] Community Features (Severity + Confirmations) — Complete
 
 ## Current Goal
 
-- Quick wins: PWA support, share report, bulk admin actions, CSV export
+- Community features: severity tagging + report confirmations
 
 ## Completed
 
@@ -390,9 +391,9 @@ change.
 - **Export admin reports to CSV** — server-generated CSV download button
 
 ### Community Features (v2.1)
-- **Report confirmations ("I saw this too")** — new `confirmations` table, +1 button on reports, credibility badge
+- [x] **Report severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
+- [x] **Report confirmations ("I saw this too")** — `confirmations` table with RLS, toggle button on public report detail, confirmation count
 - **Comments on reports** — threaded discussion with admin moderation
-- **Report severity tagging** — Minor / Urgent / Emergency label on submission form
 - **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
 
 ### Mobile & Notifications (v2.2)

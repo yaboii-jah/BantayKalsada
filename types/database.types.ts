@@ -131,6 +131,35 @@ export type Database = {
         }
         Relationships: []
       }
+      confirmations: {
+        Row: {
+          created_at: string
+          id: string
+          report_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          report_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          report_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "confirmations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           category: Database["public"]["Enums"]["report_category"]
@@ -144,6 +173,7 @@ export type Database = {
           resolved_at: string | null
           reviewed_at: string | null
           reviewed_by_id: string | null
+          severity: Database["public"]["Enums"]["report_severity"]
           status: Database["public"]["Enums"]["report_status"]
           submitted_at: string
           submitted_by_id: string
@@ -161,6 +191,7 @@ export type Database = {
           resolved_at?: string | null
           reviewed_at?: string | null
           reviewed_by_id?: string | null
+          severity?: Database["public"]["Enums"]["report_severity"]
           status?: Database["public"]["Enums"]["report_status"]
           submitted_at?: string
           submitted_by_id: string
@@ -178,6 +209,7 @@ export type Database = {
           resolved_at?: string | null
           reviewed_at?: string | null
           reviewed_by_id?: string | null
+          severity?: Database["public"]["Enums"]["report_severity"]
           status?: Database["public"]["Enums"]["report_status"]
           submitted_at?: string
           submitted_by_id?: string
@@ -208,6 +240,7 @@ export type Database = {
         | "POTHOLE"
         | "ROAD_ACCIDENT"
         | "ROAD_RAGE"
+      report_severity: "EMERGENCY" | "MINOR" | "URGENT"
       report_status: "APPROVED" | "PENDING" | "REJECTED" | "RESOLVED"
       user_role: "ADMIN" | "CITIZEN"
     }
@@ -354,6 +387,7 @@ export const Constants = {
         "ROAD_ACCIDENT",
         "ROAD_RAGE",
       ],
+      report_severity: ["EMERGENCY", "MINOR", "URGENT"],
       report_status: ["APPROVED", "PENDING", "REJECTED", "RESOLVED"],
       user_role: ["ADMIN", "CITIZEN"],
     },

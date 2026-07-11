@@ -7,6 +7,19 @@ import { formatReportDate } from "@/lib/date-utils";
 import { MapPin, Calendar, XCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const severityLabels: Record<string, string> = {
+  MINOR: "Minor",
+  URGENT: "Urgent",
+  EMERGENCY: "Emergency",
+};
+
+const severityStyles: Record<string, string> = {
+  MINOR: "border-status-approved/30 bg-status-approved/10 text-status-approved",
+  URGENT: "border-yellow-500/30 bg-yellow-500/10 text-yellow-500",
+  EMERGENCY: "border-status-rejected/30 bg-status-rejected/10 text-status-rejected",
+};
 
 const categoryLabels: Record<string, string> = {
   POTHOLE: "Pothole",
@@ -53,6 +66,9 @@ export default async function MyReportDetailPage({
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
             {categoryLabels[report.category] ?? report.category}
+          </span>
+          <span className={cn("inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium", severityStyles[report.severity])}>
+            {severityLabels[report.severity]}
           </span>
           <ReportStatusBadge status={report.status} />
         </div>

@@ -8,6 +8,8 @@ export const reportCategoryEnum = z.enum([
   "OTHER",
 ]);
 
+export const reportSeverityEnum = z.enum(["MINOR", "URGENT", "EMERGENCY"]);
+
 export const createReportSchema = z.object({
   title: z
     .string()
@@ -33,6 +35,7 @@ export const createReportSchema = z.object({
     .min(-180, "Invalid longitude")
     .max(180, "Invalid longitude"),
   location_label: z.string().trim().max(255).optional(),
+  severity: reportSeverityEnum,
 });
 
 export type CreateReportInput = z.infer<typeof createReportSchema>;

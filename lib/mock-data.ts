@@ -131,6 +131,7 @@ export function generateMockReports(count = 36): ReportRow[] {
       location_label: locations[i % locations.length],
       rejection_reason: null,
       submitted_by_id: "mock-user",
+      severity: (["MINOR", "URGENT", "EMERGENCY"] as const)[i % 3],
       reviewed_by_id: "mock-admin",
       submitted_at: submittedAt,
       reviewed_at: submittedAt,

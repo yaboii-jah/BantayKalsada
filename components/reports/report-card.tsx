@@ -7,6 +7,12 @@ import { formatReportDate } from "@/lib/date-utils";
 
 type ReportRow = Database["public"]["Tables"]["reports"]["Row"];
 
+const severityStyles: Record<string, string> = {
+  MINOR: "border-status-approved/30 bg-status-approved/10 text-status-approved",
+  URGENT: "border-yellow-500/30 bg-yellow-500/10 text-yellow-500",
+  EMERGENCY: "border-status-rejected/30 bg-status-rejected/10 text-status-rejected",
+};
+
 const categoryLabels: Record<string, string> = {
   POTHOLE: "Pothole",
   FLOODED_ROAD: "Flooded Road",
@@ -50,6 +56,11 @@ export function ReportCard({
           <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {categoryLabels[report.category] ?? report.category}
           </span>
+          {report.severity !== "MINOR" && (
+            <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium", severityStyles[report.severity])}>
+              {report.severity === "URGENT" ? "Urgent" : "Emergency"}
+            </span>
+          )}
           <ReportStatusBadge status={report.status} />
           <span className="ml-auto text-xs text-muted-foreground">
             {formatReportDate(report.submitted_at)}

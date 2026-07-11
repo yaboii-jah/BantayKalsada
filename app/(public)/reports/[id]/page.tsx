@@ -7,11 +7,25 @@ import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { formatReportDate } from "@/lib/date-utils";
 import { getDisplayUrl } from "@/lib/cloudinary-url";
-import { MapPin, Calendar, Share2 } from "lucide-react";
+import { MapPin, Calendar } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ShareButton } from "@/components/reports/share-button";
+import { ConfirmButton } from "@/components/reports/confirm-button";
+import { cn } from "@/lib/utils";
+
+const severityLabels: Record<string, string> = {
+  MINOR: "Minor",
+  URGENT: "Urgent",
+  EMERGENCY: "Emergency",
+};
+
+const severityStyles: Record<string, string> = {
+  MINOR: "border-status-approved/30 bg-status-approved/10 text-status-approved",
+  URGENT: "border-yellow-500/30 bg-yellow-500/10 text-yellow-500",
+  EMERGENCY: "border-status-rejected/30 bg-status-rejected/10 text-status-rejected",
+};
 
 const categoryLabels: Record<string, string> = {
   POTHOLE: "Pothole",
@@ -89,6 +103,20 @@ export default async function ReportDetailPage({
     notFound();
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const { count: confirmCount } = await supabase
+    .from("confirmations")
+    .select("id", { count: "exact", head: true })
+    .eq("report_id", id);
+  const userConfirmed = user
+    ? !!(await supabase
+        .from("confirmations")
+        .select("id")
+        .eq("report_id", id)
+        .eq("user_id", user.id)
+        .maybeSingle()).data
+    : false;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
@@ -105,6 +133,9 @@ export default async function ReportDetailPage({
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
             {categoryLabels[report.category] ?? report.category}
+          </span>
+          <span className={cn("inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium", severityStyles[report.severity])}>
+            {severityLabels[report.severity]}
           </span>
           <ReportStatusBadge status={report.status} />
         </div>
@@ -137,6 +168,16 @@ export default async function ReportDetailPage({
           {report.description}
         </p>
       </div>
+
+      {user && (
+        <div className="mb-8 flex items-center gap-3">
+          <ConfirmButton
+            reportId={report.id}
+            initialConfirmed={!!userConfirmed}
+            initialCount={confirmCount ?? 0}
+          />
+        </div>
+      )}
 
       <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-foreground">
