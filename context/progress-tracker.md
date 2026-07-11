@@ -20,7 +20,7 @@ change.
 
 ## Current Goal
 
-- Community features: severity tagging
+- Severity tagging shipped — feature spec `19-severity-tagging.md` written
 
 ## Completed
 
@@ -392,7 +392,6 @@ change.
 
 ### Community Features (v2.1)
 - [x] **Report severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
-- **Report confirmations ("I saw this too")** — `confirmations` table with RLS, toggle button on public report detail, confirmation count
 - **Comments on reports** — threaded discussion with admin moderation
 - **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
 

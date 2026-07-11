@@ -41,6 +41,12 @@ CREATE TYPE report_status AS ENUM (
   'RESOLVED'
 );
 
+CREATE TYPE report_severity AS ENUM (
+  'MINOR',
+  'URGENT',
+  'EMERGENCY'
+);
+
 CREATE TYPE notification_type AS ENUM (
   'REPORT_APPROVED',
   'REPORT_REJECTED',
@@ -103,11 +109,12 @@ The core table. Stores all citizen-submitted road incident reports at every stag
 
 ```sql
 CREATE TABLE reports (
-  id                uuid            PRIMARY KEY DEFAULT gen_random_uuid(),
-  title             text            NOT NULL,
-  description       text            NOT NULL,
-  category          report_category NOT NULL,
-  status            report_status   NOT NULL DEFAULT 'PENDING',
+  id                uuid             PRIMARY KEY DEFAULT gen_random_uuid(),
+  title             text             NOT NULL,
+  description       text             NOT NULL,
+  category          report_category  NOT NULL,
+  severity          report_severity  NOT NULL DEFAULT 'MINOR',
+  status            report_status    NOT NULL DEFAULT 'PENDING',
   photo_urls        text[]          NOT NULL DEFAULT '{}',
   latitude          double precision NOT NULL,
   longitude         double precision NOT NULL,
@@ -149,6 +156,7 @@ CREATE TABLE reports (
 | `title` | `text` | No | — | 5–100 characters. Enforced by `title_length` constraint and Zod. |
 | `description` | `text` | No | — | 20–1000 characters. Enforced by `description_length` constraint and Zod. |
 | `category` | `report_category` | No | — | Must match one of the defined enum values. |
+| `severity` | `report_severity` | No | `'MINOR'` | Set by the citizen on submission. Defaults to Minor if not specified. |
 | `status` | `report_status` | No | `'PENDING'` | Set by server-side logic only. Never accepted as a client value. |
 | `photo_urls` | `text[]` | No | `'{}'` | Array of 1–3 Cloudinary CDN URLs. Enforced by `photo_urls_count` constraint. |
 | `latitude` | `double precision` | No | — | From the map pin. Validated by `latitude_range` constraint. |
@@ -457,6 +465,7 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `reports.title` | Required, 5–100 characters | DB constraint + Zod |
 | `reports.description` | Required, 20–1000 characters | DB constraint + Zod |
 | `reports.category` | Must match a valid enum value | DB enum type + Zod |
+| `reports.severity` | Must match a valid enum value | DB enum type + Zod |
 | `reports.photo_urls` | Array of 1–3 valid URLs | DB constraint + Zod |
 | `reports.latitude` | Between -90 and 90 | DB constraint + Zod |
 | `reports.longitude` | Between -180 and 180 | DB constraint + Zod |

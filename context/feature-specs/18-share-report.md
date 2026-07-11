@@ -86,9 +86,9 @@ User taps share button on /reports/[id]:
 
 - [ ] Shared report link shows rich preview on Facebook (og:title, og:description, og:image)
 - [ ] Shared report link shows large image card on X/Twitter (twitter:card: summary_large_image)
-- [ ] Share button on `/reports/[id]` triggers native share sheet on mobile Chrome/Safari
-- [ ] Share button copies link to clipboard on desktop browsers without Web Share API
-- [ ] Clipboard success shows toast "Link copied"
-- [ ] Clipboard failure shows toast "Failed to copy link"
-- [ ] Report with no photos omits og:image gracefully (no broken image in preview)
+- [x] Share button on `/reports/[id]` triggers native share sheet on mobile Chrome/Safari
+- [x] Share button copies link to clipboard on desktop browsers without Web Share API
+- [x] Clipboard success shows toast "Link copied"
+- [x] Clipboard failure shows toast "Failed to copy link"
+- [x] Report with no photos omits og:image gracefully (no broken image in preview)
 - [x] `npm run build` passes with zero errors

@@ -84,7 +84,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Native iOS or Android mobile applications.
 - SMS notifications.
 - Facebook or other OAuth login providers — planned for v1.1.
-- Report upvoting, confirmations, or community interactions.
+- Report comments, nearby existing reports on submit.
 - User account management by admins (suspend, ban, or delete users).
 - Integration with government systems such as MMDA, DPWH, or LGU APIs.
 - AI-assisted moderation or duplicate detection.
