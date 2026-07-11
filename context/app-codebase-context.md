@@ -1,6 +1,6 @@
 # Bantay Kalsada — Codebase Context
 
-This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete v1 implementation including Google OAuth, in-app notifications, keyword search, map view with bounding box filter, admin analytics, and Suspense-boundary loading for filter navigation.
+This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete v1 implementation including Google OAuth, in-app notifications, keyword search, map view with bounding box filter, admin analytics, app feedback system, admin notes on feedback, report severity tagging, comments on reports, share report via link/social, PWA support, bulk admin actions, Suspense-boundary loading for filter navigation, and dark mode.
 
 ---
 
@@ -12,8 +12,8 @@ The app uses Next.js App Router **route groups** to enforce access tiers. Each g
 |-------|--------|--------|--------|
 | `(public)` | `/`, `/browse`, `/reports/[id]` | Anyone — no auth needed | Shared nav + footer (Ft2 inline) |
 | `(auth)` | `/login`, `/register`, `/reset-password` | Unauthenticated only | Centered card on gradient bg |
-| `(citizen)` | `/submit`, `/my-reports`, `/my-reports/[id]` | Auth + verified email | Same nav/footer as public |
-| `admin/` | `/admin/*` (dashboard with analytics, queues, review) | Auth + `role: ADMIN` | Sidebar + content canvas |
+| `(citizen)` | `/submit`, `/my-reports`, `/my-reports/[id]`, `/feedback`, `/my-feedback`, `/my-feedback/[id]` | Auth + verified email | Same nav/footer as public |
+| `admin/` | `/admin/*` (dashboard, queues, review, feedback inbox, notes) | Auth + `role: ADMIN` | Sidebar + content canvas |
 
 ---
 
@@ -254,19 +254,80 @@ Max 5 submissions per user per 24-hour window. Enforced by counting the authenti
 
 ---
 
-## What the `notifications` Table Already Stores
+## What the `notifications` Table Stores
 
-The `notifications` table is populated by all three admin actions (approve, reject, resolve). Each insert creates:
+The `notifications` table is populated by multiple Server Actions:
 
-| Column | Value |
-|--------|-------|
-| `user_id` | The citizen who submitted the report |
-| `report_id` | The report that changed status |
-| `type` | `REPORT_APPROVED` / `REPORT_REJECTED` / `REPORT_RESOLVED` |
-| `message` | Human-readable text (e.g., "Your report '...' has been approved.") |
-| `is_read` | `false` (ready for v1.1 mark-as-read) |
+| Action | Source | `type` | Receiver |
+|--------|--------|--------|----------|
+| `approveReport` | `app/admin/actions.ts` | `REPORT_APPROVED` | Report submitter |
+| `rejectReport` | `app/admin/actions.ts` | `REPORT_REJECTED` | Report submitter |
+| `resolveReport` | `app/admin/actions.ts` | `REPORT_RESOLVED` | Report submitter |
+| `acknowledgeFeedback` | `app/admin/actions.ts` | `FEEDBACK_ACKNOWLEDGED` | Feedback submitter |
+| `closeFeedback` | `app/admin/actions.ts` | `FEEDBACK_CLOSED` | Feedback submitter |
+| `updateFeedbackNote` | `app/admin/actions.ts` | `FEEDBACK_NOTE_ADDED` | Feedback submitter (null→value only) |
+| `addComment` | `app/actions.ts` | `COMMENT_ADDED` | Report owner (if commenter ≠ owner) |
 
-The backend for a v1.1 notification center is fully in place — only the citizen-facing UI is missing (bell icon, dropdown, mark-as-read).
+Link targets per type:
+- `REPORT_*` → `/my-reports/[report_id]`
+- `FEEDBACK_*` → `/my-feedback/[feedback_id]`
+- `COMMENT_ADDED` → `/reports/[report_id]` (public detail page)
+
+---
+
+## Comments Data Flow
+
+```
+Report Detail Page (server component)
+  → fetches report + current user + admin status
+  → renders <CommentSection reportId currentUserId isAdmin />
+    → <CommentSection /> (client)
+      → keeps optimisticComments state for instant display after posting
+      → if logged in: <CommentForm reportId onDone=(result data) />
+      → <CommentList reportId currentUserId isAdmin refreshKey optimisticComments onOptimisticConfirmed />
+        → fetch: supabase.from("report_comments").select("*")
+                 (uses denormalized author_name — no FK join through auth.users to profiles,
+                  which PostgREST cannot resolve and returns 400)
+        → merges optimisticComments with fetched data (dedup by id)
+        → cancelled flag pattern prevents stale fetch from overwriting fresh data
+        → calls onOptimisticConfirmed(ids) on successful fetch to clean up
+        → renders <CommentItem /> for each top-level + replies, sorted oldest-first
+
+addComment(report_id, parent_id, body)      → server action (anon key)
+  → 1. auth check
+  → 2. profile fetch for full_name → author_name
+  → 3. body trim + length validation (1-2000)
+  → 4. supabase insert into report_comments (with author_name)
+  → 5. .select("*") returns full comment row for optimistic insert
+  → 6. if commenter != report owner: create COMMENT_ADDED notification via service role client
+  → return { success: true, data: comment }  (full row)
+
+editComment(comment_id, body)               → server action (anon key)
+  → 1. auth check
+  → 2. body trim + length validation
+  → 3. supabase update (body, updated_at) where id=comment_id AND user_id=current_user
+  → return { success: true }
+
+deleteComment(comment_id)                   → server action (anon key)
+  → 1. auth check
+  → 2. supabase delete where id=comment_id AND user_id=current_user
+  → 3. CommentItem sets locallyDeleted=true on success → instant hide
+  → return { success: true }
+
+removeComment(comment_id)                   → admin server action (service role key)
+  → 1. verifyAdmin() — auth + role check
+  → 2. supabase update status='REMOVED' where id=comment_id via service role client
+  → 3. CommentItem sets locallyRemoved=true on success → instant "removed by moderator" placeholder
+  → return { success: true }
+```
+
+**Key fixes during implementation:**
+- **`author_name` denormalization**: Added column to `report_comments`. Avoids FK join through `auth.users` to `profiles` — PostgREST cannot resolve composite relationships, returning 400. Name is set at comment creation time from `profiles.full_name`.
+- **Optimistic insert**: `addComment` returns full row. `CommentSection` adds to `optimisticComments` state immediately. `CommentList` merges with fetched data and clears on successful re-fetch.
+- **Optimistic delete/remove**: Local state flags (`locallyDeleted`, `locallyRemoved`) in `CommentItem` provide instant feedback without waiting for re-fetch or page reload.
+- **Race condition**: `cancelled` flag pattern in `CommentList`'s `useEffect` prevents stale fetch responses from overwriting fresh data when `refreshKey` changes.
+- **Reports RLS**: The `"Public can read approved and resolved reports"` policy was `TO anon`-only. The `EXISTS` subquery in `report_comments` RLS failed for authenticated non-owners. Fixed by removing `TO anon` so the policy applies to all roles.
+- **Service worker caching**: PWA service worker precaches JS bundles at build time. Old cached bundles with the broken FK join query cause 400 errors. Unregister in DevTools after code changes during development.
 
 ---
 
@@ -274,7 +335,7 @@ The backend for a v1.1 notification center is fully in place — only the citize
 
 ```
 app/                     — Next.js App Router pages, layouts, loading states, error boundaries
-  actions.ts             — citizen Server Actions (submitReport)
+  actions.ts             — citizen & public Server Actions (submitReport, submitFeedback, addComment, editComment, deleteComment, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications)
   (auth)/                — login, register, reset-password
   auth/callback/         — OAuth callback (exchanges Google code for session)
   (citizen)/             — submit, my-reports
@@ -288,7 +349,7 @@ components/
   auth/                  — auth card, branding panel, Google sign-in button
   browse/                — filter bar, pagination bar, photo gallery, browse map (clustered, bounding box filter)
   maps/                  — Leaflet map, location picker (all client-side, dynamic import)
-  reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton
+  reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section, comment-form, comment-list, comment-item
   ui/                    — Shadcn/ui primitives (DO NOT EDIT)
 
 lib/
@@ -297,13 +358,14 @@ lib/
   cloudinary.ts          — Cloudinary config + signing
   cloudinary-url.ts      — CDN URL rewriting (res → res-3 for Asia/Pacific)
   email.ts               — Brevo client
-  notifications.ts       — notification creation helpers
-  admin-notifications.tsx— report lookup + email dispatch orchestration
+  notifications.ts       — notification creation helpers (all types including FEEDBACK_*, COMMENT_ADDED)
+  admin-notifications.tsx— report + feedback lookup + email dispatch orchestration
+  admin-feedback-notifications.tsx — feedback-specific notification dispatcher (acknowledge, close, note)
   date-utils.ts          — fil-PH date formatting
   mock-data.ts           — 36 development mock reports
 
 emails/
-  render.ts              — HTML email generators (template strings, no JSX)
+  render.ts              — HTML email generators (template strings, no JSX) — report status + feedback notification templates (acknowledged, closed, note-added)
 
 types/
   database.types.ts      — Generated Supabase types (DO NOT EDIT BY HAND)

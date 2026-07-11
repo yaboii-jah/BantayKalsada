@@ -1,11 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/service-role";
 
 export type ReportNotificationType = "REPORT_APPROVED" | "REPORT_REJECTED" | "REPORT_RESOLVED";
+export type CommentNotificationType = "COMMENT_ADDED";
 export type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED";
-export type NotificationType = ReportNotificationType | FeedbackNotificationType;
+export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType;
 
 export function getMessageForType(type: NotificationType, title: string): string {
   switch (type) {
+    case "COMMENT_ADDED":
+      return `Someone commented on the report "${title}".`;
     case "REPORT_APPROVED":
       return `Your report "${title}" has been approved and is now visible on the public feed.`;
     case "REPORT_REJECTED":
@@ -23,6 +26,8 @@ export function getMessageForType(type: NotificationType, title: string): string
 
 export function getSubjectForType(type: NotificationType): string {
   switch (type) {
+    case "COMMENT_ADDED":
+      return "New Comment on Report — Bantay Kalsada";
     case "REPORT_APPROVED":
       return "Report Approved — Bantay Kalsada";
     case "REPORT_REJECTED":

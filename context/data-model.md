@@ -15,6 +15,7 @@ The database owns all structured application data. It does not store binary cont
 | Road incident reports | `reports` table |
 | Status change notifications | `notifications` table |
 | App feedback submissions | `feedback` table |
+| Comments on reports | `report_comments` table |
 | Report photos | Cloudinary —  only the URL strings are stored in the database |
 
 ---
@@ -47,7 +48,10 @@ CREATE TYPE report_severity AS ENUM (
   'EMERGENCY'
 );
 
+CREATE TYPE comment_status AS ENUM ('ACTIVE', 'REMOVED');
+
 CREATE TYPE notification_type AS ENUM (
+  'COMMENT_ADDED',
   'REPORT_APPROVED',
   'REPORT_REJECTED',
   'REPORT_RESOLVED',
@@ -58,6 +62,8 @@ CREATE TYPE notification_type AS ENUM (
 CREATE TYPE feedback_type AS ENUM ('BUG_REPORT', 'FEATURE_REQUEST', 'GENERAL');
 
 CREATE TYPE feedback_status AS ENUM ('OPEN', 'ACKNOWLEDGED', 'CLOSED');
+
+CREATE TYPE comment_status AS ENUM ('ACTIVE', 'REMOVED');
 ```
 
 ---
@@ -171,6 +177,38 @@ CREATE TABLE reports (
 
 ---
 
+### `report_comments`
+
+Stores comments on approved/resolved reports. Supports single-level threading (top-level comments with flat replies). Comments can be soft-deleted by administrators.
+
+```sql
+CREATE TABLE report_comments (
+  id          uuid            PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id   uuid            NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  user_id     uuid            NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  parent_id   uuid            NULL REFERENCES report_comments(id) ON DELETE CASCADE,
+  body        text            NOT NULL,
+  author_name text            NOT NULL DEFAULT '',
+  status      comment_status  NOT NULL DEFAULT 'ACTIVE',
+  created_at  timestamptz     NOT NULL DEFAULT now(),
+  updated_at  timestamptz     NOT NULL DEFAULT now(),
+
+  CONSTRAINT comment_body_length CHECK (char_length(body) >= 1 AND char_length(body) <= 2000)
+);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `report_id` | `uuid` | No | — | FK to `reports.id`. Cascade deletes when the report is deleted. |
+| `user_id` | `uuid` | No | — | FK to `auth.users.id`. Cascade deletes when the auth user is deleted. |
+| `parent_id` | `uuid` | Yes | `null` | FK to `report_comments.id`. Null for top-level comments, non-null for replies. |
+| `body` | `text` | No | — | 1–2000 characters. Enforced by `comment_body_length` constraint and server-side validation. |
+| `author_name` | `text` | No | `''` | Denormalized from `profiles.full_name` at comment creation time. Set by the `addComment` Server Action. Avoids FK join to profiles for display, works for both anon and authenticated visitors. |
+| `status` | `comment_status` | No | `'ACTIVE'` | `ACTIVE` for visible, `REMOVED` for admin soft-delete. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
+| `updated_at` | `timestamptz` | No | `now()` | Updated on edit via the Server Action. |
+
 ### `notifications`
 
 Stores in-app notification records created when a report's status changes or when feedback is acknowledged/closed. One row per status change event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
@@ -247,11 +285,16 @@ auth.users (Supabase-managed)
   ├── profiles.id                (one-to-one, cascade delete)
   ├── reports.submitted_by_id   (one-to-many, cascade delete)
   ├── reports.reviewed_by_id    (one-to-many, set null on delete)
+  ├── report_comments.user_id   (one-to-many, cascade delete)
   ├── feedback.user_id          (one-to-many, cascade delete)
   └── notifications.user_id     (one-to-many, cascade delete)
 
 reports
+  ├── report_comments.report_id (one-to-many, cascade delete)
   └── notifications.report_id   (one-to-many, cascade delete)
+
+report_comments
+  └── report_comments.parent_id (one-to-many, cascade delete)
 
 feedback
   └── notifications.feedback_id (one-to-many, cascade delete)
@@ -291,6 +334,15 @@ CREATE INDEX idx_feedback_status ON feedback(status);
 
 -- feedback: admin inbox sorted newest first
 CREATE INDEX idx_feedback_created_at ON feedback(created_at DESC);
+
+-- report_comments: listing comments for a report (the primary query)
+CREATE INDEX idx_comments_report_id ON report_comments(report_id);
+
+-- report_comments: filtering by user (admin lookups, self-service)
+CREATE INDEX idx_comments_user_id ON report_comments(user_id);
+
+-- report_comments: fetching replies for a top-level comment
+CREATE INDEX idx_comments_parent_id ON report_comments(parent_id);
 ```
 
 ---
@@ -356,8 +408,9 @@ Enable RLS on all application-owned tables. Admin operations use the service rol
 ```sql
 ALTER TABLE profiles      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE feedback      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feedback           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_comments    ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
@@ -385,10 +438,9 @@ Note: Admins read other users' profiles (for the report review page) using the s
 ### `reports` RLS
 
 ```sql
--- Public (unauthenticated) can read approved and resolved reports only
-CREATE POLICY "Public can read approved and resolved reports"
+-- Anyone (anon + authenticated) can read approved and resolved reports
+CREATE POLICY "Anyone can read approved and resolved reports"
   ON reports FOR SELECT
-  TO anon
   USING (status IN ('APPROVED', 'RESOLVED'));
 
 -- Authenticated citizens can read their own reports regardless of status
@@ -455,6 +507,42 @@ Note: Feedback entries are inserted by the `submitFeedback` Server Action using 
 
 ---
 
+### `report_comments` RLS
+
+```sql
+-- Anyone can read active comments on approved/resolved reports
+CREATE POLICY "Anyone can read active comments on approved reports"
+  ON report_comments FOR SELECT
+  USING (
+    status = 'ACTIVE' AND EXISTS (
+      SELECT 1 FROM reports WHERE reports.id = report_id AND reports.status IN ('APPROVED', 'RESOLVED')
+    )
+  );
+
+-- Authenticated users can insert comments
+CREATE POLICY "Authenticated users can insert comments"
+  ON report_comments FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update own comments (body edit, not status)
+CREATE POLICY "Users can update own comments"
+  ON report_comments FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id AND status = 'ACTIVE');
+
+-- Users can delete own comments
+CREATE POLICY "Users can delete own comments"
+  ON report_comments FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
+```
+
+Note: Admin soft-delete (setting `status = 'REMOVED'`) uses the service role client via `removeComment` Server Action in `app/admin/actions.ts`. There is no admin-specific RLS policy — admin mutations bypass RLS entirely.
+
+---
+
 ## Business Validation Rules
 
 These rules are enforced at two levels: database constraints (defined above) and Zod schemas (in `lib/validations/`). Both layers must agree. If a constraint exists in the database, the corresponding Zod rule must exist too — and vice versa.
@@ -479,6 +567,11 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `feedback.type` | Must match a valid enum value | DB enum type + Zod |
 | `feedback.status` | Set server-side only — never accepted from client | Server Action handler |
 | Feedback submission rate | Max 3 submissions per user per 24-hour window | Server Action (count query before insert) |
+| `report_comments.body` | Required, 1–2000 characters | DB constraint + server-side validation |
+| `report_comments.status` | Must match a valid enum value | DB enum type + server-side enforcement |
+| Comment ownership | Only the comment author can edit or delete a comment | RLS policy on `report_comments` |
+| Comment admin removal | Admins can set status to `REMOVED` via service role client | Server Action handler (`verifyAdmin()` + service role update) |
+| Comment notification | Report owner receives in-app notification when someone comments on their report (not on own comment) | Server Action (`addComment` checks `submitted_by_id !== user.id`) |
 
 ---
 

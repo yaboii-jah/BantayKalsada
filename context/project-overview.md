@@ -78,17 +78,17 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - App feedback system: any logged-in user can submit bug reports, feature requests, or general feedback with an optional 1–5 star rating. Admins view submissions in a dedicated inbox and can acknowledge or close them. Status changes and admin notes trigger in-app notifications and emails. Admins can add, edit, and remove internal notes on feedback submissions that are visible to the citizen.
 - Progressive Web App (PWA) support: manifest.json for installability, service worker for offline caching (static assets, pages, and images), and an in-app install banner.
 - Share report via link/social: Open Graph meta tags on report detail pages for rich link previews on social platforms, plus an in-app share button using the Web Share API with clipboard fallback.
+- Comments on reports: any logged-in user can comment on approved/resolved reports on the public detail page. Single-level threading (reply to top-level only). Editing and deletion by the comment author. Admin moderation via soft-delete (status = REMOVED). Report owner receives an in-app notification when someone comments.
 
 ### Out of Scope
 
 - Native iOS or Android mobile applications.
 - SMS notifications.
 - Facebook or other OAuth login providers — planned for v1.1.
-- Report comments, nearby existing reports on submit.
+- Nearby existing reports on submit.
 - User account management by admins (suspend, ban, or delete users).
 - Integration with government systems such as MMDA, DPWH, or LGU APIs.
 - AI-assisted moderation or duplicate detection.
-- Comments or discussion threads on reports.
 - Multi-role or region-scoped administrator accounts.
 
 ## Success Criteria

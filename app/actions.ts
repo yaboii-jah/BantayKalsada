@@ -247,3 +247,121 @@ export async function submitFeedback(
     return { success: false, error: "An unexpected error occurred. Please try again." };
   }
 }
+
+export async function addComment(
+  _prevState: ActionResponse | null,
+  formData: { report_id: string; parent_id?: string | null; body: string },
+): Promise<ActionResponse> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in to comment" };
+    }
+
+    const body = formData.body.trim();
+    if (!body || body.length > 2000) {
+      return { success: false, error: "Comment must be between 1 and 2000 characters" };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+
+    const { data: comment, error: insertError } = await supabase
+      .from("report_comments")
+      .insert({
+        report_id: formData.report_id,
+        user_id: user.id,
+        parent_id: formData.parent_id ?? null,
+        body,
+        author_name: profile?.full_name ?? "Anonymous",
+      })
+      .select("*")
+      .single();
+
+    if (insertError) {
+      return { success: false, error: "Failed to post comment. Please try again." };
+    }
+
+    const { data: report } = await supabase
+      .from("reports")
+      .select("submitted_by_id, title")
+      .eq("id", formData.report_id)
+      .single();
+
+    if (report && report.submitted_by_id !== user.id) {
+      const adminClient = createAdminClient();
+      await adminClient.from("notifications").insert({
+        user_id: report.submitted_by_id,
+        report_id: formData.report_id,
+        type: "COMMENT_ADDED",
+        message: `Someone commented on the report "${report.title}".`,
+      });
+    }
+
+    return { success: true, data: comment as { id: string } };
+  } catch {
+    return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
+export async function editComment(
+  _prevState: ActionResponse | null,
+  formData: { comment_id: string; body: string },
+): Promise<ActionResponse> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in to edit a comment" };
+    }
+
+    const body = formData.body.trim();
+    if (!body || body.length > 2000) {
+      return { success: false, error: "Comment must be between 1 and 2000 characters" };
+    }
+
+    const { error: updateError } = await supabase
+      .from("report_comments")
+      .update({ body, updated_at: new Date().toISOString() })
+      .eq("id", formData.comment_id)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      return { success: false, error: "Failed to edit comment" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
+export async function deleteComment(
+  commentId: string,
+): Promise<ActionResponse> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in to delete a comment" };
+    }
+
+    const { error: deleteError } = await supabase
+      .from("report_comments")
+      .delete()
+      .eq("id", commentId)
+      .eq("user_id", user.id);
+
+    if (deleteError) {
+      return { success: false, error: "Failed to delete comment" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}

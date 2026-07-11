@@ -586,3 +586,27 @@ export async function bulkResolveReports(
     return { success: false, error: "An unexpected error occurred" };
   }
 }
+
+export async function removeComment(
+  commentId: string,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error) {
+      return { success: false, error: auth.error };
+    }
+
+    const { error } = await createAdminClient()
+      .from("report_comments")
+      .update({ status: "REMOVED", updated_at: new Date().toISOString() })
+      .eq("id", commentId);
+
+    if (error) {
+      return { success: false, error: "Failed to remove comment" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}

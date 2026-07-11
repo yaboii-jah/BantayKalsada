@@ -17,10 +17,11 @@ change.
 - [x] Dark Mode (User Side) — Complete
 - [x] Bulk Admin Actions — Complete
 - [x] Community Features (Severity Tagging) — Complete
+- [x] Comments on Reports — Complete
 
 ## Current Goal
 
-- Severity tagging shipped — feature spec `19-severity-tagging.md` written
+- All foundational features delivered.
 
 ## Completed
 
@@ -348,6 +349,11 @@ change.
 - [x] Selection is current-page only (clears on page change), rejection uses a single shared reason dialog
 - [x] `npm run build` passes with zero errors
 
+## Community Features (v2.1)
+- [x] **Severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
+- [x] **Comments on reports** — threaded discussion with admin moderation
+- **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
+
 ## Next Up
 - [x] Migration 1: notification_type enum values (non-transaction)
 - [x] Migration 2: feedback tables, RLS, indexes
@@ -392,7 +398,8 @@ change.
 
 ### Community Features (v2.1)
 - [x] **Report severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
-- **Comments on reports** — threaded discussion with admin moderation
+- [x] **Comments on reports** — single-level threaded discussion with admin moderation, COMMENT_ADDED notifications, edit/delete by author, soft-delete by admin
+- [x] **Comments bug fixes** — `author_name` denormalization (removed broken FK join to profiles), optimistic insert (instant display on post), optimistic delete/remove (instant UI), `cancelled` flag pattern (race condition fix), reports RLS fix (TO anon → all roles for EXISTS subquery), service worker cache invalidation note
 - **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
 
 ### Mobile & Notifications (v2.2)

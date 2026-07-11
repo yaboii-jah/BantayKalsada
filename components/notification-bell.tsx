@@ -9,6 +9,7 @@ import {
   CheckCircle,
   XCircle,
   CheckCheck,
+  MessageCircle,
   MessageSquare,
   Check,
   Loader2,
@@ -33,6 +34,7 @@ const NOTIFICATION_ICONS: Record<
   Notification["type"],
   typeof CheckCircle
 > = {
+  COMMENT_ADDED: MessageCircle,
   REPORT_APPROVED: CheckCircle,
   REPORT_REJECTED: XCircle,
   REPORT_RESOLVED: CheckCheck,
@@ -42,6 +44,9 @@ const NOTIFICATION_ICONS: Record<
 };
 
 function getNotificationHref(notification: Notification): string {
+  if (notification.type === "COMMENT_ADDED" && notification.report_id) {
+    return `/reports/${notification.report_id}`;
+  }
   if (notification.type.startsWith("FEEDBACK_") && notification.feedback_id) {
     return `/my-feedback/${notification.feedback_id}`;
   }

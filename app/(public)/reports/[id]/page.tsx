@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ShareButton } from "@/components/reports/share-button";
+import { CommentSection } from "@/components/reports/comment-section";
 import { cn } from "@/lib/utils";
 
 const severityLabels: Record<string, string> = {
@@ -104,6 +105,12 @@ export default async function ReportDetailPage({
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+
+  const isAdmin = profile?.role === "ADMIN";
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
@@ -166,6 +173,12 @@ export default async function ReportDetailPage({
           locationLabel={report.location_label}
         />
       </div>
+
+      <CommentSection
+        reportId={report.id}
+        currentUserId={user?.id ?? null}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }

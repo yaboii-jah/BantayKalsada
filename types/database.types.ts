@@ -104,6 +104,57 @@ export type Database = {
           },
         ]
       }
+      report_comments: {
+        Row: {
+          author_name: string
+          body: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          report_id: string
+          status: Database["public"]["Enums"]["comment_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          author_name: string
+          body: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          report_id: string
+          status?: Database["public"]["Enums"]["comment_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          author_name?: string
+          body?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          report_id?: string
+          status?: Database["public"]["Enums"]["comment_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "report_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_comments_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -196,9 +247,11 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      comment_status: "ACTIVE" | "REMOVED"
       feedback_status: "OPEN" | "ACKNOWLEDGED" | "CLOSED"
       feedback_type: "BUG_REPORT" | "FEATURE_REQUEST" | "GENERAL"
       notification_type:
+        | "COMMENT_ADDED"
         | "FEEDBACK_ACKNOWLEDGED"
         | "FEEDBACK_CLOSED"
         | "FEEDBACK_NOTE_ADDED"
@@ -343,7 +396,9 @@ export const Constants = {
     Enums: {
       feedback_status: ["ACKNOWLEDGED", "CLOSED", "OPEN"],
       feedback_type: ["BUG_REPORT", "FEATURE_REQUEST", "GENERAL"],
+      comment_status: ["ACTIVE", "REMOVED"],
       notification_type: [
+        "COMMENT_ADDED",
         "FEEDBACK_ACKNOWLEDGED",
         "FEEDBACK_CLOSED",
         "FEEDBACK_NOTE_ADDED",
