@@ -1,13 +1,17 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { formatReportDate } from "@/lib/date-utils";
-import { MapPin, Calendar } from "lucide-react";
+import { getDisplayUrl } from "@/lib/cloudinary-url";
+import { MapPin, Calendar, Share2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { ShareButton } from "@/components/reports/share-button";
 
 const categoryLabels: Record<string, string> = {
   POTHOLE: "Pothole",
@@ -16,6 +20,55 @@ const categoryLabels: Record<string, string> = {
   ROAD_RAGE: "Road Rage",
   OTHER: "Other",
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createSupabaseServerClient();
+
+  const { data: report } = await supabase
+    .from("reports")
+    .select("title, description, photo_urls")
+    .eq("id", id)
+    .in("status", ["APPROVED", "RESOLVED"])
+    .single();
+
+  if (!report) return {};
+
+  const headersList = await headers();
+  const host = headersList.get("host") ?? "bantay-kalsada.vercel.app";
+  const protocol = headersList.get("x-forwarded-proto") ?? "https";
+  const url = `${protocol}://${host}/reports/${id}`;
+
+  const ogDescription =
+    report.description.length > 160
+      ? report.description.slice(0, 157).trim() + "..."
+      : report.description;
+
+  const image = report.photo_urls[0] ? getDisplayUrl(report.photo_urls[0]) : undefined;
+
+  return {
+    title: report.title,
+    description: ogDescription,
+    openGraph: {
+      title: report.title,
+      description: ogDescription,
+      url,
+      siteName: "Bantay Kalsada",
+      type: "article",
+      ...(image && { images: [{ url: image, width: 1200, height: 900 }] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: report.title,
+      description: ogDescription,
+      ...(image && { images: [image] }),
+    },
+  };
+}
 
 export default async function ReportDetailPage({
   params,
@@ -38,12 +91,15 @@ export default async function ReportDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <Link href="/browse">
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2">
-          <ArrowLeft className="mr-1 size-4" />
-          Back to reports
-        </Button>
-      </Link>
+      <div className="mb-6 flex items-center justify-between">
+        <Link href="/browse">
+          <Button variant="ghost" size="sm" className="-ml-2">
+            <ArrowLeft className="mr-1 size-4" />
+            Back to reports
+          </Button>
+        </Link>
+        <ShareButton title={report.title} />
+      </div>
 
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-2 mb-3">

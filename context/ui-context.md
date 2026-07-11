@@ -155,6 +155,7 @@ Lucide React — already included as a Shadcn/ui dependency, no additional insta
 | Save note            | `Save`                |
 | Remove note          | `Trash2`              |
 | Logout               | `LogOut`              |
+| Share report         | `Share2`              |
 | Install PWA          | `Download`            |
 
 ---

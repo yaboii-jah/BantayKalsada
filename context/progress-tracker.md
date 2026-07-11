@@ -369,8 +369,16 @@ change.
 - [x] **Detail pages**: `PhotoGallery` (reused carousel) shown on citizen + admin feedback detail pages
 - [x] `npm run build` passes
 
+### Share Report via Link/Social
+
+- [x] Added `generateMetadata` to `app/(public)/reports/[id]/page.tsx` — dynamic `og:title`, `og:description`, `og:image` (first Cloudinary photo via `getDisplayUrl`), `og:url`, `og:type: article`, `twitter:card: summary_large_image`; description truncated to 160 chars; no `og:image` when report has no photos
+- [x] Created `components/reports/share-button.tsx` — client component using `navigator.share()` with fallback to `navigator.clipboard.writeText()` + toast feedback
+- [x] Added `<ShareButton>` to report detail page — positioned in the top-right, beside "Back to reports"
+- [x] Feature spec: `context/feature-specs/18-share-report.md`
+- [x] `npm run build` passes with zero errors
+
 ### Quick Wins (v2.0)
-- **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
+- [x] **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
 - [x] **PWA support** — manifest, service worker, app icons, install prompt
 - [x] **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action

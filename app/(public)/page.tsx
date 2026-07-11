@@ -8,7 +8,6 @@ export default function Home() {
         <section className="my-12 flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center px-4 text-center">
         <div className="mx-auto max-w-2xl">
             <div className="mb-8 inline-flex size-20 items-center justify-center rounded-3xl bg-primary/10">
-              <Map className="size-10 text-primary" />
             </div>
             <h1 className="text-4xl font-bold leading-tight text-foreground sm:text-5xl lg:text-6xl">
               Report road hazards.
