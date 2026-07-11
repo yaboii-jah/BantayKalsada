@@ -16,11 +16,11 @@ change.
 - [x] Admin Note on Feedback — Complete
 - [x] Dark Mode (User Side) — Complete
 - [x] Bulk Admin Actions — Complete
-- [x] Community Features (Severity + Confirmations) — Complete
+- [x] Community Features (Severity Tagging) — Complete
 
 ## Current Goal
 
-- Community features: severity tagging + report confirmations
+- Community features: severity tagging
 
 ## Completed
 
@@ -392,7 +392,7 @@ change.
 
 ### Community Features (v2.1)
 - [x] **Report severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
-- [x] **Report confirmations ("I saw this too")** — `confirmations` table with RLS, toggle button on public report detail, confirmation count
+- **Report confirmations ("I saw this too")** — `confirmations` table with RLS, toggle button on public report detail, confirmation count
 - **Comments on reports** — threaded discussion with admin moderation
 - **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
 

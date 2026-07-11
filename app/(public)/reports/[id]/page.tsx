@@ -12,7 +12,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ShareButton } from "@/components/reports/share-button";
-import { ConfirmButton } from "@/components/reports/confirm-button";
 import { cn } from "@/lib/utils";
 
 const severityLabels: Record<string, string> = {
@@ -104,18 +103,6 @@ export default async function ReportDetailPage({
   }
 
   const { data: { user } } = await supabase.auth.getUser();
-  const { count: confirmCount } = await supabase
-    .from("confirmations")
-    .select("id", { count: "exact", head: true })
-    .eq("report_id", id);
-  const userConfirmed = user
-    ? !!(await supabase
-        .from("confirmations")
-        .select("id")
-        .eq("report_id", id)
-        .eq("user_id", user.id)
-        .maybeSingle()).data
-    : false;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -168,16 +155,6 @@ export default async function ReportDetailPage({
           {report.description}
         </p>
       </div>
-
-      {user && (
-        <div className="mb-8 flex items-center gap-3">
-          <ConfirmButton
-            reportId={report.id}
-            initialConfirmed={!!userConfirmed}
-            initialCount={confirmCount ?? 0}
-          />
-        </div>
-      )}
 
       <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-foreground">

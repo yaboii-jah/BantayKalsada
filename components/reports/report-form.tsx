@@ -17,12 +17,20 @@ import { Label } from "@/components/ui/label";
 import { PhotoUpload } from "@/components/reports/photo-upload";
 import { LocationPickerWrapper } from "@/components/maps/location-picker-wrapper";
 
+import { cn } from "@/lib/utils";
+
 const categoryLabels: Record<CreateReportInput["category"], string> = {
   POTHOLE: "Pothole",
   FLOODED_ROAD: "Flooded Road",
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage Incident",
   OTHER: "Other Road Hazard",
+};
+
+const severityCheckStyles: Record<string, string> = {
+  MINOR: "has-[:checked]:border-status-approved/50 has-[:checked]:bg-status-approved/10",
+  URGENT: "has-[:checked]:border-yellow-500/50 has-[:checked]:bg-yellow-500/10",
+  EMERGENCY: "has-[:checked]:border-status-rejected/50 has-[:checked]:bg-status-rejected/10",
 };
 
 export function ReportForm() {
@@ -145,7 +153,10 @@ export function ReportForm() {
           {reportSeverityEnum.options.map((value) => (
             <label
               key={value}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+              className={cn(
+                "flex cursor-pointer items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm transition-colors",
+                severityCheckStyles[value],
+              )}
             >
               <input
                 type="radio"
