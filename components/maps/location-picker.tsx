@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-lea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { LocateFixed } from "lucide-react";
+import { NearbyReportsLayer } from "./nearby-reports-layer";
 
 const defaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -116,6 +117,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <LocationMarker position={position} onMove={handleMove} />
+        <NearbyReportsLayer lat={position?.[0] ?? null} lng={position?.[1] ?? null} />
       </MapContainer>
 
       <button

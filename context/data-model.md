@@ -168,6 +168,7 @@ CREATE TABLE reports (
 | `photo_urls` | `text[]` | No | `'{}'` | Array of 1–3 Cloudinary CDN URLs. Enforced by `photo_urls_count` constraint. |
 | `latitude` | `double precision` | No | — | From the map pin. Validated by `latitude_range` constraint. |
 | `longitude` | `double precision` | No | — | From the map pin. Validated by `longitude_range` constraint. |
+| `location` | `geography(Point, 4326)` | No (generated) | — | PostGIS geography point. Generated column computed from `longitude, latitude` via `ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography`. Enables spatial queries with `ST_DWithin` using the GIST index. |
 | `location_label` | `text` | Yes | `null` | Optional human-readable address from Nominatim reverse geocoding. |
 | `rejection_reason` | `text` | Yes | `null` | Required (min 10 chars) when `status = 'REJECTED'`. Enforced by `rejection_reason_required` constraint. Null for all other statuses. |
 | `submitted_by_id` | `uuid` | No | — | FK to `auth.users.id`. The citizen who submitted the report. |
@@ -177,6 +178,14 @@ CREATE TABLE reports (
 | `resolved_at` | `timestamptz` | Yes | `null` | When the admin marked the report as resolved. Set server-side at the time of the action. |
 
 ---
+
+**Generated geography column** (added via separate migration after table creation):
+```sql
+ALTER TABLE reports ADD COLUMN location geography(Point, 4326)
+  GENERATED ALWAYS AS (
+    ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
+  ) STORED;
+```
 
 ### `report_comments`
 
@@ -343,6 +352,9 @@ CREATE INDEX idx_reports_submitted_at ON reports(submitted_at DESC);
 -- reports: composite index for the most common public feed query (approved/resolved, sorted by date)
 CREATE INDEX idx_reports_status_submitted_at ON reports(status, submitted_at DESC);
 
+-- reports: spatial index for PostGIS ST_DWithin queries (nearby reports on submit)
+CREATE INDEX idx_reports_location ON reports USING GIST (location);
+
 -- notifications: citizen fetching their own notifications
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 
@@ -423,6 +435,59 @@ CREATE TRIGGER set_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW
   EXECUTE PROCEDURE public.set_updated_at();
+```
+
+### 3. Nearby reports lookup (PostGIS)
+
+Used by the submission form's location picker to show existing approved/resolved reports within a configurable radius when the user pins a location. Called client-side via `supabase.rpc("get_nearby_reports", ...)`.
+
+```sql
+CREATE OR REPLACE FUNCTION get_nearby_reports(
+  lat double precision,
+  lng double precision,
+  max_distance_m double precision DEFAULT 200
+)
+RETURNS TABLE(
+  id uuid,
+  title text,
+  category report_category,
+  severity report_severity,
+  photo_urls text[],
+  latitude double precision,
+  longitude double precision,
+  location_label text,
+  submitted_at timestamptz,
+  distance_m double precision
+)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = public
+AS $$
+  SELECT
+    id,
+    title,
+    category,
+    severity,
+    photo_urls,
+    latitude,
+    longitude,
+    location_label,
+    submitted_at,
+    ST_Distance(
+      location,
+      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
+    ) AS distance_m
+  FROM reports
+  WHERE status IN ('APPROVED', 'RESOLVED')
+    AND ST_DWithin(
+      location,
+      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
+      max_distance_m
+    )
+  ORDER BY distance_m ASC
+  LIMIT 25;
+$$;
 ```
 
 ---

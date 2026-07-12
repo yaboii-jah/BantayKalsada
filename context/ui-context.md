@@ -92,6 +92,7 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 - Field order: Category → Title → Description → Photos → Location (map).
 - Photo upload widget sits between the description textarea and the map. It shows a dropzone when no photos are uploaded, and a row of thumbnail previews with individual remove buttons once photos are attached.
 - The map container has a fixed height of `h-[400px]` and `rounded-lg` corners. A "Use My Location" button floats above the top-left corner of the map.
+- When a location is pinned, nearby APPROVED/RESOLVED reports appear as severity-colored chip markers (white pill with colored dot + distance, colored border matching severity level). Tapping a chip opens a Leaflet popup with photo thumbnail, title, severity badge, status badge, distance, date, and a "View full details →" link. Moving the pin clears and re-fetches.
 - The Submit button is full-width, pinned to the bottom of the form, and uses the `--primary` color. It is disabled and shows a loading spinner while the form is submitting.
 
 ### Admin Panel

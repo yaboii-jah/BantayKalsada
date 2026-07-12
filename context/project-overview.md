@@ -15,7 +15,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 1. A visitor registers for an account using their name, email, and password.
 2. The visitor verifies their email address by clicking a link sent to their inbox.
 3. The verified citizen logs in and clicks "Submit Report."
-4. The citizen fills out the report form: selects a category, enters a title and description, uploads between one and three photos, and pins the incident location on the map.
+4. The citizen fills out the report form: selects a category, enters a title and description, uploads between one and three photos, and pins the incident location on the map — nearby existing APPROVED/RESOLVED reports appear as colored chip markers to help identify duplicates.
 5. The citizen submits the report; it is saved with a `PENDING` status and a confirmation email is sent.
 6. An administrator logs in to the admin panel and opens the pending report queue.
 7. The administrator reviews the report's full details — photos, description, category, and pinned location.
@@ -42,6 +42,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Submit a road incident report with a required title, description, category, between one and three photos (each max 5 MB), and a pinned map location.
 - Use the device's GPS to automatically center the map on the current location.
 - Add, preview, and individually remove photos before submitting (minimum 1, maximum 3).
+- See nearby existing APPROVED/RESOLVED reports as severity-colored chip markers on the map when pinning a location — tap a chip to view report summary and navigate to full details.
 - Receive an email notification when a submitted report is approved, rejected (with the rejection reason), or resolved.
 - View a personal report history listing all own submissions with their current status.
 - View the rejection reason for any rejected report in the personal report history.

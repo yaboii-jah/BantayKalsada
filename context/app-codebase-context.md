@@ -326,6 +326,45 @@ removeComment(comment_id)                   → admin server action (service rol
 ```
 
 **Key fixes during implementation:**
+
+---
+
+## Nearby Reports Data Flow
+
+```
+Submit Form (server component)
+  → renders <LocationPickerWrapper />
+    → dynamic import → <LocationPicker /> (client)
+      → renders <MapContainer> with <TileLayer> + <LocationMarker> + <NearbyReportsLayer />
+
+Location Picker (location-picker.tsx)
+  → citizen taps map or "Use My Location"
+  → handleMove(lat, lng) fires (reverse geocode + onChange)
+  → lat/lng state updates → NearbyReportsLayer receives new lat/lng props
+
+NearbyReportsLayer (nearby-reports-layer.tsx) — client component
+  → useEffect fires (cancelled flag pattern):
+      1. Increment fetchIdRef (cancels any in-flight request)
+      2. supabase.rpc("get_nearby_reports", { lat, lng, max_distance_m: 200 })
+      3. RPC queries reports table via ST_DWithin(location, geography, 200)
+         → GIST index scan on idx_reports_location
+         → filters status IN ('APPROVED', 'RESOLVED')
+         → orders by distance, LIMIT 25
+      4. Returns data → setReports()
+  → Second useEffect renders markers:
+      1. Clear layerGroup
+      2. For each report: create L.divIcon chip (white pill, colored dot + distance)
+      3. Chip styled by severity: green=MINOR, yellow=URGENT, red=EMERGENCY
+      4. bindPopup(): photo thumbnail, title, severity badge, status badge,
+         distance, date, "View full details →" link to /reports/[id]
+      5. Add to layerGroup → rendered on map
+  → Pin moved → lat/lng change → first useEffect re-fires (old fetch cancelled)
+
+Data sources:
+  - Reports table with PostGIS geography(Point, 4326) generated column
+  - get_nearby_reports RPC function (SECURITY INVOKER)
+  - Supabase anon-key browser client (via createSupabaseBrowserClient)
+```
 - **`author_name` denormalization**: Added column to `report_comments`. Avoids FK join through `auth.users` to `profiles` — PostgREST cannot resolve composite relationships, returning 400. Name is set at comment creation time from `profiles.full_name`.
 - **Optimistic insert**: `addComment` returns full row. `CommentSection` adds to `optimisticComments` state immediately. `CommentList` merges with fetched data and clears on successful re-fetch.
 - **Optimistic delete/remove**: Local state flags (`locallyDeleted`, `locallyRemoved`) in `CommentItem` provide instant feedback without waiting for re-fetch or page reload.
@@ -356,7 +395,7 @@ components/
   admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts
   auth/                  — auth card, branding panel, Google sign-in button
   browse/                — filter bar, pagination bar, photo gallery, browse map (clustered, bounding box filter)
-  maps/                  — Leaflet map, location picker (all client-side, dynamic import)
+  maps/                  — Leaflet map, location picker, nearby reports layer (all client-side, dynamic import)
   reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section, comment-form, comment-list, comment-item
   ui/                    — Shadcn/ui primitives (DO NOT EDIT)
 

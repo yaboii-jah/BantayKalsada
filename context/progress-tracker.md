@@ -401,7 +401,7 @@ change.
 - [x] **Comments on reports** — single-level threaded discussion with admin moderation, COMMENT_ADDED notifications, edit/delete by author, soft-delete by admin
 - [x] **Comments bug fixes** — `author_name` denormalization (removed broken FK join to profiles), optimistic insert (instant display on post), optimistic delete/remove (instant UI), `cancelled` flag pattern (race condition fix), reports RLS fix (TO anon → all roles for EXISTS subquery), service worker cache invalidation note
 - [x] **Security fixes (v2.1.1)** — notification DELETE RLS policy + switched to anon-key client (removed service role misuse), comment rate limiting (30/24h) + INSERT RLS report status guard, Cloudinary sign endpoint auth check + rate limiting (30/hr via `upload_sign_log` table), comment notification message uses author name, `updateFeedbackNote` empty-string edge case fix
-- **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
+- [x] **Nearby existing reports on submit** — PostGIS spatial query shows existing APPROVED/RESOLVED reports within 200m on the submission map when pinning a location
 
 ### Mobile & Notifications (v2.2)
 - **Push notifications** — service worker + Supabase Realtime for real-time status alerts
