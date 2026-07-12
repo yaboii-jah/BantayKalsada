@@ -273,6 +273,8 @@ Link targets per type:
 - `FEEDBACK_*` → `/my-feedback/[feedback_id]`
 - `COMMENT_ADDED` → `/reports/[report_id]` (public detail page)
 
+**Delete fix:** `deleteNotification` and `clearAllNotifications` previously used `createAdminClient()` (service role) because no DELETE RLS policy existed. A `"Citizens can delete own notifications"` DELETE policy was added, and both functions now use the anon-key server client — matching the read/update pattern and removing unnecessary privilege elevation.
+
 ---
 
 ## Comments Data Flow
@@ -295,11 +297,13 @@ Report Detail Page (server component)
 
 addComment(report_id, parent_id, body)      → server action (anon key)
   → 1. auth check
-  → 2. profile fetch for full_name → author_name
-  → 3. body trim + length validation (1-2000)
-  → 4. supabase insert into report_comments (with author_name)
-  → 5. .select("*") returns full comment row for optimistic insert
-  → 6. if commenter != report owner: create COMMENT_ADDED notification via service role client
+  → 2. body trim + length validation (1-2000)
+  → 3. rate limit check: COUNT(*) user's comments in last 24h, max 30
+  → 4. report fetch: verify status is APPROVED or RESOLVED
+  → 5. profile fetch for full_name → author_name
+  → 6. supabase insert into report_comments (with author_name)
+  → 7. .select("*") returns full comment row for optimistic insert
+  → 8. if commenter != report owner: create COMMENT_ADDED notification via service role client
   → return { success: true, data: comment }  (full row)
 
 editComment(comment_id, body)               → server action (anon key)
@@ -328,6 +332,10 @@ removeComment(comment_id)                   → admin server action (service rol
 - **Race condition**: `cancelled` flag pattern in `CommentList`'s `useEffect` prevents stale fetch responses from overwriting fresh data when `refreshKey` changes.
 - **Reports RLS**: The `"Public can read approved and resolved reports"` policy was `TO anon`-only. The `EXISTS` subquery in `report_comments` RLS failed for authenticated non-owners. Fixed by removing `TO anon` so the policy applies to all roles.
 - **Service worker caching**: PWA service worker precaches JS bundles at build time. Old cached bundles with the broken FK join query cause 400 errors. Unregister in DevTools after code changes during development.
+- **Notification DELETE RLS**: Added DELETE policy on `notifications` for authenticated users. `deleteNotification` and `clearAllNotifications` now use the anon-key client instead of the service role, removing unnecessary privilege elevation.
+- **Comment rate limiting**: 30 comments per 24h per user enforced by `addComment` via database count query before insert.
+- **Comment INSERT RLS guard**: INSERT policy on `report_comments` now verifies the parent report is `APPROVED` or `RESOLVED` via `EXISTS` subquery, preventing comments on pending/rejected reports.
+- **Cloudinary sign auth + rate limiting**: `/api/uploads/sign` requires authentication (401 otherwise) and is rate-limited to 30 requests per hour per user via the `upload_sign_log` table.
 
 ---
 

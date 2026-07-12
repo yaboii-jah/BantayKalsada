@@ -16,6 +16,7 @@ The database owns all structured application data. It does not store binary cont
 | Status change notifications | `notifications` table |
 | App feedback submissions | `feedback` table |
 | Comments on reports | `report_comments` table |
+| Upload sign request log | `upload_sign_log` table |
 | Report photos | Cloudinary —  only the URL strings are stored in the database |
 
 ---
@@ -209,6 +210,24 @@ CREATE TABLE report_comments (
 | `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
 | `updated_at` | `timestamptz` | No | `now()` | Updated on edit via the Server Action. |
 
+### `upload_sign_log`
+
+Tracks signature requests to the `/api/uploads/sign` endpoint for rate limiting. One row per request. Prevents rapid-fire Cloudinary upload abuse.
+
+```sql
+CREATE TABLE upload_sign_log (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `user_id` | `uuid` | No | — | FK to `auth.users.id`. The authenticated user who requested the signature. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. Used for the 1-hour sliding window rate check. |
+
 ### `notifications`
 
 Stores in-app notification records created when a report's status changes or when feedback is acknowledged/closed. One row per status change event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
@@ -286,6 +305,7 @@ auth.users (Supabase-managed)
   ├── reports.submitted_by_id   (one-to-many, cascade delete)
   ├── reports.reviewed_by_id    (one-to-many, set null on delete)
   ├── report_comments.user_id   (one-to-many, cascade delete)
+  ├── upload_sign_log.user_id   (one-to-many, cascade delete)
   ├── feedback.user_id          (one-to-many, cascade delete)
   └── notifications.user_id     (one-to-many, cascade delete)
 
@@ -295,6 +315,9 @@ reports
 
 report_comments
   └── report_comments.parent_id (one-to-many, cascade delete)
+
+upload_sign_log
+  — (no child references)
 
 feedback
   └── notifications.feedback_id (one-to-many, cascade delete)
@@ -343,6 +366,9 @@ CREATE INDEX idx_comments_user_id ON report_comments(user_id);
 
 -- report_comments: fetching replies for a top-level comment
 CREATE INDEX idx_comments_parent_id ON report_comments(parent_id);
+
+-- upload_sign_log: counting requests per user in a time window for rate limiting
+CREATE INDEX idx_upload_sign_log_user_created ON upload_sign_log(user_id, created_at);
 ```
 
 ---
@@ -411,6 +437,7 @@ ALTER TABLE reports       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feedback           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_comments    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE upload_sign_log    ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
@@ -481,9 +508,15 @@ CREATE POLICY "Citizens can update own notifications"
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Citizens can delete their own notifications
+CREATE POLICY "Citizens can delete own notifications"
+  ON notifications FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
 ```
 
-Note: Notifications are created by admin Server Actions using the service role client. There is no insert policy for authenticated users — citizens cannot create notifications directly. Citizens can read and update (mark as read) their own notifications via the anon-key server client, governed by the SELECT and UPDATE RLS policies. DELETE operations use the service role client because no DELETE RLS policy exists on the `notifications` table — ownership is enforced server-side by filtering `user_id` in the query.
+Note: Notifications are created by admin Server Actions using the service role client. There is no insert policy for authenticated users — citizens cannot create notifications directly. Citizens can read, update (mark as read), and delete their own notifications via the anon-key server client, governed by the SELECT, UPDATE, and DELETE RLS policies.
 
 ---
 
@@ -519,11 +552,15 @@ CREATE POLICY "Anyone can read active comments on approved reports"
     )
   );
 
--- Authenticated users can insert comments
+-- Authenticated users can insert comments on approved/resolved reports only
 CREATE POLICY "Authenticated users can insert comments"
   ON report_comments FOR INSERT
   TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    auth.uid() = user_id AND EXISTS (
+      SELECT 1 FROM reports WHERE reports.id = report_id AND reports.status IN ('APPROVED', 'RESOLVED')
+    )
+  );
 
 -- Users can update own comments (body edit, not status)
 CREATE POLICY "Users can update own comments"
@@ -540,6 +577,26 @@ CREATE POLICY "Users can delete own comments"
 ```
 
 Note: Admin soft-delete (setting `status = 'REMOVED'`) uses the service role client via `removeComment` Server Action in `app/admin/actions.ts`. There is no admin-specific RLS policy — admin mutations bypass RLS entirely.
+
+---
+
+### `upload_sign_log` RLS
+
+```sql
+-- Users can insert their own sign request log entries
+CREATE POLICY "Users can insert own sign log"
+  ON upload_sign_log FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can read their own sign request log entries
+CREATE POLICY "Users can read own sign log"
+  ON upload_sign_log FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+```
+
+Note: The `upload_sign_log` table is used exclusively for rate limiting the `/api/uploads/sign` endpoint. Rows are inserted by the route handler using the anon-key server client (governed by the INSERT RLS policy) and queried for the 30-requests-per-hour rate check (governed by the SELECT RLS policy).
 
 ---
 
@@ -572,6 +629,8 @@ These rules are enforced at two levels: database constraints (defined above) and
 | Comment ownership | Only the comment author can edit or delete a comment | RLS policy on `report_comments` |
 | Comment admin removal | Admins can set status to `REMOVED` via service role client | Server Action handler (`verifyAdmin()` + service role update) |
 | Comment notification | Report owner receives in-app notification when someone comments on their report (not on own comment) | Server Action (`addComment` checks `submitted_by_id !== user.id`) |
+| Comment submission rate | Max 30 comments per user per 24-hour window | Server Action (`addComment` — count query before insert) |
+| Upload sign request rate | Max 30 signature requests per user per 1-hour window | API route handler (`GET /api/uploads/sign` — count query on `upload_sign_log` before generating signature) |
 
 ---
 

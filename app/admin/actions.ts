@@ -309,7 +309,7 @@ export async function updateFeedbackNote(
       .eq("id", parsed.data.feedbackId)
       .single();
 
-    const wasNull = !current?.admin_note && parsed.data.adminNote !== null;
+    const wasNull = current?.admin_note == null && parsed.data.adminNote !== null;
 
     const { error: updateError } = await adminClient
       .from("feedback")

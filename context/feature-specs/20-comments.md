@@ -45,7 +45,7 @@ Add `COMMENT_ADDED` to existing `notification_type` enum (non-transaction migrat
 ### RLS
 
 - **SELECT:** `status = 'ACTIVE'` AND the parent report is `APPROVED` or `RESOLVED` (uses `EXISTS` subquery on `reports`)
-- **INSERT:** Authenticated user, `user_id` must match `auth.uid()`, report must exist and be `APPROVED`/`RESOLVED`
+- **INSERT:** Authenticated user, `user_id` must match `auth.uid()`, report must exist and be `APPROVED`/`RESOLVED` (verified via `EXISTS` subquery)
 - **UPDATE:** Authenticated user, `user_id` must match `auth.uid()`, comment must be `ACTIVE`
 - **DELETE:** Authenticated user, `user_id` must match `auth.uid()`
 
@@ -61,8 +61,10 @@ Add `COMMENT_ADDED` to existing `notification_type` enum (non-transaction migrat
 | Step | Detail |
 |------|--------|
 | Auth | `requireUser()` — returns 401 if not authenticated |
-| Profile fetch | Gets `profiles.full_name` for `author_name` |
 | Validation | `body.trim()`, length 1-2000 |
+| Rate limit | `COUNT(*)` user's comments in last 24h — max 30, returns 429 if exceeded |
+| Report status check | Fetches report — returns error if not `APPROVED` or `RESOLVED` |
+| Profile fetch | Gets `profiles.full_name` for `author_name` |
 | Insert | `supabase.from("report_comments").insert({...}).select("*").single()` — returns full row |
 | Notification | If commenter != report owner: create `COMMENT_ADDED` notification via service role client |
 | Return | `{ success: true, data: comment }` (full row for optimistic insert) |
@@ -243,8 +245,10 @@ Admin removes a comment:
 | Migration — `report_comments` table, `comment_status` enum, RLS, indexes | ✅ Done |
 | Migration — `author_name` column + backfill | ✅ Done |
 | Migration — reports RLS fix (TO anon → all roles) | ✅ Done |
+| Migration — INSERT RLS report status guard | ✅ Done |
+| Rate limiting — 30 comments per 24h on `addComment` | ✅ Done |
 | Types — `database.types.ts` updated | ✅ Done |
-| Server action — `addComment` (returns full row) | ✅ Done |
+| Server action — `addComment` (returns full row, rate limited 30/24h, report status check) | ✅ Done |
 | Server action — `editComment` | ✅ Done |
 | Server action — `deleteComment` | ✅ Done |
 | Server action — `removeComment` (admin soft-delete) | ✅ Done |
@@ -273,4 +277,6 @@ Admin removes a comment:
 - [x] Race condition handled (cancelled flag prevents stale fetch overwrite)
 - [x] RLS works for all roles (reports policy covers anon + authenticated)
 - [x] Service worker cache invalidation noted for dev workflow
+- [x] INSERT RLS policy verifies report is APPROVED/RESOLVED (defense in depth)
+- [x] Comment rate limited to 30 per 24h per user
 - [x] `npm run build` passes with zero errors

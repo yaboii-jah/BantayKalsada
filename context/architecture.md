@@ -29,7 +29,7 @@
 
 - `app/sw.ts` — Service worker entry point. Defines precaching for static assets, runtime caching strategies for pages and images. Bundled into `public/sw.js` by `@serwist/next` during `next build`.
 
-- `app/api/` — API route handlers. Owns no UI. Responsible for Cloudinary signed upload preset generation (`/api/uploads/sign`). Mutations (report submission, admin approve/reject/resolve) are implemented as Server Actions (`app/actions.ts`, `app/admin/actions.ts`), not API routes. Every handler validates its input with Zod before touching the database.
+- `app/api/` — API route handlers. Owns no UI. Responsible for Cloudinary signed upload preset generation (`/api/uploads/sign`) — requires authentication and enforces 30 requests per hour per user rate limit via the `upload_sign_log` table. Mutations (report submission, admin approve/reject/resolve) are implemented as Server Actions (`app/actions.ts`, `app/admin/actions.ts`), not API routes. Every handler validates its input with Zod before touching the database.
 
 - `app/auth/callback/route.ts` — OAuth callback route. Receives the authorization code from Supabase after Google OAuth consent, exchanges it for a session via `exchangeCodeForSession()`, and redirects the user to the app.
 
@@ -61,7 +61,7 @@
 
 - **Ownership**: Every report record carries a `submitted_by_id` foreign key referencing `auth.users.id`. When a citizen queries their own reports, the RLS policy on the `reports` table automatically restricts results to rows where `submitted_by_id = auth.uid()`. Route handlers never accept a user ID from the request body to determine ownership — they always read the authenticated user's ID from the server-side Supabase session.
 
-- **Access control**: Three access tiers are enforced by a combination of RLS policies (database level) and server-side session checks (application level). (1) Public — no session required; RLS allows `SELECT` only on reports where `status IN ('APPROVED', 'RESOLVED')`; all other tables are inaccessible. (2) Citizen — valid Supabase session + verified email required; RLS allows citizens to `SELECT` and `INSERT` their own reports, and `SELECT` and `UPDATE` (mark as read) their own notifications. Notification `DELETE` uses the service-role client because the `notifications` table has no DELETE RLS policy — ownership is enforced server-side by filtering `user_id`. (3) Admin — valid session + `role: ADMIN` on the profile record required; admin operations use the Supabase service role client to bypass RLS. The service role key is never exposed to the browser.
+- **Access control**: Three access tiers are enforced by a combination of RLS policies (database level) and server-side session checks (application level). (1) Public — no session required; RLS allows `SELECT` only on reports where `status IN ('APPROVED', 'RESOLVED')`; all other tables are inaccessible. (2) Citizen — valid Supabase session + verified email required; RLS allows citizens to `SELECT` and `INSERT` their own reports, and `SELECT`, `UPDATE` (mark as read), and `DELETE` their own notifications. Notification `DELETE` uses the anon-key server client governed by a dedicated DELETE RLS policy. (3) Admin — valid session + `role: ADMIN` on the profile record required; admin operations use the Supabase service role client to bypass RLS. The service role key is never exposed to the browser.
 
 ---
 
@@ -94,3 +94,7 @@
 13. **Service worker caching uses specific strategies per resource type.** Static assets (JS, CSS, fonts) are precached at install time. Navigations use network-first with cache fallback (stale page loads offline). Cloudinary images use stale-while-revalidate. API routes, Supabase auth requests, and map tiles are network-only. The service worker is bundled at build time by `@serwist/next` from `app/sw.ts` and served at `/sw.js`. No runtime-generated caching rules are added client-side.
 
 14. **Comments are soft-deleted by admin, never hard-deleted from the database.** The `removeComment` admin Server Action sets `report_comments.status = 'REMOVED'` — it never issues a SQL DELETE. The `report_comments` DELETE RLS policy only allows the original author to hard-delete their own comment. This ensures auditability and prevents data loss from malicious or accidental deletion.
+
+15. **Comment submission rate is limited server-side.** The `addComment` Server Action rejects submissions when the authenticated user has already submitted 30 or more comments within the past 24 hours, counted via a database query. The INSERT RLS policy on `report_comments` also verifies the parent report is `APPROVED` or `RESOLVED` — comments cannot be placed on pending or rejected reports.
+
+16. **Cloudinary upload signing requires authentication and is rate-limited.** The `/api/uploads/sign` route handler calls `supabase.auth.getUser()` and returns 401 for unauthenticated requests. Each successful request is logged to `upload_sign_log`. The handler enforces a maximum of 30 signature requests per hour per user using a sliding window count on that table.

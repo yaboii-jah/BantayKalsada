@@ -19,7 +19,7 @@ export default function Home() {
               Bantay Kalsada lets you document potholes, flooded roads, accidents,
               and other hazards so everyone in your community stays informed.
             </p>
-            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"> 
               <Link href="/register">
                 <Button size="lg" className="w-48">
                   Get started

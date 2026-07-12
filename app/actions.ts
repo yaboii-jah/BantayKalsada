@@ -74,8 +74,7 @@ export async function deleteNotification(
       return { success: false, error: "Not authenticated" };
     }
 
-    const adminClient = createAdminClient();
-    const { error } = await adminClient
+    const { error } = await supabase
       .from("notifications")
       .delete()
       .eq("id", notificationId)
@@ -102,8 +101,7 @@ export async function clearAllNotifications(): Promise<{
       return { success: false, error: "Not authenticated" };
     }
 
-    const adminClient = createAdminClient();
-    const { error } = await adminClient
+    const { error } = await supabase
       .from("notifications")
       .delete()
       .eq("user_id", user.id);
@@ -264,6 +262,34 @@ export async function addComment(
       return { success: false, error: "Comment must be between 1 and 2000 characters" };
     }
 
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count, error: countError } = await supabase
+      .from("report_comments")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", twentyFourHoursAgo);
+
+    if (countError) {
+      return { success: false, error: "Failed to verify comment limit" };
+    }
+
+    if (count !== null && count >= 30) {
+      return {
+        success: false,
+        error: "You have reached the maximum of 30 comments in 24 hours. Please try again later.",
+      };
+    }
+
+    const { data: report } = await supabase
+      .from("reports")
+      .select("status, submitted_by_id, title")
+      .eq("id", formData.report_id)
+      .single();
+
+    if (!report || !["APPROVED", "RESOLVED"].includes(report.status)) {
+      return { success: false, error: "Cannot comment on this report" };
+    }
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("full_name")
@@ -286,19 +312,13 @@ export async function addComment(
       return { success: false, error: "Failed to post comment. Please try again." };
     }
 
-    const { data: report } = await supabase
-      .from("reports")
-      .select("submitted_by_id, title")
-      .eq("id", formData.report_id)
-      .single();
-
-    if (report && report.submitted_by_id !== user.id) {
+    if (report.submitted_by_id !== user.id) {
       const adminClient = createAdminClient();
       await adminClient.from("notifications").insert({
         user_id: report.submitted_by_id,
         report_id: formData.report_id,
         type: "COMMENT_ADDED",
-        message: `Someone commented on the report "${report.title}".`,
+        message: `${profile?.full_name ?? "Someone"} commented on the report "${report.title}".`,
       });
     }
 
