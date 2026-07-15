@@ -183,7 +183,7 @@ CREATE TABLE reports (
 | `longitude` | `double precision` | No | — | From the map pin. Validated by `longitude_range` constraint. |
 | `location` | `geography(Point, 4326)` | No (generated) | — | PostGIS geography point. Generated column computed from `longitude, latitude` via `ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography`. Enables spatial queries with `ST_DWithin` using the GIST index. |
 | `location_label` | `text` | Yes | `null` | Optional human-readable address from Nominatim reverse geocoding. |
-| `barangay` | `barangay` | Yes | `null` | The Taytay barangay where the incident is located. Set via auto-detect from Nominatim reverse geocode on pin drop, or manually selected by the citizen. Nullable for existing rows until backfilled. |
+| `barangay` | `barangay` | Yes | `null` | The Taytay barangay where the incident is located. Manually selected by the citizen from an `InlineSelect` dropdown on the submission form. Stays nullable — pre-scope rows keep `NULL` (no backfill or `NOT NULL` migration planned). |
 | `rejection_reason` | `text` | Yes | `null` | Required (min 10 chars) when `status = 'REJECTED'`. Enforced by `rejection_reason_required` constraint. Null for all other statuses. |
 | `submitted_by_id` | `uuid` | No | — | FK to `auth.users.id`. The citizen who submitted the report. |
 | `reviewed_by_id` | `uuid` | Yes | `null` | FK to `auth.users.id`. The admin who approved or rejected. Set when status changes from `PENDING`. |
@@ -572,7 +572,7 @@ $$;
 Calling pattern:
 ```sql
 -- Returns true if (lat, lng) falls within Taytay
-SELECT is_within_boundary(14.5692, 121.1326, 'Taytay');
+SELECT is_within_boundary(14.5587, 121.1360, 'Taytay');
 ```
 
 ### 5. Report location boundary enforcement (trigger)

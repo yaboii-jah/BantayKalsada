@@ -427,7 +427,7 @@ change.
 - [x] Detail — barangay in report metadata (`reports/[id]/page.tsx`)
 - [x] `npm run build` — zero errors
 - [x] Admin — barangay column in `admin-queue-table.tsx`, barangay in queue page queries, display on review page, barangay distribution chart in analytics
-- [ ] Boundary enforcement + auto-detect tested
+- [x] Boundary enforcement tested (inside/outside Taytay via trigger + `is_within_boundary` RPC). Barangay is selected manually via `InlineSelect` — Nominatim auto-detect was NOT implemented (reverse geocode sets `location_label` only).
 
 ### Mobile & Notifications (v2.2)
 - **Push notifications** — service worker + Supabase Realtime for real-time status alerts
@@ -520,3 +520,11 @@ change.
 - **Notifications — `.ts` vs `.tsx` lesson** — Turbopack cannot parse JSX in files with `.ts` extension even when the JSX is in server-only modules. `lib/admin-notifications.tsx` uses `.tsx` because it renders email template functions. `app/admin/actions.ts` and `emails/render.ts` stay `.ts` (no JSX). `emails/render.ts` was originally `render.tsx` then reverted to `.ts` after switching to template strings.
 - **Notifications — fire-and-forget email dispatch** — Email + notification insertion is fire-and-forget (`.catch()`), not awaited. The admin gets `{ success: true }` immediately after the status update. Failed emails are logged server-side. This decision was made to prevent transient Brevo API failures from blocking report moderation.
 - **Notifications — `verifyAdmin()` extraction** — The auth + role check pattern (getUser → profiles.role → return error) was identical across all three admin actions. Extracted into a shared helper returning a discriminated union type for clean narrowing.
+
+## Doc Alignment & Fixes (post-Taytay testing)
+
+- **Report card tag overflow fix** — `components/reports/report-card.tsx`: added `flex-wrap` to the category/severity/status/date row so tags wrap instead of being clipped by the card's `overflow-hidden` on narrow cards (mobile / 5-column grid). One-word change, build verified.
+- **Search behavior confirmed intentional** — ILIKE keyword search matching both `title` and `description` (not title only) is by design per `feature-specs/09-search-design.md`. No change made.
+- **Spec `22-municipality-scope.md` reconciled with implementation** — The spec still read as a pre-implementation plan and described behavior that was never built. Corrected: (1) barangay is **manually selected** via `InlineSelect`, not Nominatim auto-detected — reverse geocode only sets `location_label`; (2) boundary enforced by `trg_reports_location_boundary` trigger using inline `ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geometry` (not `NEW.location`, which is NULL in BEFORE INSERT on PG17), not a CHECK constraint; (3) `barangay` column stays nullable (no backfill/NOT NULL); (4) default map center is `14.5587, 121.1360` (was documented as `14.5692, 121.1326`); (5) Files Created table fixed to real migration filenames incl. `20250713000009_add_reports_rls_policies.sql`, plus `taytay-boundary.tsx` and `inline-select.tsx`; (6) Implementation Status + checklists flipped to complete, auto-detect marked "not implemented"; (7) admin queue barangay **filter** was never built (column + analytics chart only).
+- **`architecture.md`** — line describing barangay as "auto-detected from Nominatim" corrected to manual `InlineSelect` selection.
+- **`data-model.md`** — `reports.barangay` note corrected (manual selection, stays nullable); illustrative `is_within_boundary` example coordinate aligned to `14.5587, 121.1360`.
