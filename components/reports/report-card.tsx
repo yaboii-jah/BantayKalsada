@@ -21,6 +21,14 @@ const categoryLabels: Record<string, string> = {
   OTHER: "Other",
 };
 
+const barangayLabels: Record<string, string> = {
+  DOLORES: "Dolores",
+  SAN_ISIDRO: "San Isidro",
+  SAN_JUAN: "San Juan",
+  SANTA_ANA: "Santa Ana",
+  MUZON: "Muzon",
+};
+
 export function ReportCard({
   report,
   className,
@@ -52,7 +60,7 @@ export function ReportCard({
         </div>
       )}
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {categoryLabels[report.category] ?? report.category}
           </span>
@@ -72,6 +80,11 @@ export function ReportCard({
         {report.location_label && (
           <p className="mt-auto text-xs text-muted-foreground">
             {report.location_label}
+          </p>
+        )}
+        {report.barangay && (
+          <p className="text-xs text-muted-foreground">
+            Barangay {barangayLabels[report.barangay] ?? report.barangay}
           </p>
         )}
       </div>

@@ -27,7 +27,7 @@ export default async function AdminPendingPage({ searchParams }: PageProps) {
 
   const { data: reports } = await adminClient
     .from("reports")
-    .select("id, status, category, title, submitted_at, submitted_by_id, rejection_reason")
+    .select("id, status, category, barangay, title, submitted_at, submitted_by_id, rejection_reason")
     .eq("status", "PENDING")
     .order("submitted_at", { ascending: true })
     .range(offset, offset + PAGE_SIZE - 1);
@@ -45,6 +45,7 @@ export default async function AdminPendingPage({ searchParams }: PageProps) {
     id: r.id,
     status: r.status,
     category: r.category,
+    barangay: r.barangay,
     title: r.title,
     submitted_at: r.submitted_at,
     submitter_name: profileMap.get(r.submitted_by_id) ?? "Unknown",

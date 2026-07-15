@@ -17,6 +17,7 @@ The database owns all structured application data. It does not store binary cont
 | App feedback submissions | `feedback` table |
 | Comments on reports | `report_comments` table |
 | Upload sign request log | `upload_sign_log` table |
+| Municipality boundary polygons (Taytay, Rizal) | `municipality_boundaries` table |
 | Report photos | Cloudinary —  only the URL strings are stored in the database |
 
 ---
@@ -58,6 +59,14 @@ CREATE TYPE notification_type AS ENUM (
   'REPORT_RESOLVED',
   'FEEDBACK_ACKNOWLEDGED',
   'FEEDBACK_CLOSED'
+);
+
+CREATE TYPE barangay AS ENUM (
+  'DOLORES',
+  'SAN_ISIDRO',
+  'SAN_JUAN',
+  'SANTA_ANA',
+  'MUZON'
 );
 
 CREATE TYPE feedback_type AS ENUM ('BUG_REPORT', 'FEATURE_REQUEST', 'GENERAL');
@@ -126,6 +135,7 @@ CREATE TABLE reports (
   latitude          double precision NOT NULL,
   longitude         double precision NOT NULL,
   location_label    text            NULL,
+  barangay          barangay        NULL,
   rejection_reason  text            NULL,
   submitted_by_id   uuid            NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   reviewed_by_id    uuid            NULL REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -153,7 +163,10 @@ CREATE TABLE reports (
       (status = 'REJECTED' AND rejection_reason IS NOT NULL AND char_length(TRIM(rejection_reason)) >= 10)
       OR
       (status != 'REJECTED')
-    )
+    ),
+
+  CONSTRAINT report_within_taytay_check
+    CHECK (location IS NOT NULL)
 );
 ```
 
@@ -170,6 +183,7 @@ CREATE TABLE reports (
 | `longitude` | `double precision` | No | — | From the map pin. Validated by `longitude_range` constraint. |
 | `location` | `geography(Point, 4326)` | No (generated) | — | PostGIS geography point. Generated column computed from `longitude, latitude` via `ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography`. Enables spatial queries with `ST_DWithin` using the GIST index. |
 | `location_label` | `text` | Yes | `null` | Optional human-readable address from Nominatim reverse geocoding. |
+| `barangay` | `barangay` | Yes | `null` | The Taytay barangay where the incident is located. Set via auto-detect from Nominatim reverse geocode on pin drop, or manually selected by the citizen. Nullable for existing rows until backfilled. |
 | `rejection_reason` | `text` | Yes | `null` | Required (min 10 chars) when `status = 'REJECTED'`. Enforced by `rejection_reason_required` constraint. Null for all other statuses. |
 | `submitted_by_id` | `uuid` | No | — | FK to `auth.users.id`. The citizen who submitted the report. |
 | `reviewed_by_id` | `uuid` | Yes | `null` | FK to `auth.users.id`. The admin who approved or rejected. Set when status changes from `PENDING`. |
@@ -236,6 +250,36 @@ CREATE TABLE upload_sign_log (
 | `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
 | `user_id` | `uuid` | No | — | FK to `auth.users.id`. The authenticated user who requested the signature. |
 | `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. Used for the 1-hour sliding window rate check. |
+
+### `municipality_boundaries`
+
+Stores administrative boundary polygons for municipality-level geographic scoping. Currently holds Taytay, Rizal only. Used by the `report_within_taytay` CHECK constraint and the `is_within_boundary` RPC function to enforce that all report locations fall within the supported municipality.
+
+```sql
+CREATE TABLE municipality_boundaries (
+  id          uuid                  PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        text                  NOT NULL,
+  province    text                  NOT NULL DEFAULT 'Rizal',
+  boundary    geography(Polygon, 4326) NOT NULL,
+  center_lat  double precision      NOT NULL,
+  center_lng  double precision      NOT NULL,
+  zoom_level  integer               NOT NULL DEFAULT 14,
+  created_at  timestamptz           NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_muni_boundary ON municipality_boundaries USING GIST (boundary);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `name` | `text` | No | — | Municipality name (e.g. "Taytay"). |
+| `province` | `text` | No | `'Rizal'` | Province the municipality belongs to. |
+| `boundary` | `geography(Polygon, 4326)` | No | — | PostGIS polygon defining the municipality boundary. GIST-indexed for spatial queries. |
+| `center_lat` | `double precision` | No | — | Default map center latitude for the municipality. |
+| `center_lng` | `double precision` | No | — | Default map center longitude for the municipality. |
+| `zoom_level` | `integer` | No | `14` | Default map zoom level for the municipality. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
 
 ### `notifications`
 
@@ -381,6 +425,9 @@ CREATE INDEX idx_comments_parent_id ON report_comments(parent_id);
 
 -- upload_sign_log: counting requests per user in a time window for rate limiting
 CREATE INDEX idx_upload_sign_log_user_created ON upload_sign_log(user_id, created_at);
+
+-- municipality_boundaries: spatial index for ST_Within boundary checks
+CREATE INDEX idx_muni_boundary ON municipality_boundaries USING GIST (boundary);
 ```
 
 ---
@@ -490,6 +537,80 @@ AS $$
 $$;
 ```
 
+### 4. Municipality boundary check (PostGIS)
+
+Called by the `submitReport` Server Action before insert to verify that the pinned location falls within the supported municipality (currently Taytay, Rizal). Used for application-level enforcement (defense in depth alongside the `trg_reports_location_boundary` database trigger on the `reports` table).
+
+> **Why a trigger instead of a CHECK constraint:** PostgreSQL does not allow subqueries in CHECK constraints. The trigger fires on `BEFORE INSERT OR UPDATE OF latitude, longitude` and rejects the operation if the location falls outside the Taytay boundary.
+
+```sql
+CREATE OR REPLACE FUNCTION is_within_boundary(
+  lat double precision,
+  lng double precision,
+  municipality_name text
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM municipality_boundaries
+    WHERE name = municipality_name
+      AND ST_Within(
+        ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geometry,
+        boundary::geometry
+      )
+  );
+$$;
+```
+
+`SECURITY DEFINER` ensures the function always queries the `municipality_boundaries` table regardless of the caller's RLS context. The function is read-only (`STABLE`) and adds no additional risk — it only returns a boolean based on geometry, never writes data.
+
+Calling pattern:
+```sql
+-- Returns true if (lat, lng) falls within Taytay
+SELECT is_within_boundary(14.5692, 121.1326, 'Taytay');
+```
+
+### 5. Report location boundary enforcement (trigger)
+
+Fires before a report row is inserted or its latitude/longitude is updated. Rejects the operation if the pinned location falls outside the Taytay boundary polygon. Acts as database-level defense in depth alongside the application-level check in the `submitReport` Server Action.
+
+```sql
+CREATE OR REPLACE FUNCTION check_report_location_boundary()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM municipality_boundaries
+    WHERE name = 'Taytay'
+      AND ST_Within(
+        ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geometry,
+        boundary::geometry
+      )
+  ) THEN
+    RAISE EXCEPTION 'Report location must be within Taytay, Rizal';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_reports_location_boundary
+  BEFORE INSERT OR UPDATE OF latitude, longitude ON reports
+  FOR EACH ROW
+  EXECUTE FUNCTION check_report_location_boundary();
+```
+
+> **Why a trigger instead of a CHECK constraint:** PostgreSQL does not allow subqueries in CHECK constraints. The `municipality_boundaries` table must be queried to determine whether a point falls within the boundary, which requires a subquery. A `BEFORE INSERT OR UPDATE OF latitude, longitude` trigger achieves the same effect without this limitation. The trigger only fires when location-changing columns are modified (not on every column update), minimising overhead.
+>
+> **Why `ST_MakePoint(NEW.longitude, NEW.latitude)` instead of `NEW.location::geometry`:** The `location` column is a generated geography column (`GENERATED ALWAYS AS (ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography) STORED`). On PostgreSQL 17, generated columns are **not** computed before `BEFORE INSERT` triggers fire — `NEW.location` is NULL inside the trigger function. The geometry must be constructed inline from the raw lat/lng columns, matching the approach used by the `is_within_boundary` RPC.
+
 ---
 
 ## Row Level Security Policies
@@ -550,6 +671,8 @@ CREATE POLICY "Authenticated users can insert reports"
   TO authenticated
   WITH CHECK (auth.uid() = submitted_by_id);
 ```
+
+> **Note:** These three policies (plus `ALTER TABLE reports ENABLE ROW LEVEL SECURITY;`) were materialized as a single migration `20250713000009` — they were documented here earlier but never created in the database, causing `submitReport` inserts to fail with default-deny RLS.
 
 **Column-level note on `rejection_reason`:** RLS operates at the row level — it cannot hide individual columns from a query. The `rejection_reason` field must be excluded at the application layer:
 - Public feed API routes must never include `rejection_reason` in the Supabase `.select()` call.
@@ -682,6 +805,8 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `reports.rejection_reason` | Required (min 10 chars) when status is `REJECTED` | DB constraint + Zod |
 | `reports.status` | Set server-side only — never accepted from client | API route handler |
 | `profiles.role` | Set via seed or Supabase Studio only — never accepted from client | API route handler + no RLS update policy for role |
+| `reports.barangay` | Must match a valid barangay enum value | DB enum type + Zod |
+| `reports.location` | Must fall within Taytay boundary polygon | DB trigger (`trg_reports_location_boundary` on INSERT/UPDATE of latitude/longitude) + Server Action (`is_within_boundary` RPC call) |
 | Report submission rate | Max 5 submissions per user per 24-hour window | API route handler (count query before insert) |
 | `feedback.title` | Required, 10–100 characters | DB constraint + Zod |
 | `feedback.description` | Required, 20–2000 characters | DB constraint + Zod |

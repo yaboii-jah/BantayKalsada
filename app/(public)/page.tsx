@@ -11,13 +11,13 @@ export default function Home() {
               <Map className="size-10 text-primary" />
             </div>
             <h1 className="text-4xl font-bold leading-tight text-foreground sm:text-5xl lg:text-6xl">
-              Report road hazards.
+              Report road hazards in
               <br />
-              Keep your community safe.
+              Taytay, Rizal.
             </h1>
             <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
               Bantay Kalsada lets you document potholes, flooded roads, accidents,
-              and other hazards so everyone in your community stays informed.
+              and other hazards so everyone in Taytay stays informed.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"> 
               <Link href="/register">
@@ -42,7 +42,7 @@ export default function Home() {
               How it works
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              Three simple steps to report a road hazard in your area.
+              Three simple steps to report a road hazard in Taytay.
             </p>
           </div>
           <div className="mt-16 grid gap-8 sm:grid-cols-3">
@@ -66,8 +66,8 @@ export default function Home() {
                 2. Pin the location
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Drop a pin on the map so authorities and neighbours know exactly
-                where the issue is.
+                Drop a pin on the map so authorities know exactly
+                where the issue is — reports are accepted for Taytay, Rizal only.
               </p>
             </div>
             <div className="flex flex-col items-center text-center">
@@ -101,7 +101,7 @@ export default function Home() {
             </p>
             <Link href="/submit" className="mt-8">
               <Button size="lg">
-                Start reporting today
+                Start reporting in Taytay
               </Button>
             </Link>
           </div>

@@ -27,6 +27,7 @@ export interface QueueRow {
   id: string;
   status: ReportStatus;
   category: ReportCategory;
+  barangay: string | null;
   title: string;
   submitted_at: string;
   submitter_name: string;
@@ -50,6 +51,14 @@ const categoryLabels: Record<string, string> = {
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage",
   OTHER: "Other",
+};
+
+const barangayLabels: Record<string, string> = {
+  DOLORES: "Dolores",
+  SAN_ISIDRO: "San Isidro",
+  SAN_JUAN: "San Juan",
+  SANTA_ANA: "Santa Ana",
+  MUZON: "Muzon",
 };
 
 export function AdminQueueTable({
@@ -118,6 +127,7 @@ export function AdminQueueTable({
             {showStatus && <TableHead>Status</TableHead>}
             <TableHead>Submitter</TableHead>
             <TableHead>Category</TableHead>
+            <TableHead>Barangay</TableHead>
             <TableHead className="max-w-[200px]">Title</TableHead>
             <TableHead>Date</TableHead>
             {showRejectionReason && <TableHead>Rejection Reason</TableHead>}
@@ -152,6 +162,9 @@ export function AdminQueueTable({
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {categoryLabels[row.category] ?? row.category}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {row.barangay ? (barangayLabels[row.barangay] ?? row.barangay) : "—"}
               </TableCell>
               <TableCell className="max-w-[200px] truncate text-muted-foreground">
                 {row.title}

@@ -6,6 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import Link from "next/link";
+import { TaytayBoundary } from "@/components/maps/taytay-boundary";
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -182,6 +183,7 @@ export function BrowseMap({ reports }: { reports: BrowseMapReport[] }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <TaytayBoundary />
       <MapContent reports={reports} />
     </MapContainer>
   );

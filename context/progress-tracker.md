@@ -18,10 +18,11 @@ change.
 - [x] Bulk Admin Actions — Complete
 - [x] Community Features (Severity Tagging) — Complete
 - [x] Comments on Reports — Complete
+- [x] Municipality Scope — Taytay, Rizal
 
 ## Current Goal
 
-- All foundational features delivered.
+- Scope the application to Taytay, Rizal: enforce geographic boundary, add barangay field, localize UX, fix submission bugs. All 5 phases complete. Report submission now working: RLS INSERT policy + boundary trigger fix + foreground color neutralized.
 
 ## Completed
 
@@ -402,6 +403,31 @@ change.
 - [x] **Comments bug fixes** — `author_name` denormalization (removed broken FK join to profiles), optimistic insert (instant display on post), optimistic delete/remove (instant UI), `cancelled` flag pattern (race condition fix), reports RLS fix (TO anon → all roles for EXISTS subquery), service worker cache invalidation note
 - [x] **Security fixes (v2.1.1)** — notification DELETE RLS policy + switched to anon-key client (removed service role misuse), comment rate limiting (30/24h) + INSERT RLS report status guard, Cloudinary sign endpoint auth check + rate limiting (30/hr via `upload_sign_log` table), comment notification message uses author name, `updateFeedbackNote` empty-string edge case fix
 - [x] **Nearby existing reports on submit** — PostGIS spatial query shows existing APPROVED/RESOLVED reports within 200m on the submission map when pinning a location
+
+### Municipality Scope — Taytay, Rizal
+
+- [x] Feature spec written — `context/feature-specs/22-municipality-scope.md`
+- [x] Migration — `barangay` enum (`20250713000004`)
+- [x] Migration — `municipality_boundaries` table + Taytay polygon insert (`20250713000005`)
+- [x] Migration — `barangay` column on `reports` (`20250713000006`)
+- [x] Migration — boundary trigger `trg_reports_location_boundary` (`20250713000007_add_report_location_boundary_trigger.sql`)
+- [x] Migration — `is_within_boundary` RPC (`20250713000008`)
+- [x] `types/database.types.ts` — added `barangay` enum, `municipality_boundaries` table, `is_within_boundary` function, `barangay` column on `reports`
+- [x] `context/data-model.md` — added `barangay` enum, `municipality_boundaries` table, `barangay` column on `reports`, `report_within_taytay` constraint, `is_within_boundary` RPC, boundary index, validation rules
+- [x] Context — `project-overview.md` updated (overview, features, scope, success criteria)
+- [x] Context — `architecture.md` updated (boundaries, storage model, invariant 18)
+- [x] Zod — `barangayEnum` added to `createReportSchema` / `submitReportSchema`
+- [x] Server Action — `is_within_boundary` RPC call before insert + `barangay` in payload
+- [x] Form — barangay dropdown in `report-form.tsx`
+- [x] Map — default center + zoom to Taytay, reverse geo for barangay, info banner in `location-picker.tsx`
+- [x] `npm run build` — zero errors
+- [x] Landing — localized Taytay copy in `page.tsx`
+- [x] Browse — barangay filter in `filter-bar.tsx`, URL param in `browse/page.tsx`
+- [x] Card — barangay label in `report-card.tsx`
+- [x] Detail — barangay in report metadata (`reports/[id]/page.tsx`)
+- [x] `npm run build` — zero errors
+- [x] Admin — barangay column in `admin-queue-table.tsx`, barangay in queue page queries, display on review page, barangay distribution chart in analytics
+- [ ] Boundary enforcement + auto-detect tested
 
 ### Mobile & Notifications (v2.2)
 - **Push notifications** — service worker + Supabase Realtime for real-time status alerts

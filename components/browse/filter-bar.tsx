@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal, ChevronDown, Search, X, LayoutGrid, Map } from "lucide-react";
+import { SlidersHorizontal, Search, X, LayoutGrid, Map } from "lucide-react";
+import { InlineSelect } from "@/components/ui/inline-select";
 
 const categories = [
   { value: "all", label: "All categories" },
@@ -20,111 +20,14 @@ const statuses = [
   { value: "RESOLVED", label: "Resolved" },
 ];
 
-function InlineSelect({
-  value,
-  options,
-  onSelect,
-  className,
-}: {
-  value: string;
-  options: { value: string; label: string }[];
-  onSelect: (value: string) => void;
-  className?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
-  const selected = options.find((o) => o.value === value);
-
-  const updatePosition = useCallback(() => {
-    if (!open || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setMenuStyle({
-      position: "fixed",
-      left: rect.left,
-      top: rect.bottom + 4,
-      minWidth: Math.max(rect.width, 144),
-      zIndex: 1000,
-    });
-  }, [open]);
-
-  useEffect(() => {
-    updatePosition();
-  }, [updatePosition]);
-
-  useEffect(() => {
-    if (!open) return;
-    updatePosition();
-    window.addEventListener("scroll", updatePosition, { passive: true });
-    window.addEventListener("resize", updatePosition, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", updatePosition);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [open, updatePosition]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node) &&
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEscape);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open]);
-
-  return (
-    <div ref={containerRef} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((p) => !p)}
-        className={`flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm whitespace-nowrap transition-colors outline-none select-none hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${className ?? ""}`}
-      >
-        <span className="truncate">{selected?.label ?? "Select"}</span>
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-      </button>
-      {open && createPortal(
-        <div
-          ref={menuRef}
-          style={menuStyle}
-          className="z-[1000] mt-1 min-w-36 origin-top overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10"
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onSelect(opt.value);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center px-2.5 py-1.5 text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground ${
-                opt.value === value ? "bg-accent/50 font-medium" : ""
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>,
-        document.body,
-      )}
-    </div>
-  );
-}
+const barangays = [
+  { value: "all", label: "All barangays" },
+  { value: "DOLORES", label: "Dolores" },
+  { value: "SAN_ISIDRO", label: "San Isidro" },
+  { value: "SAN_JUAN", label: "San Juan" },
+  { value: "SANTA_ANA", label: "Santa Ana" },
+  { value: "MUZON", label: "Muzon" },
+];
 
 export function FilterBar({ view }: { view: string }) {
   const router = useRouter();
@@ -152,6 +55,7 @@ export function FilterBar({ view }: { view: string }) {
 
   const currentCategory = searchParams.get("category") ?? "all";
   const currentStatus = searchParams.get("status") ?? "all";
+  const currentBarangay = searchParams.get("barangay") ?? "all";
   const currentQ = searchParams.get("q") ?? "";
 
   function buildHref(key: string, value: string) {
@@ -198,13 +102,19 @@ export function FilterBar({ view }: { view: string }) {
           value={currentCategory}
           options={categories}
           onSelect={(value) => router.push(buildHref("category", value))}
-          className="w-44"
+          className="h-8 px-2.5 py-2 w-44"
         />
         <InlineSelect
           value={currentStatus}
           options={statuses}
           onSelect={(value) => router.push(buildHref("status", value))}
-          className="w-40"
+          className="h-8 px-2.5 py-2 w-40"
+        />
+        <InlineSelect
+          value={currentBarangay}
+          options={barangays}
+          onSelect={(value) => router.push(buildHref("barangay", value))}
+          className="h-8 px-2.5 py-2 w-44"
         />
         <div className="flex overflow-hidden rounded-lg border border-input">
           <button

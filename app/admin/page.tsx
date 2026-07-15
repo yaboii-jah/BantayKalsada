@@ -11,12 +11,20 @@ const CATEGORY_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+const BARANGAY_LABELS: Record<string, string> = {
+  DOLORES: "Dolores",
+  SAN_ISIDRO: "San Isidro",
+  SAN_JUAN: "San Juan",
+  SANTA_ANA: "Santa Ana",
+  MUZON: "Muzon",
+};
+
 export default async function AdminDashboard() {
   const adminClient = createAdminClient();
 
   const { data: allReports } = await adminClient
     .from("reports")
-    .select("submitted_at, category, status, resolved_at");
+    .select("submitted_at, category, status, resolved_at, barangay");
 
   const reports = allReports ?? [];
 
@@ -83,6 +91,18 @@ export default async function AdminDashboard() {
     }))
     .sort((a, b) => b.count - a.count);
 
+  const barangayMap: Record<string, number> = {};
+  reports.forEach((r) => {
+    const b = r.barangay ?? "UNKNOWN";
+    barangayMap[b] = (barangayMap[b] ?? 0) + 1;
+  });
+  const barangayCounts = Object.entries(barangayMap)
+    .map(([barangay, count]) => ({
+      barangay: BARANGAY_LABELS[barangay] ?? barangay,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
   const statusCounts = [
     { status: "PENDING", count: pending },
     { status: "APPROVED", count: approved },
@@ -118,6 +138,7 @@ export default async function AdminDashboard() {
     dailySubmissions,
     categoryCounts,
     statusCounts,
+    barangayCounts,
     approvalRate,
     avgResolutionHours,
     reportsThisMonth,

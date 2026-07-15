@@ -3,6 +3,9 @@ import { ReportForm } from "@/components/reports/report-form";
 export default function SubmitPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+        📍 Reports are accepted for <strong>Taytay, Rizal</strong> only. Pin a location within Taytay to submit.
+      </div>
       <h1 className="mb-2 text-2xl font-bold tracking-tight text-foreground">
         Submit a Report
       </h1>

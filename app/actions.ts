@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
-import { createReportSchema, type CreateReportInput } from "@/lib/validations/report";
+import { barangayEnum, createReportSchema, type CreateReportInput } from "@/lib/validations/report";
 import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
 
 export interface ActionResponse {
@@ -150,6 +150,18 @@ export async function submitReport(
       };
     }
 
+    const { data: withinBoundary } = await supabase.rpc("is_within_boundary", {
+      lat: formData.latitude,
+      lng: formData.longitude,
+      municipality_name: "Taytay",
+    });
+    if (!withinBoundary) {
+      return {
+        success: false,
+        error: "Reports are accepted for Taytay, Rizal only. Please pin a location within Taytay.",
+      };
+    }
+
     const parsed = createReportSchema.safeParse(formData);
     if (!parsed.success) {
       return {
@@ -164,6 +176,8 @@ export async function submitReport(
         title: parsed.data.title,
         description: parsed.data.description,
         category: parsed.data.category,
+        barangay: parsed.data.barangay,
+        severity: parsed.data.severity,
         photo_urls: parsed.data.photo_urls,
         latitude: parsed.data.latitude,
         longitude: parsed.data.longitude,

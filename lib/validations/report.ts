@@ -10,6 +10,14 @@ export const reportCategoryEnum = z.enum([
 
 export const reportSeverityEnum = z.enum(["MINOR", "URGENT", "EMERGENCY"]);
 
+export const barangayEnum = z.enum([
+  "DOLORES",
+  "SAN_ISIDRO",
+  "SAN_JUAN",
+  "SANTA_ANA",
+  "MUZON",
+]);
+
 export const createReportSchema = z.object({
   title: z
     .string()
@@ -22,6 +30,7 @@ export const createReportSchema = z.object({
     .min(20, "Description must be at least 20 characters")
     .max(1000, "Description must be at most 1000 characters"),
   category: reportCategoryEnum,
+  barangay: barangayEnum,
   photo_urls: z
     .array(z.string().url())
     .min(1, "At least one photo is required")

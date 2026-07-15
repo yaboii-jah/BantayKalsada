@@ -2,7 +2,7 @@
 
 ## Overview
 
-Bantay Kalsada is a community-driven road incident reporting web application built for Filipino citizens. It allows registered users to submit reports of road hazards — such as potholes, flooded roads, broken traffic signs, and road accidents — by providing a title, description, category, between one and three photos, and a pinned map location. Users register with an email and password and must verify their email address before submitting reports. Submitted reports go through an administrator moderation queue before becoming publicly visible. Approved reports appear in a public feed that any visitor can browse, search, and filter, giving road users actionable awareness of hazards in their area.
+Bantay Kalsada is a community-driven road incident reporting web application built for residents of Taytay, Rizal. It allows registered users to submit reports of road hazards — such as potholes, flooded roads, broken traffic signs, and road accidents — by providing a title, description, category, barangay, between one and three photos, and a pinned map location (which must fall within Taytay's municipal boundary). Users register with an email and password and must verify their email address before submitting reports. Submitted reports go through an administrator moderation queue before becoming publicly visible. Approved reports appear in a public feed that any visitor can browse, search, and filter, giving road users actionable awareness of hazards in their area.
 
 ## Goals
 
@@ -29,9 +29,10 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 ### Public Feed (No Account Required)
 
 - Browse all approved and resolved road incident reports in a paginated list.
-- View the full details of any approved report: title, category, status badge, description, photo gallery (up to 3 photos), pinned map location, and submission date.
+- View the full details of any approved report: title, category, barangay, status badge, description, photo gallery (up to 3 photos), pinned map location, and submission date.
 - Filter reports by category (Pothole, Flooded Road, Road Accident, Road Rage, Other Road Hazard).
 - Filter reports by status (Approved, Resolved).
+- Filter reports by barangay (Dolores, San Isidro, San Juan, Santa Ana, Muzon).
 
 ### Citizen Reporting
 
@@ -39,7 +40,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Verify email address by clicking a link sent to the inbox; email verification is required before submitting reports.
 - Log in and log out securely.
 - Reset a forgotten password via an emailed reset link.
-- Submit a road incident report with a required title, description, category, between one and three photos (each max 5 MB), and a pinned map location.
+- Submit a road incident report with a required title, description, category, barangay (selected from a dropdown), between one and three photos (each max 5 MB), and a pinned map location that must fall within Taytay's municipal boundary.
 - Use the device's GPS to automatically center the map on the current location.
 - Add, preview, and individually remove photos before submitting (minimum 1, maximum 3).
 - See nearby existing APPROVED/RESOLVED reports as severity-colored chip markers on the map when pinning a location — tap a chip to view report summary and navigate to full details.
@@ -51,7 +52,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 
 - Access a protected admin panel, separate from the citizen-facing UI, at `/admin`.
 - View a paginated queue of all pending reports sorted by submission date (oldest first).
-- Open a report to review its full details: submitter name, email, category, title, description, photo gallery (up to 3 photos), pinned location, and submission timestamp.
+- Open a report to review its full details: submitter name, email, category, barangay, title, description, photo gallery (up to 3 photos), pinned location, and submission timestamp.
 - Approve a report, changing its status to `APPROVED` and triggering an email notification to the reporter.
 - Reject a report with a mandatory written reason, changing its status to `REJECTED` and sending the reason to the reporter via email.
 - Mark an approved report as `RESOLVED`, triggering an email notification to the reporter.
@@ -80,17 +81,20 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Progressive Web App (PWA) support: manifest.json for installability, service worker for offline caching (static assets, pages, and images), and an in-app install banner.
 - Share report via link/social: Open Graph meta tags on report detail pages for rich link previews on social platforms, plus an in-app share button using the Web Share API with clipboard fallback.
 - Comments on reports: any logged-in user can comment on approved/resolved reports on the public detail page. Single-level threading (reply to top-level only). Editing and deletion by the comment author. Admin moderation via soft-delete (status = REMOVED). Report owner receives an in-app notification when someone comments.
+- Barangay field on reports: required dropdown on submission (Dolores, San Isidro, San Juan, Santa Ana, Muzon) manually selected by the citizen from an InlineSelect dropdown.
+- Municipality boundary enforcement: all pinned locations validated against Taytay boundary polygon at the database level (`trg_reports_location_boundary` trigger) and application level (`is_within_boundary` RPC in Server Action).
 
 ### Out of Scope
 
 - Native iOS or Android mobile applications.
 - SMS notifications.
 - Facebook or other OAuth login providers — planned for v1.1.
-- Nearby existing reports on submit.
+- Comment list pagination — currently shows all comments without pagination.
 - User account management by admins (suspend, ban, or delete users).
 - Integration with government systems such as MMDA, DPWH, or LGU APIs.
 - AI-assisted moderation or duplicate detection.
 - Multi-role or region-scoped administrator accounts.
+- Multi-municipality or nationwide deployment — currently scoped to Taytay, Rizal only.
 
 ## Success Criteria
 
@@ -98,6 +102,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 2. An administrator can log in to the admin panel, open a pending report, and approve it; the approved report immediately appears on the public feed and the reporter receives an approval email.
 3. An administrator can reject a pending report with a written reason; the reporter sees the rejection reason in their personal report history.
 4. An administrator can mark an approved report as resolved; the report displays a "Resolved" badge on the public feed and the reporter receives a resolution email.
-5. Any visitor without an account can browse the public feed in grid or map view, search by keyword, filter by category and status, and view the full details of an approved report including its photo gallery.
+5. Any visitor without an account can browse the public feed in grid or map view, search by keyword, filter by category, barangay, and status, and view the full details of an approved report including its photo gallery.
+
 6. No report submitted by a citizen is visible on the public feed until an administrator explicitly approves it.
 7. A citizen who submits more than 5 reports within a 24-hour window is blocked from submitting additional reports until the window resets.

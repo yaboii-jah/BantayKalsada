@@ -7,7 +7,7 @@ import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { formatReportDate } from "@/lib/date-utils";
 import { getDisplayUrl } from "@/lib/cloudinary-url";
-import { MapPin, Calendar } from "lucide-react";
+import { MapPin, Calendar, Building2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -33,6 +33,14 @@ const categoryLabels: Record<string, string> = {
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage",
   OTHER: "Other",
+};
+
+const barangayLabels: Record<string, string> = {
+  DOLORES: "Dolores",
+  SAN_ISIDRO: "San Isidro",
+  SAN_JUAN: "San Juan",
+  SANTA_ANA: "Santa Ana",
+  MUZON: "Muzon",
 };
 
 export async function generateMetadata({
@@ -149,6 +157,12 @@ export default async function ReportDetailPage({
           <span className="flex items-center gap-1.5">
             <MapPin className="size-4" />
             {report.location_label}
+          </span>
+        )}
+        {report.barangay && (
+          <span className="flex items-center gap-1.5">
+            <Building2 className="size-4" />
+            Barangay {barangayLabels[report.barangay] ?? report.barangay}
           </span>
         )}
         <span className="flex items-center gap-1.5">

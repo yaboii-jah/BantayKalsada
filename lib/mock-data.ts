@@ -119,15 +119,21 @@ export function generateMockReports(count = 36): ReportRow[] {
     const titleList = titles[category];
     const submittedAt = randomDate(30);
 
+    const barangayValues: Database["public"]["Enums"]["barangay"][] = [
+      "DOLORES", "SAN_ISIDRO", "SAN_JUAN", "SANTA_ANA", "MUZON",
+    ];
+
     reports.push({
       id: `mock-${i + 1}`,
       title: titleList[i % titleList.length],
       description: `This is a detailed description of a ${category.toLowerCase().replace(/_/g, " ")} report observed near ${locations[i % locations.length]}. The situation requires immediate attention from the local authorities to ensure public safety.`,
       category,
+      barangay: barangayValues[i % barangayValues.length],
       status,
       photo_urls: photoUrlSets[i % photoUrlSets.length],
       latitude: 14.5 + Math.random() * 0.5,
       longitude: 121 + Math.random() * 0.3,
+      location: null,
       location_label: locations[i % locations.length],
       rejection_reason: null,
       submitted_by_id: "mock-user",

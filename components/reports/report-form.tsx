@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Send, Loader2 } from "lucide-react";
 
-import { createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
+import { barangayEnum, createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
 import { submitReport } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PhotoUpload } from "@/components/reports/photo-upload";
 import { LocationPickerWrapper } from "@/components/maps/location-picker-wrapper";
+import { InlineSelect } from "@/components/ui/inline-select";
 
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,20 @@ const categoryLabels: Record<CreateReportInput["category"], string> = {
   ROAD_RAGE: "Road Rage Incident",
   OTHER: "Other Road Hazard",
 };
+
+const categoryOptions = [
+  { value: "", label: "Select a category" },
+  ...Object.entries(categoryLabels).map(([value, label]) => ({ value, label })),
+];
+
+const barangayOptions = [
+  { value: "", label: "Select your barangay" },
+  { value: "DOLORES", label: "Dolores" },
+  { value: "SAN_ISIDRO", label: "San Isidro" },
+  { value: "SAN_JUAN", label: "San Juan" },
+  { value: "SANTA_ANA", label: "Santa Ana" },
+  { value: "MUZON", label: "Muzon" },
+];
 
 const severityCheckStyles: Record<string, string> = {
   MINOR: "has-[:checked]:border-status-approved/50 has-[:checked]:bg-status-approved/10",
@@ -42,6 +57,7 @@ export function ReportForm() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CreateReportInput>({
     resolver: zodResolver(createReportSchema),
@@ -49,12 +65,16 @@ export function ReportForm() {
       title: "",
       description: "",
       severity: "MINOR",
+      barangay: undefined,
       photo_urls: [],
       latitude: undefined,
       longitude: undefined,
       location_label: undefined,
     },
   });
+
+  const selectedCategory = watch("category");
+  const selectedBarangay = watch("barangay");
 
   const onPhotosChange = useCallback(
     (urls: string[]) => {
@@ -100,23 +120,13 @@ export function ReportForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
-        <select
-          id="category"
-          className="flex h-8 w-full items-center justify-between rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&>option]:text-foreground"
-          {...register("category")}
-        >
-          <option value="" disabled>
-            Select a category
-          </option>
-          {(Object.keys(categoryLabels) as CreateReportInput["category"][]).map(
-            (key) => (
-              <option key={key} value={key}>
-                {categoryLabels[key]}
-              </option>
-            ),
-          )}
-        </select>
+        <Label>Category</Label>
+        <InlineSelect
+          value={selectedCategory ?? ""}
+          options={categoryOptions}
+          onSelect={(value) => setValue("category", value as CreateReportInput["category"], { shouldValidate: true })}
+          placeholder="Select a category"
+        />
         {errors.category && (
           <p className="text-xs text-destructive">{errors.category.message}</p>
         )}
@@ -169,6 +179,19 @@ export function ReportForm() {
           ))}
         </div>
       </fieldset>
+
+      <div className="space-y-2">
+        <Label>Barangay *</Label>
+        <InlineSelect
+          value={selectedBarangay ?? ""}
+          options={barangayOptions}
+          onSelect={(value) => setValue("barangay", value as CreateReportInput["barangay"], { shouldValidate: true })}
+          placeholder="Select your barangay"
+        />
+        {errors.barangay && (
+          <p className="text-xs text-destructive">{errors.barangay.message}</p>
+        )}
+      </div>
 
       <div className="space-y-2">
         <Label>Photos</Label>

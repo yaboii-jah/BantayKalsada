@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Send, Loader2, Star, ChevronDown } from "lucide-react";
+import { Send, Loader2, Star } from "lucide-react";
 
+import { InlineSelect } from "@/components/ui/inline-select";
 import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
 import { submitFeedback } from "@/app/actions";
 import { PhotoUpload } from "@/components/reports/photo-upload";
@@ -28,73 +29,6 @@ const typeOptions = [
   { value: "FEATURE_REQUEST", label: "Feature Request" },
   { value: "GENERAL", label: "General Feedback" },
 ];
-
-function InlineSelect({
-  value,
-  options,
-  onSelect,
-}: {
-  value: string;
-  options: { value: string; label: string }[];
-  onSelect: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const selected = options.find((o) => o.value === value);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEscape);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((p) => !p)}
-        className="flex h-10 w-full items-center justify-between gap-1.5 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none select-none hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <span className={value ? "text-foreground" : "text-muted-foreground"}>
-          {selected?.label ?? "Select"}
-        </span>
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-[1000] mt-1 w-full origin-top overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10">
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onSelect(opt.value);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center px-3 py-2 text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground ${
-                opt.value === value ? "bg-accent/50 font-medium" : ""
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function FeedbackForm() {
   const router = useRouter();

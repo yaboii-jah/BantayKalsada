@@ -6,6 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { LocateFixed } from "lucide-react";
 import { NearbyReportsLayer } from "./nearby-reports-layer";
+import { TaytayBoundary } from "./taytay-boundary";
 
 const defaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -22,16 +23,19 @@ interface LocationPickerProps {
   onChange: (location: { lat: number; lng: number; label?: string }) => void;
 }
 
-async function reverseGeocode(lat: number, lng: number): Promise<string | undefined> {
+async function reverseGeocode(
+  lat: number,
+  lng: number,
+): Promise<{ displayName?: string }> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=fil`,
       { headers: { "User-Agent": "BantayKalsada/1.0" } },
     );
     const data = await res.json();
-    return data.display_name as string | undefined;
+    return { displayName: data.display_name as string | undefined };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -81,8 +85,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const handleMove = useCallback(
     async (lat: number, lng: number) => {
       setPosition([lat, lng]);
-      const label = await reverseGeocode(lat, lng);
-      onChange({ lat, lng, label });
+      const { displayName } = await reverseGeocode(lat, lng);
+      onChange({ lat, lng, label: displayName });
     },
     [onChange],
   );
@@ -95,8 +99,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setPosition([lat, lng]);
-        const label = await reverseGeocode(lat, lng);
-        onChange({ lat, lng, label });
+        const { displayName } = await reverseGeocode(lat, lng);
+        onChange({ lat, lng, label: displayName });
         setLocating(false);
       },
       () => setLocating(false),
@@ -107,8 +111,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   return (
     <div className="relative">
       <MapContainer
-        center={position ?? [14.5995, 120.9842]}
-        zoom={13}
+        center={position ?? [14.5587, 121.1360]}
+        zoom={14}
         className="h-[400px] w-full rounded-lg"
         scrollWheelZoom={true}
       >
@@ -116,6 +120,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <TaytayBoundary />
         <LocationMarker position={position} onMove={handleMove} />
         <NearbyReportsLayer lat={position?.[0] ?? null} lng={position?.[1] ?? null} />
       </MapContainer>
@@ -138,6 +143,10 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           </>
         )}
       </button>
+      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="text-primary">📍</span>
+        Reports accepted for <strong>Taytay, Rizal</strong> only
+      </div>
     </div>
   );
 }

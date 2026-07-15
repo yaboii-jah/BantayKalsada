@@ -24,6 +24,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 const CATEGORY_COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"];
 
+const BARANGAY_COLORS = ["#14b8a6", "#f97316", "#a855f7", "#eab308", "#06b6d4"];
+
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Pending",
   APPROVED: "Approved",
@@ -34,11 +36,13 @@ const STATUS_LABELS: Record<string, string> = {
 type DailyEntry = { date: string; count: number };
 type CategoryEntry = { category: string; count: number };
 type StatusEntry = { status: string; count: number };
+type BarangayEntry = { barangay: string; count: number };
 
 export interface AnalyticsData {
   dailySubmissions: DailyEntry[];
   categoryCounts: CategoryEntry[];
   statusCounts: StatusEntry[];
+  barangayCounts: BarangayEntry[];
   approvalRate: number;
   avgResolutionHours: number;
   reportsThisMonth: number;
@@ -231,6 +235,46 @@ export function AnalyticsCharts({ data }: { data: AnalyticsData }) {
               </div>
             ))}
           </div>
+        </ChartCard>
+
+        <ChartCard title="By Barangay">
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart
+              data={data.barangayCounts}
+              layout="vertical"
+              margin={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--color-border)"
+                horizontal={false}
+              />
+              <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} />
+              <YAxis
+                type="category"
+                dataKey="barangay"
+                tick={{ fontSize: 11, fill: "var(--color-foreground)" }}
+                width={100}
+              />
+              <Tooltip
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-popover)",
+                  color: "var(--color-popover-foreground)",
+                }}
+              />
+              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                {data.barangayCounts.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={BARANGAY_COLORS[i % BARANGAY_COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </ChartCard>
       </div>
     </div>

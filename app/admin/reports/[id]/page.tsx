@@ -5,7 +5,7 @@ import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { AdminReportActions } from "./admin-report-actions";
 import { formatReportDate } from "@/lib/date-utils";
-import { MapPin, Calendar, User, AlertCircle } from "lucide-react";
+import { MapPin, Calendar, User, AlertCircle, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const severityLabels: Record<string, string> = {
@@ -28,6 +28,14 @@ const categoryLabels: Record<string, string> = {
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage",
   OTHER: "Other",
+};
+
+const barangayLabels: Record<string, string> = {
+  DOLORES: "Dolores",
+  SAN_ISIDRO: "San Isidro",
+  SAN_JUAN: "San Juan",
+  SANTA_ANA: "Santa Ana",
+  MUZON: "Muzon",
 };
 
 interface PageProps {
@@ -136,6 +144,12 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
               minute: "2-digit",
             })}
           </div>
+          {report.barangay && (
+            <div className="flex items-center gap-1 pt-1 text-xs text-muted-foreground">
+              <Building2 className="h-3 w-3" />
+              Barangay {barangayLabels[report.barangay] ?? report.barangay}
+            </div>
+          )}
         </div>
         {report.reviewed_at && (
           <div className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">

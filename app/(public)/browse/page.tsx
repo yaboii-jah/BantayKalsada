@@ -15,12 +15,14 @@ const PAGE_SIZE = 12;
 async function BrowseReports({
   categoryFilter,
   statusFilter,
+  barangayFilter,
   query,
   view,
   currentPage,
 }: {
   categoryFilter: string;
   statusFilter: string;
+  barangayFilter: string;
   query: string;
   view: "grid" | "map";
   currentPage: number;
@@ -49,6 +51,11 @@ async function BrowseReports({
   if (categoryFilter !== "all") {
     countQuery = countQuery.eq("category", categoryFilter);
     dataQuery = dataQuery.eq("category", categoryFilter);
+  }
+
+  if (barangayFilter !== "all") {
+    countQuery = countQuery.eq("barangay", barangayFilter);
+    dataQuery = dataQuery.eq("barangay", barangayFilter);
   }
 
   if (query) {
@@ -82,6 +89,7 @@ async function BrowseReports({
     if (view === "map") p.set("view", "map");
     if (categoryFilter && categoryFilter !== "all") p.set("category", categoryFilter);
     if (statusFilter && statusFilter !== "all") p.set("status", statusFilter);
+    if (barangayFilter && barangayFilter !== "all") p.set("barangay", barangayFilter);
     if (page > 1) p.set("page", String(page));
     const qs = p.toString();
     return `/browse${qs ? `?${qs}` : ""}`;
@@ -90,7 +98,8 @@ async function BrowseReports({
   const isFiltered =
     !!query ||
     (categoryFilter && categoryFilter !== "all") ||
-    (statusFilter && statusFilter !== "all");
+    (statusFilter && statusFilter !== "all") ||
+    (barangayFilter && barangayFilter !== "all");
 
   if (view === "map" && pageReports.length > 0) {
     return (
@@ -172,16 +181,17 @@ async function BrowseReports({
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; status?: string; page?: string; q?: string; view?: string }>;
+  searchParams: Promise<{ category?: string; status?: string; barangay?: string; page?: string; q?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const categoryFilter = params.category ?? "all";
   const statusFilter = params.status ?? "all";
+  const barangayFilter = params.barangay ?? "all";
   const query = params.q?.trim() ?? "";
   const view = params.view === "map" ? "map" : "grid";
   const currentPage = Math.max(1, Number(params.page) || 1);
 
-  const suspenseKey = `${view}-${categoryFilter}-${statusFilter}-${query}-${currentPage}`;
+  const suspenseKey = `${view}-${categoryFilter}-${statusFilter}-${barangayFilter}-${query}-${currentPage}`;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -212,6 +222,7 @@ export default async function BrowsePage({
         <BrowseReports
           categoryFilter={categoryFilter}
           statusFilter={statusFilter}
+          barangayFilter={barangayFilter}
           query={query}
           view={view}
           currentPage={currentPage}

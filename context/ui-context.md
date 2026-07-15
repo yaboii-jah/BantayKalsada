@@ -16,7 +16,7 @@ All components must use these CSS custom property tokens. No hardcoded hex value
 | ---------------- | --------------------- | ------------------------ | --------- |
 | Page background  | `--background`        | `bg-background`          | `#FFFFFF` |
 | Surface (cards)  | `--card`              | `bg-card`                | `#F8FAFC` |
-| Primary text     | `--foreground`        | `text-foreground`        | `#0F172A` |
+| Primary text     | `--foreground`        | `text-foreground`        | `#202020` (neutral `oklch(0.13 0 0)`) |
 | Muted text       | `--muted-foreground`  | `text-muted-foreground`  | `#64748B` |
 | Primary accent   | `--primary`           | `bg-primary`             | `#1D4ED8` |
 | Primary text on accent | `--primary-foreground` | `text-primary-foreground` | `#FFFFFF` |
@@ -73,7 +73,7 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 - Do not edit files inside `components/ui/` directly. Wrap and extend them in `components/reports/`, `components/admin/`, or the relevant feature folder.
 - Toast notifications for user feedback (report submitted, action successful, error occurred) use the Shadcn/ui `Sonner` toast component.
 - The rejection reason prompt uses the Shadcn/ui `Dialog` component — not a native browser `confirm()`.
-- All form fields use Shadcn/ui `Input`, `Textarea`, and `Select` components wired to `react-hook-form` with Zod resolvers for validation feedback.
+- All form fields use Shadcn/ui `Input` and `Textarea` components wired to `react-hook-form` with Zod resolvers for validation feedback. Custom dropdowns (`InlineSelect`) replace Shadcn/ui `Select` — they render options via `createPortal` to `document.body` to avoid container clipping, use `bg-background text-foreground` for reliable dark mode cascade, and are shared across report-form, feedback-form, and filter-bar.
 
 ---
 
