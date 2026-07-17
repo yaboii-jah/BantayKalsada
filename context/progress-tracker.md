@@ -19,6 +19,7 @@ change.
 - [x] Community Features (Severity Tagging) — Complete
 - [x] Comments on Reports — Complete
 - [x] Municipality Scope — Taytay, Rizal
+- [x] Browse Map Heatmap (Phase A) — Markers/Heatmap toggle, severity-weighted density of all Taytay reports
 
 ## Current Goal
 
@@ -356,26 +357,7 @@ change.
 - **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
 
 ## Next Up
-- [x] Migration 1: notification_type enum values (non-transaction)
-- [x] Migration 2: feedback tables, RLS, indexes
-- [x] Supabase types regenerated (`database.types.ts`)
-- [x] Notification bell updated — handles FEEDBACK_ACKNOWLEDGED / FEEDBACK_CLOSED types
-- [x] Zod schemas, Server Actions, email templates
-- [x] Citizen pages (/feedback, /my-feedback, /my-feedback/[id])
-- [x] Admin pages (/admin/feedback, /admin/feedback/[id])
-- [x] Nav + sidebar links, notification bell updates
-- [x] Fixed /my-feedback page layout — added `mx-auto max-w-7xl` centering wrapper
-- [x] Fixed avatar dropdown — "Feedback" renamed to "My Feedback", links to `/my-feedback`
-- [x] Replaced Radix Select in feedback form with inline custom dropdown (fixes body scroll lock layout shift)
-- [x] `/my-feedback` added to middleware `protectedRoutes` — unauthenticated users redirected to `/login?redirect=/my-feedback`
-- [x] Server-side auth guard on both `/my-feedback` and `/my-feedback/[id]` — `return null` replaced with `redirect("/login?redirect=/my-feedback")`
-- [x] Feedback card status badge overflow fix — added `flex-wrap` to badges row
-- [x] **Photo uploads**: Migration 3 adds `photo_urls text[]` to feedback table
-- [x] **Zod**: `createFeedbackSchema` extended with optional `photo_urls` (max 3)
-- [x] **Server Action**: `submitFeedback` now inserts `photo_urls`
-- [x] **Form**: `PhotoUpload` component integrated into `FeedbackForm`, emits URLs on submit
-- [x] **Detail pages**: `PhotoGallery` (reused carousel) shown on citizen + admin feedback detail pages
-- [x] `npm run build` passes
+
 
 ### Share Report via Link/Social
 
@@ -430,6 +412,7 @@ change.
 - [x] Boundary enforcement tested (inside/outside Taytay via trigger + `is_within_boundary` RPC). Barangay is selected manually via `InlineSelect` — Nominatim auto-detect was NOT implemented (reverse geocode sets `location_label` only).
 
 ### Mobile & Notifications (v2.2)
+- **Heatmap external traffic API (Phase B)** — fill the `getExternalHeatPoints()` seam in `lib/heatmap.ts` with a specified traffic provider (TomTom/HERE/Google) via a server proxy; merges into the existing heatmap points
 - **Push notifications** — service worker + Supabase Realtime for real-time status alerts
 - **Offline submission** — queue report data in localStorage, submit on reconnect
 - **Geographic search / barangay filter** — filter browse feed by location
@@ -528,3 +511,15 @@ change.
 - **Spec `22-municipality-scope.md` reconciled with implementation** — The spec still read as a pre-implementation plan and described behavior that was never built. Corrected: (1) barangay is **manually selected** via `InlineSelect`, not Nominatim auto-detected — reverse geocode only sets `location_label`; (2) boundary enforced by `trg_reports_location_boundary` trigger using inline `ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geometry` (not `NEW.location`, which is NULL in BEFORE INSERT on PG17), not a CHECK constraint; (3) `barangay` column stays nullable (no backfill/NOT NULL); (4) default map center is `14.5587, 121.1360` (was documented as `14.5692, 121.1326`); (5) Files Created table fixed to real migration filenames incl. `20250713000009_add_reports_rls_policies.sql`, plus `taytay-boundary.tsx` and `inline-select.tsx`; (6) Implementation Status + checklists flipped to complete, auto-detect marked "not implemented"; (7) admin queue barangay **filter** was never built (column + analytics chart only).
 - **`architecture.md`** — line describing barangay as "auto-detected from Nominatim" corrected to manual `InlineSelect` selection.
 - **`data-model.md`** — `reports.barangay` note corrected (manual selection, stays nullable); illustrative `is_within_boundary` example coordinate aligned to `14.5587, 121.1360`.
+
+## Session Notes — Browse Heatmap (Phase A)
+
+- **`leaflet.heat` global-`L` binding (root-cause fix).** `leaflet.heat@0.2.0` is a bare IIFE (no UMD) that does `L.heatLayer = …` on the **global** `L`. Webpack Leaflet does not set a global `L`, and the imported `L` can be a different object than `window.L`. A static `import "leaflet.heat"` therefore attaches `heatLayer` to a global the component never reads → the `L.heatLayer` guard silently returns → blank layer, no error. Fix in `components/maps/heat-layer.tsx`: set `window.L = L` then `await import("leaflet.heat")`, resolve `heatLayer` from `window.L ?? L`. Verified rendering (red/blue/orange intensity blobs). See `feature-specs/23-heatmap.md` → Implementation Notes.
+- **Stale PWA service worker hides new map code.** `@serwist/next` precaches the JS bundle, so after a code change `/browse` kept serving the old cached page (no toggle visible). Fix during dev: DevTools → Unregister SW + hard-reload. Known dev gotcha (app-codebase-context.md already notes it).
+- **Heatmap tuning:** `radius: 30`, `blur: 20` for sparse Taytay data. External traffic source deferred — `getExternalHeatPoints()` in `lib/heatmap.ts` returns `[]` (Phase B, blocked on user-specified provider + keys).
+- **Overlay (not a mode switch) implemented.** Replaced the Markers/Heatmap either/or toggle with markers-always-rendered + a single **Heat** on/off toggle (default on) showing the heat as an underlay beneath the clustered markers. Heat scope stays all Taytay (unfiltered); markers remain viewport-filtered. Captured in `feature-specs/23-heatmap.md` (rewritten to match the spec-10/13 format) and reflected in `architecture.md` + `app-codebase-context.md`.
+
+## Bugfixes — Browse Map (Jul 17)
+
+- **Dark-mode popup readability (Issue 1).** Leaflet popup has a hardcoded white background (`leaflet.css`). `.dark` Tailwind classes (`text-foreground`, `text-muted-foreground`, `bg-muted`) flip to light values in dark mode → light text on white, unreadable. **Fix:** added `browse-popup` class to the popup content `<div>` in `components/browse/browse-map.tsx:147`; added CSS overrides in `app/globals.css` forcing the popup wrapper/tip to white (`oklch(1 0 0)`) and class-children to light-mode color values (dark text, gray-100 badges). Verified: `npm run build` — zero errors.
+- **Reset button crash with zero filtered reports (Issue 2).** `handleReset` built `L.latLngBounds(reports.map(...))`. When filters matched zero reports, `reports` was empty → `L.latLngBounds([])` invalid → `fitBounds` threw "Bounds are not valid". **Fix:** `handleReset` now checks `reports.length > 0` first, falls back to `allHeatPoints`; early-returns if both are empty. Also corrected tuple access (`p[0]`/`p[1]`) for `HeatPoint` format. Verified: `npm run build` — zero errors.

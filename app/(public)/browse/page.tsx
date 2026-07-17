@@ -5,6 +5,7 @@ import { FilterBar } from "@/components/browse/filter-bar";
 import { PaginationBar } from "@/components/browse/pagination-bar";
 import { BrowseMapWrapper } from "@/components/browse/browse-map-wrapper";
 import { ReportsGridSkeleton, MapSkeleton } from "@/components/reports/reports-grid-skeleton";
+import { severityWeight, type HeatPoint } from "@/lib/heatmap";
 import { Map } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -70,10 +71,23 @@ async function BrowseReports({
   let pageReports: Database["public"]["Tables"]["reports"]["Row"][] = [];
   let totalCount = count ?? 0;
 
+  let heatPoints: HeatPoint[] = [];
+
   if (view === "map") {
     const { data: allData } = await dataQuery;
     pageReports = allData ?? [];
     totalCount = pageReports.length;
+
+    // Unfiltered hazard density across all of Taytay (APPROVED/RESOLVED only).
+    // Ignores the active filters by design — the heatmap shows overall concentration.
+    const { data: heatData } = await supabase
+      .from("reports")
+      .select("latitude, longitude, severity")
+      .in("status", baseStatusFilter);
+
+    heatPoints = (heatData ?? []).map(
+      (r) => [r.latitude, r.longitude, severityWeight(r.severity)] as HeatPoint,
+    );
   } else {
     const from = (currentPage - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -101,7 +115,7 @@ async function BrowseReports({
     (statusFilter && statusFilter !== "all") ||
     (barangayFilter && barangayFilter !== "all");
 
-  if (view === "map" && pageReports.length > 0) {
+  if (view === "map" && (pageReports.length > 0 || heatPoints.length > 0)) {
     return (
       <>
         <BrowseMapWrapper
@@ -114,6 +128,7 @@ async function BrowseReports({
             longitude: r.longitude,
             photo_urls: r.photo_urls,
           }))}
+          heatPoints={heatPoints}
         />
       </>
     );

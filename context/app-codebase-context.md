@@ -171,7 +171,9 @@ Two layers prevent unapproved reports from leaking:
 
 The page renders a responsive card grid (1→5 columns) or a map with clustered markers, with:
 - Category + status filter bar, keyword search input, grid/map view toggle (all driven by URL search params: `?category=POTHOLE&status=APPROVED&q=pothole&view=map&page=2`)
-- Map view: shows all filtered results as Leaflet markers with clustering via `react-leaflet-cluster`; a purely client-side bounding box filter constrains markers and count to the current viewport as the user pans/zooms; a dynamic count bar displays "Showing X of Y reports in this area" with a Reset button
+  - Map view: shows all filtered results as Leaflet markers with clustering via `react-leaflet-cluster`; a purely client-side bounding box filter constrains markers and count to the current viewport as the user pans/zooms; a dynamic count bar displays "Showing X of Y reports in this area" with a Reset button
+  - Map view overlays a severity-weighted hazard-density **heatmap under the existing clustered markers**, toggled by a single **Heat** on/off control (default on). The heatmap (when enabled) renders overall hazard density from **all** `APPROVED`/`RESOLVED` Taytay reports (severity-weighted: Minor=1, Urgent=2, Emergency=3) via `components/maps/heat-layer.tsx` (`leaflet.heat`, `useMap()`). The unfiltered point data is fetched server-side in `BrowseReports` (map view) and passed as `heatPoints` to `BrowseMapWrapper`. An external traffic source is isolated behind `getExternalHeatPoints()` in `lib/heatmap.ts` (returns `[]` for now).
+  - **`leaflet.heat` integration gotcha:** the plugin (v0.2.0) is a bare IIFE that attaches `L.heatLayer` to the **global** `L`. Webpack Leaflet does not set a global `L`, and the imported `L` can differ from `window.L`. `heat-layer.tsx` therefore sets `window.L = L` then `await import("leaflet.heat")` and resolves `heatLayer` from `window.L ?? L`. A plain static `import "leaflet.heat"` silently produces a blank layer (no error).
 - Pagination bar (12 per page, hidden in map view)
 - Suspense-boundary loading: data-fetching sub-components wrapped in `<Suspense key={serializedParams}>` show skeleton cards or map spinner when filters change
 - Loading skeleton (`loading.tsx`)
@@ -395,7 +397,7 @@ components/
   admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts
   auth/                  — auth card, branding panel, Google sign-in button
   browse/                — filter bar, pagination bar, photo gallery, browse map (clustered, bounding box filter)
-  maps/                  — Leaflet map, location picker, nearby reports layer (all client-side, dynamic import)
+  maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer (all client-side, dynamic import)
   reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section, comment-form, comment-list, comment-item
   ui/                    — Shadcn/ui primitives (DO NOT EDIT)
 
@@ -404,6 +406,7 @@ lib/
   validations/           — Zod schemas + inferred types
   cloudinary.ts          — Cloudinary config + signing
   cloudinary-url.ts      — CDN URL rewriting (res → res-3 for Asia/Pacific)
+  heatmap.ts             — severity weighting + external heat source seam (getExternalHeatPoints)
   email.ts               — Brevo client
   notifications.ts       — notification creation helpers (all types including FEEDBACK_*, COMMENT_ADDED)
   admin-notifications.tsx— report + feedback lookup + email dispatch orchestration

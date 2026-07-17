@@ -38,6 +38,10 @@ These are project-specific tokens added to `app/globals.css` for use exclusively
 
 Status badge backgrounds use a 10% opacity version of the status color (`--status-[name]/10`) with the full-opacity color for text and border.
 
+### Heatmap Gradient (Allowed Color Exception)
+
+The browse-map heatmap (`components/maps/heat-layer.tsx`) renders a continuous blue → cyan → amber → orange → red ramp. This is an **explicit exception** to the "no hardcoded hex" rule: a heatmap requires a continuous color scale that CSS custom-property tokens cannot express. It follows the same precedent as the `TaytayBoundary` polygon fill (`#0d9488`), which is also hardcoded. The in-map Markers/Heatmap toggle uses only standard tokens (`bg-card`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`) and introduces no new tokens.
+
 ---
 
 ## Typography

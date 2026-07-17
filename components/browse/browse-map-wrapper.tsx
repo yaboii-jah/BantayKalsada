@@ -14,6 +14,8 @@ const BrowseMapInner = dynamic(
   },
 );
 
+import type { HeatPoint } from "@/lib/heatmap";
+
 interface BrowseMapReport {
   id: string;
   title: string;
@@ -26,8 +28,10 @@ interface BrowseMapReport {
 
 export function BrowseMapWrapper({
   reports,
+  heatPoints,
 }: {
   reports: BrowseMapReport[];
+  heatPoints: HeatPoint[];
 }) {
-  return <BrowseMapInner reports={reports} />;
+  return <BrowseMapInner reports={reports} heatPoints={heatPoints} />;
 }

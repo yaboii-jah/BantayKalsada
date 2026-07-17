@@ -6,7 +6,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import Link from "next/link";
+import { Flame } from "lucide-react";
 import { TaytayBoundary } from "@/components/maps/taytay-boundary";
+import { HeatLayer } from "@/components/maps/heat-layer";
+import { severityWeight, getExternalHeatPoints, type HeatPoint } from "@/lib/heatmap";
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -37,10 +40,57 @@ const statusColors: Record<string, string> = {
   RESOLVED: "bg-status-resolved/10 text-status-resolved",
 };
 
-function MapContent({ reports }: { reports: BrowseMapReport[] }) {
+function HeatToggle({
+  showHeat,
+  onToggle,
+}: {
+  showHeat: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={showHeat}
+      className={`absolute right-4 top-4 z-[1000] flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium shadow transition-colors ${
+        showHeat
+          ? "bg-primary text-primary-foreground"
+          : "bg-card text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <Flame className="size-3.5" />
+      Heat
+    </button>
+  );
+}
+
+function MapContent({
+  reports,
+  heatPoints,
+}: {
+  reports: BrowseMapReport[];
+  heatPoints: HeatPoint[];
+}) {
   const map = useMap();
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
-  const initialFitDone = useRef(false);
+  const [showHeat, setShowHeat] = useState(true);
+  const [externalPoints, setExternalPoints] = useState<HeatPoint[]>([]);
+  const fittedRef = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    getExternalHeatPoints().then((pts) => {
+      if (active) setExternalPoints(pts);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const allHeatPoints = useMemo(
+    () => [...heatPoints, ...externalPoints],
+    [heatPoints, externalPoints],
+  );
 
   useMapEvents({
     moveend() {
@@ -52,18 +102,22 @@ function MapContent({ reports }: { reports: BrowseMapReport[] }) {
   });
 
   useEffect(() => {
-    if (initialFitDone.current || reports.length === 0) return;
-    initialFitDone.current = true;
+    if (fittedRef.current) return;
+    fittedRef.current = true;
 
-    if (reports.length === 1) {
-      map.setView([reports[0].latitude, reports[0].longitude], 15);
+    const target =
+      reports.length > 0
+        ? reports.map((r) => [r.latitude, r.longitude] as [number, number])
+        : allHeatPoints.map((p) => [p[0], p[1]] as [number, number]);
+
+    if (target.length === 0) return;
+
+    if (target.length === 1) {
+      map.setView(target[0], 15);
     } else {
-      const allBounds = L.latLngBounds(
-        reports.map((r) => [r.latitude, r.longitude]),
-      );
-      map.fitBounds(allBounds, { padding: [48, 48] });
+      map.fitBounds(L.latLngBounds(target), { padding: [48, 48] });
     }
-  }, [map, reports]);
+  }, [map, reports, allHeatPoints]);
 
   const visibleReports = useMemo(() => {
     if (!bounds || reports.length === 0) return reports;
@@ -73,14 +127,22 @@ function MapContent({ reports }: { reports: BrowseMapReport[] }) {
   const isFiltered = visibleReports.length < reports.length;
 
   function handleReset() {
+    const points = reports.length > 0 ? reports : allHeatPoints;
+    if (points.length === 0) return;
     const allBounds = L.latLngBounds(
-      reports.map((r) => [r.latitude, r.longitude]),
+      points.map((p) =>
+        "latitude" in p
+          ? ([p.latitude, p.longitude] as [number, number])
+          : ([p[0], p[1]] as [number, number]),
+      ),
     );
     map.fitBounds(allBounds, { padding: [48, 48] });
   }
 
   return (
     <>
+      <HeatToggle showHeat={showHeat} onToggle={() => setShowHeat((v) => !v)} />
+
       <MarkerClusterGroup chunkedLoading>
         {visibleReports.map((report) => (
           <Marker
@@ -88,7 +150,7 @@ function MapContent({ reports }: { reports: BrowseMapReport[] }) {
             position={[report.latitude, report.longitude]}
           >
             <Popup>
-              <div className="flex flex-col gap-2 text-sm">
+              <div className="browse-popup flex flex-col gap-2 text-sm">
                 {report.photo_urls[0] && (
                   <img
                     src={report.photo_urls[0]}
@@ -122,6 +184,9 @@ function MapContent({ reports }: { reports: BrowseMapReport[] }) {
           </Marker>
         ))}
       </MarkerClusterGroup>
+
+      {showHeat && <HeatLayer points={allHeatPoints} max={3} />}
+
       <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
         <div className="flex items-center gap-3 rounded-lg bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow backdrop-blur-sm">
           {visibleReports.length > 0 ? (
@@ -158,8 +223,14 @@ function MapContent({ reports }: { reports: BrowseMapReport[] }) {
   );
 }
 
-export function BrowseMap({ reports }: { reports: BrowseMapReport[] }) {
-  if (reports.length === 0) {
+export function BrowseMap({
+  reports,
+  heatPoints,
+}: {
+  reports: BrowseMapReport[];
+  heatPoints: HeatPoint[];
+}) {
+  if (reports.length === 0 && heatPoints.length === 0) {
     return (
       <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-muted lg:aspect-[3/2]">
         <p className="text-sm text-muted-foreground">No reports to show on map</p>
@@ -170,12 +241,12 @@ export function BrowseMap({ reports }: { reports: BrowseMapReport[] }) {
   const center: [number, number] =
     reports.length === 1
       ? [reports[0].latitude, reports[0].longitude]
-      : [14.5, 121];
+      : [14.5587, 121.136];
 
   return (
     <MapContainer
       center={center}
-      zoom={10}
+      zoom={12}
       className="aspect-[4/3] w-full rounded-lg lg:aspect-[3/2]"
       scrollWheelZoom={true}
     >
@@ -184,7 +255,7 @@ export function BrowseMap({ reports }: { reports: BrowseMapReport[] }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <TaytayBoundary />
-      <MapContent reports={reports} />
+      <MapContent reports={reports} heatPoints={heatPoints} />
     </MapContainer>
   );
 }

@@ -156,3 +156,24 @@
     overflow-x: clip;
   }
 }
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: oklch(1 0 0) !important;
+}
+
+.browse-popup {
+  color: oklch(0.13 0 0);
+}
+
+.browse-popup .text-foreground {
+  color: oklch(0.13 0 0);
+}
+
+.browse-popup .text-muted-foreground {
+  color: oklch(0.554 0.046 260);
+}
+
+.browse-popup .bg-muted {
+  background: oklch(0.968 0.003 265);
+}
