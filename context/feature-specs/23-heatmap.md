@@ -130,6 +130,86 @@ Client component, child of `MapContainer`. In a `useEffect`: sets `window.L = L`
 
 In the `view === "map"` branch, a separate unfiltered query `.select("latitude, longitude, severity").in("status", ["APPROVED","RESOLVED"])` builds `heatPoints`, passed to `BrowseMapWrapper`.
 
-## Phase B (Deferred — blocked on user-specified traffic API)
+## Phase B — External Traffic Heatmap (TomTom) [BUILT]
 
-Implement `getExternalHeatPoints()` as a **server proxy route** (hide API key, avoid CORS) for the named provider (TomTom/HERE/Google). Normalize its response into `HeatPoint` tuples and merge into `allHeatPoints`. **No heatmap-UI change required** — the seam is already wired.
+Add a **second, independent "Traffic" heat layer** sourced from the **TomTom Traffic
+Flow API** (live congestion), behind its own **Traffic toggle**. Distinct from the
+severity-weighted hazard heat (Phase A). Cached server-side in Supabase, rebuilt on a
+15-min TTL, shared across all visitors, strict free-tier budget.
+
+### Decisions (grilled)
+- **Provider:** TomTom Traffic Flow (`flowSegmentData`, `jamFactor` 0–10).
+- **Data:** Live congestion, served from a server-side cache (not client-polled).
+- **Layer:** Separate `TrafficLayer` + `TrafficToggle` (UI *does* change — supersedes
+  the earlier "no UI change required" note).
+- **Cache:** Supabase `traffic_cache` table; server rebuilds the grid once per TTL.
+- **Cost:** Strict free tier — ~20 bbox grid points × 96 rebuilds/day (15-min TTL)
+  ≈ **1,920 calls/day** < 2,500 TomTom free-tier limit.
+- **Deploy:** Serverless → external cache required (no in-memory).
+- **Fetch:** Lazy — client calls `GET /api/traffic` only when Traffic toggled ON.
+- **Grid:** Bounding-box lat/lng grid over Taytay (~1 km spacing, ~20 pts), no polygon clip.
+
+### TomTom API
+- `GET https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/Json?point={lat},{lng}&unit=KMPH&key=$TOMTOM_API_KEY`
+- Response: `flowSegmentData.{currentSpeed, freeFlowSpeed, jamFactor (0–10), confidence}`.
+- Point-based (no area endpoint) → grid sampling required.
+
+### Architecture
+```
+GET /api/traffic (server proxy, hides TOMTOM_API_KEY)
+  └─ lib/tomtom.ts: getTrafficHeatPoints()
+       ├─ cache-read traffic_cache (latest row; TTL 15 min) → return cached
+       └─ else buildTrafficGrid():
+            ├─ generate ~20 bbox points over TAYTAY_BBOX
+            ├─ fetch TomTom per point (concurrency-limited)
+            ├─ map jamFactor → intensity
+            └─ upsert traffic_cache row
+BrowseMap (client)
+  ├─ HeatToggle (Phase A, default on)
+  ├─ TrafficToggle (default OFF) → on first ON, fetch('/api/traffic') → trafficPoints
+  ├─ MarkerClusterGroup (ALWAYS, top)
+  ├─ {showHeat && <HeatLayer points={allHeatPoints} max={3} />}        (hazard underlay)
+  └─ {showTraffic && trafficPoints.length>0 && <TrafficLayer points={trafficPoints} max={10} />}  (traffic underlay)
+```
+
+### Files
+- **New** `lib/tomtom.ts` (server-only): `TAYTAY_BBOX`, `buildTrafficGrid()`,
+  `getTrafficHeatPoints()` (cache + graceful degradation; no key → `[]`).
+  Replaces the dead `getExternalHeatPoints()` seam in `lib/heatmap.ts` (remove it).
+- **New** `app/api/traffic/route.ts` (GET, server-only): hides key, returns `{ points }`.
+- **New** `components/maps/traffic-layer.tsx` (client, `MapContainer` child): same
+  `window.L = L` + dynamic `import("leaflet.heat")` pattern; `max: 10`, `radius: ~35`,
+  `blur: 20`, green→yellow→red gradient. *Refactor `heat-layer.tsx` → shared
+  `HeatCanvas` with `HeatLayer`/`TrafficLayer` wrappers.*
+- **New** `supabase/migrations/…_add_traffic_cache.sql`:
+  `traffic_cache(bucket timestamptz PK, points jsonb, fetched_at timestamptz)`.
+  Server-only (service-role); browser never queries it.
+- **New** `.env.local` + deploy secrets: `TOMTOM_API_KEY` (user-supplied).
+- **Modified** `components/browse/browse-map.tsx`: `TrafficToggle` + `showTraffic`
+  state + lazy fetch effect; drop `externalPoints` from `allHeatPoints`.
+- **Modified** context: `architecture.md`, `app-codebase-context.md`, `ui-context.md`
+  (2nd hardcoded-hex gradient exception), `progress-tracker.md`.
+
+### Normalization & visual
+- Intensity = raw `jamFactor` (0–10); `TrafficLayer` `max: 10`.
+- Gradient: `#16a34a → #eab308 → #f97316 → #dc2626` (congestion ramp), distinct from
+  the hazard blue→red ramp.
+
+### Graceful degradation
+- No `TOMTOM_API_KEY` → `getTrafficHeatPoints()` returns `[]`; toggle inert.
+- TomTom 403/429/network error → serve stale cache or `[]`; log server-side; no crash.
+- Empty `trafficPoints` → `TrafficLayer` not rendered.
+
+### Invariants
+- Leaflet client-only (TrafficLayer inside `ssr:false` island).
+- Key server-only (proxy route; never in client bundle).
+- `npm run build` passes; no `console.log`.
+
+### Phase B Checklist
+- [x] `lib/tomtom.ts` + `traffic_cache` migration + `TOMTOM_API_KEY` wired (user supplies key)
+- [x] `GET /api/traffic` returns cached-or-rebuilt points; key not leaked
+- [x] Traffic toggle lazy-fetches; green→red blobs appear under markers
+- [x] Heat + Traffic independent; markers stay clickable above both
+- [x] Quota guard: first toggle ≈20 calls, repeats within 15 min = 0 (cache)
+- [x] Degradation: no key / API error → toggle inert, no crash
+- [x] `npm run build` passes with zero errors

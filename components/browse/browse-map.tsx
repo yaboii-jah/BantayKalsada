@@ -6,10 +6,11 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import Link from "next/link";
-import { Flame } from "lucide-react";
+import { Car, Flame } from "lucide-react";
 import { TaytayBoundary } from "@/components/maps/taytay-boundary";
 import { HeatLayer } from "@/components/maps/heat-layer";
-import { severityWeight, getExternalHeatPoints, type HeatPoint } from "@/lib/heatmap";
+import { TrafficLayer } from "@/components/maps/traffic-layer";
+import { severityWeight, type HeatPoint } from "@/lib/heatmap";
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -64,6 +65,30 @@ function HeatToggle({
   );
 }
 
+function TrafficToggle({
+  showTraffic,
+  onToggle,
+}: {
+  showTraffic: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={showTraffic}
+      className={`flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium shadow transition-colors ${
+        showTraffic
+          ? "bg-primary text-primary-foreground"
+          : "bg-card text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <Car className="size-3.5" />
+      Traffic
+    </button>
+  );
+}
+
 function MapContent({
   reports,
   heatPoints,
@@ -74,23 +99,9 @@ function MapContent({
   const map = useMap();
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const [showHeat, setShowHeat] = useState(true);
-  const [externalPoints, setExternalPoints] = useState<HeatPoint[]>([]);
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [trafficPoints, setTrafficPoints] = useState<HeatPoint[]>([]);
   const fittedRef = useRef(false);
-
-  useEffect(() => {
-    let active = true;
-    getExternalHeatPoints().then((pts) => {
-      if (active) setExternalPoints(pts);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const allHeatPoints = useMemo(
-    () => [...heatPoints, ...externalPoints],
-    [heatPoints, externalPoints],
-  );
 
   useMapEvents({
     moveend() {
@@ -108,7 +119,7 @@ function MapContent({
     const target =
       reports.length > 0
         ? reports.map((r) => [r.latitude, r.longitude] as [number, number])
-        : allHeatPoints.map((p) => [p[0], p[1]] as [number, number]);
+        : heatPoints.map((p) => [p[0], p[1]] as [number, number]);
 
     if (target.length === 0) return;
 
@@ -117,7 +128,23 @@ function MapContent({
     } else {
       map.fitBounds(L.latLngBounds(target), { padding: [48, 48] });
     }
-  }, [map, reports, allHeatPoints]);
+  }, [map, reports, heatPoints]);
+
+  useEffect(() => {
+    if (!showTraffic) return;
+    let active = true;
+    fetch("/api/traffic")
+      .then((r) => r.json())
+      .then((data) => {
+        if (active) setTrafficPoints(data.points ?? []);
+      })
+      .catch(() => {
+        if (active) setTrafficPoints([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [showTraffic]);
 
   const visibleReports = useMemo(() => {
     if (!bounds || reports.length === 0) return reports;
@@ -127,7 +154,7 @@ function MapContent({
   const isFiltered = visibleReports.length < reports.length;
 
   function handleReset() {
-    const points = reports.length > 0 ? reports : allHeatPoints;
+    const points = reports.length > 0 ? reports : heatPoints;
     if (points.length === 0) return;
     const allBounds = L.latLngBounds(
       points.map((p) =>
@@ -141,7 +168,10 @@ function MapContent({
 
   return (
     <>
-      <HeatToggle showHeat={showHeat} onToggle={() => setShowHeat((v) => !v)} />
+      <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-1.5">
+        <HeatToggle showHeat={showHeat} onToggle={() => setShowHeat((v) => !v)} />
+        <TrafficToggle showTraffic={showTraffic} onToggle={() => setShowTraffic((v) => !v)} />
+      </div>
 
       <MarkerClusterGroup chunkedLoading>
         {visibleReports.map((report) => (
@@ -185,7 +215,8 @@ function MapContent({
         ))}
       </MarkerClusterGroup>
 
-      {showHeat && <HeatLayer points={allHeatPoints} max={3} />}
+      {showHeat && <HeatLayer points={heatPoints} max={3} />}
+      {showTraffic && trafficPoints.length > 0 && <TrafficLayer points={trafficPoints} />}
 
       <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
         <div className="flex items-center gap-3 rounded-lg bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow backdrop-blur-sm">

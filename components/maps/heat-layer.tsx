@@ -6,15 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { HeatPoint } from "@/lib/heatmap";
 
-interface HeatLayerProps {
-  points: HeatPoint[];
-  max?: number;
-}
-
-// Continuous blue -> amber -> red ramp. Hardcoded hex is an allowed exception
-// to the "no hardcoded colors" rule: heatmap gradients require a continuous
-// color scale, same precedent as the TaytayBoundary polygon fill.
-const HEAT_GRADIENT = {
+export const HEAT_GRADIENT = {
   0.2: "#3b82f6",
   0.4: "#22d3ee",
   0.6: "#f59e0b",
@@ -22,7 +14,15 @@ const HEAT_GRADIENT = {
   1.0: "#dc2626",
 };
 
-export function HeatLayer({ points, max = 3 }: HeatLayerProps) {
+interface HeatCanvasProps {
+  points: HeatPoint[];
+  max: number;
+  radius: number;
+  blur: number;
+  gradient: Record<number, string>;
+}
+
+export function HeatCanvas({ points, max, radius, blur, gradient }: HeatCanvasProps) {
   const map = useMap();
 
   useEffect(() => {
@@ -30,10 +30,6 @@ export function HeatLayer({ points, max = 3 }: HeatLayerProps) {
     let layer: L.Layer | null = null;
 
     async function init() {
-      // leaflet.heat (v0.2.0) is a bare IIFE that attaches `heatLayer` to the
-      // GLOBAL `L`. In a webpack bundle Leaflet does not set a global `L`, and
-      // the imported `L` can be a different object than the global one — so we
-      // expose our imported `L` as the global first, then load the plugin.
       if (typeof window !== "undefined") {
         (window as unknown as { L: typeof L }).L = L;
       }
@@ -50,10 +46,10 @@ export function HeatLayer({ points, max = 3 }: HeatLayerProps) {
       if (typeof heatLayerFn !== "function" || cancelled) return;
 
       layer = heatLayerFn(points, {
-        radius: 30,
-        blur: 20,
+        radius,
+        blur,
         max,
-        gradient: HEAT_GRADIENT,
+        gradient,
       });
       layer.addTo(map);
     }
@@ -64,7 +60,24 @@ export function HeatLayer({ points, max = 3 }: HeatLayerProps) {
       cancelled = true;
       if (layer) map.removeLayer(layer);
     };
-  }, [map, points, max]);
+  }, [map, points, max, radius, blur, gradient]);
 
   return null;
+}
+
+interface HeatLayerProps {
+  points: HeatPoint[];
+  max?: number;
+}
+
+export function HeatLayer({ points, max = 3 }: HeatLayerProps) {
+  return (
+    <HeatCanvas
+      points={points}
+      max={max}
+      radius={30}
+      blur={20}
+      gradient={HEAT_GRADIENT}
+    />
+  );
 }

@@ -523,3 +523,19 @@ change.
 
 - **Dark-mode popup readability (Issue 1).** Leaflet popup has a hardcoded white background (`leaflet.css`). `.dark` Tailwind classes (`text-foreground`, `text-muted-foreground`, `bg-muted`) flip to light values in dark mode → light text on white, unreadable. **Fix:** added `browse-popup` class to the popup content `<div>` in `components/browse/browse-map.tsx:147`; added CSS overrides in `app/globals.css` forcing the popup wrapper/tip to white (`oklch(1 0 0)`) and class-children to light-mode color values (dark text, gray-100 badges). Verified: `npm run build` — zero errors.
 - **Reset button crash with zero filtered reports (Issue 2).** `handleReset` built `L.latLngBounds(reports.map(...))`. When filters matched zero reports, `reports` was empty → `L.latLngBounds([])` invalid → `fitBounds` threw "Bounds are not valid". **Fix:** `handleReset` now checks `reports.length > 0` first, falls back to `allHeatPoints`; early-returns if both are empty. Also corrected tuple access (`p[0]`/`p[1]`) for `HeatPoint` format. Verified: `npm run build` — zero errors.
+
+## Phase B — Traffic Heatmap (TomTom) [BUILT]
+
+- **Grilled and locked.** Provider: TomTom Traffic Flow. Data: live congestion, server-cached (Supabase, 15-min TTL, ~20-pt bbox grid, strict free tier ≈1,920 calls/day < 2,500). Separate Traffic layer + toggle (UI changes — supersedes spec's "no UI change" note). Lazy fetch on toggle. Serverless deploy.
+- **Plan written into** `feature-specs/23-heatmap.md` Phase B section.
+- **Implementation complete (Jul 17).** All files created and modified per plan:
+  - `lib/tomtom.ts` — `generateGrid()`, `buildTrafficGrid()` (TomTom fetch, concurrency-limited), `getTrafficHeatPoints()` (Supabase cache read/write, graceful degradation with/without key and with/without cache table).
+  - `app/api/traffic/route.ts` — GET proxy, hides `TOMTOM_API_KEY`, returns `{ points }`.
+  - `components/maps/heat-layer.tsx` — refactored to shared `HeatCanvas` (parameterized `max`/`gradient`/`radius`/`blur`) + `HeatLayer` wrapper (blue→red hazard ramp, unchanged interface).
+  - `components/maps/traffic-layer.tsx` — `HeatCanvas` wrapper with green→yellow→red congestion ramp, `max: 10`, `radius: 35`.
+  - `components/browse/browse-map.tsx` — `TrafficToggle` (default OFF), lazy fetch via `fetch("/api/traffic")` on toggle, `TrafficLayer` rendered as underlay; removed dead `externalPoints`/`getExternalHeatPoints` seam; `HeatToggle` and `TrafficToggle` stacked in a flex column container.
+  - `supabase/migrations/20250717000010_add_traffic_cache.sql` — `traffic_cache(key text PK, points jsonb, fetched_at timestamptz)`.
+  - `lib/heatmap.ts` — removed `getExternalHeatPoints()` function.
+  - Context files (architecture, app-codebase, ui-context, progress-tracker) updated.
+- **User must apply:** `TOMTOM_API_KEY` to `.env.local` + deploy secrets; apply `traffic_cache` migration to Supabase (`supabase db push` or SQL editor). Without key → toggle inert; without table → live-fetch works, caching degraded.
+- **Verified:** `npm run build` passes with zero errors. Routes include new `GET /api/traffic`.
