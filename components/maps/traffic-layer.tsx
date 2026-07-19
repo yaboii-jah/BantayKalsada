@@ -1,27 +1,20 @@
 "use client";
 
-import { HeatCanvas } from "@/components/maps/heat-layer";
-import type { HeatPoint } from "@/lib/heatmap";
+import { TileLayer } from "react-leaflet";
+import L from "leaflet";
 
-const TRAFFIC_GRADIENT = {
-  0.0: "#16a34a",
-  0.3: "#eab308",
-  0.6: "#f97316",
-  1.0: "#dc2626",
-};
+const TAYTAY_BOUNDS = L.latLngBounds(
+  [14.48, 121.1],
+  [14.58, 121.17],
+);
 
-interface TrafficLayerProps {
-  points: HeatPoint[];
-}
-
-export function TrafficLayer({ points }: TrafficLayerProps) {
+export function TrafficLayer() {
   return (
-    <HeatCanvas
-      points={points}
-      max={10}
-      radius={35}
-      blur={20}
-      gradient={TRAFFIC_GRADIENT}
+    <TileLayer
+      url="/api/traffic/tiles/{z}/{x}/{y}"
+      opacity={0.6}
+      zIndex={500}
+      bounds={TAYTAY_BOUNDS}
     />
   );
 }

@@ -53,7 +53,7 @@ function HeatToggle({
       type="button"
       onClick={onToggle}
       aria-pressed={showHeat}
-      className={`absolute right-4 top-4 z-[1000] flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium shadow transition-colors ${
+      className={`flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium shadow transition-colors ${
         showHeat
           ? "bg-primary text-primary-foreground"
           : "bg-card text-muted-foreground hover:text-foreground"
@@ -62,6 +62,29 @@ function HeatToggle({
       <Flame className="size-3.5" />
       Heat
     </button>
+  );
+}
+
+const TRAFFIC_LEVELS = [
+  { color: "#16a34a", label: "Light" },
+  { color: "#eab308", label: "Moderate" },
+  { color: "#f97316", label: "Heavy" },
+  { color: "#dc2626", label: "Severe" },
+];
+
+function TrafficLegend() {
+  return (
+    <div className="absolute bottom-4 left-4 z-[1000] flex items-center gap-3 rounded-lg bg-background/90 px-3 py-1.5 text-xs text-muted-foreground shadow backdrop-blur-sm">
+      {TRAFFIC_LEVELS.map((level) => (
+        <span key={level.label} className="flex items-center gap-1">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: level.color }}
+          />
+          {level.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -100,7 +123,6 @@ function MapContent({
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const [showHeat, setShowHeat] = useState(true);
   const [showTraffic, setShowTraffic] = useState(false);
-  const [trafficPoints, setTrafficPoints] = useState<HeatPoint[]>([]);
   const fittedRef = useRef(false);
 
   useMapEvents({
@@ -130,22 +152,6 @@ function MapContent({
     }
   }, [map, reports, heatPoints]);
 
-  useEffect(() => {
-    if (!showTraffic) return;
-    let active = true;
-    fetch("/api/traffic")
-      .then((r) => r.json())
-      .then((data) => {
-        if (active) setTrafficPoints(data.points ?? []);
-      })
-      .catch(() => {
-        if (active) setTrafficPoints([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [showTraffic]);
-
   const visibleReports = useMemo(() => {
     if (!bounds || reports.length === 0) return reports;
     return reports.filter((r) => bounds.contains([r.latitude, r.longitude]));
@@ -168,7 +174,7 @@ function MapContent({
 
   return (
     <>
-      <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-1.5">
+      <div className="absolute right-4 top-4 z-[1000] flex flex-row gap-1.5">
         <HeatToggle showHeat={showHeat} onToggle={() => setShowHeat((v) => !v)} />
         <TrafficToggle showTraffic={showTraffic} onToggle={() => setShowTraffic((v) => !v)} />
       </div>
@@ -216,7 +222,8 @@ function MapContent({
       </MarkerClusterGroup>
 
       {showHeat && <HeatLayer points={heatPoints} max={3} />}
-      {showTraffic && trafficPoints.length > 0 && <TrafficLayer points={trafficPoints} />}
+      {showTraffic && <TrafficLayer />}
+      {showTraffic && <TrafficLegend />}
 
       <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
         <div className="flex items-center gap-3 rounded-lg bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow backdrop-blur-sm">

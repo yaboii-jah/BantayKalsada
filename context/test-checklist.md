@@ -2,18 +2,23 @@
 
 ### Checklist
 
-## Heatmap (Browse Map Overlay)
-/ - `/browse?view=map` shows markers AND heat by default (overlay, not a mode switch)
-/  - "Heat" toggle button visible top-right; filled (primary) when on, muted when off
-/  - Clicking Heat (off) hides the heat underlay; markers remain and stay clickable
-/  - Clicking Heat (on) re-adds the heat; map does NOT refit on toggle
-/ - Markers remain clustered and popups open while heat is on
-/ - Heat reflects ALL APPROVED/RESOLVED Taytay reports (ignores category/status/barangay filters)
-/ - Emergency reports render hotter (red) than Minor (blue) — severity weighting (MINOR=1 / URGENT=2 / EMERGENCY=3)
-/ - "Showing X of Y in this area" count bar tracks markers (viewport), not the heat
-/ - Filtering by category/status/barangay changes markers but heat stays municipality-wide
-/ - Heat-only view (filters yield 0 markers) still shows heat across Taytay/ - No reports AND no heat 
-points → "No reports to show on map"
-/ - Heat toggle is tappable and visible on mobile map view
-/ - After a code change, unregister SW + hard-reload (stale service worker serves old bundle)
-/ - `npm run build` → zero errors
+## Traffic Layer (Road Coloring — Phase B)
+/ - "Traffic" toggle appears top-right, stacked UNDER the "Heat" toggle (both visible)
+/ - Traffic toggle defaults to OFF; filled (primary) when on, muted when off
+/ - Toggle ON → roads render green/yellow/orange/red (TomTom raster tiles); tiles load automatically via `GET /api/traffic/tiles/{z}/{x}/{y}`
+/ - Toggle OFF → road colors removed; map does NOT refit
+/ - Heat and Traffic toggles are independent (each works without affecting the other)
+/ - Markers stay clickable and clustered above the traffic layer
+/ - Count bar still tracks markers only (unchanged by Traffic)
+/ - Filters (category/status/barangay) do not affect the traffic layer
+/ - After a code change: unregister SW + hard-reload (stale SW serves old bundle)
+
+## Traffic Layer — Setup & Degradation
+/ - `TOMTOM_API_KEY` set in `.env.local` and deploy secrets
+/ - No key → tile proxy returns 500; Traffic toggle mounts but shows nothing, no crash
+/ - No DB table or migration required
+
+## Bugfix Verification (Browse Map)
+/ - Dark mode: tap a marker → popup description is dark-on-white and readable (not light-on-white)
+/ - Filters yield 0 reports → "No reports in this area" + Reset works, NO "Bounds are not valid" console error
+/ - Reset refits map to all reports (or to hazard heat when 0 reports)

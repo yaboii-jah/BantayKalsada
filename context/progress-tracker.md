@@ -539,3 +539,48 @@ change.
   - Context files (architecture, app-codebase, ui-context, progress-tracker) updated.
 - **User must apply:** `TOMTOM_API_KEY` to `.env.local` + deploy secrets; apply `traffic_cache` migration to Supabase (`supabase db push` or SQL editor). Without key → toggle inert; without table → live-fetch works, caching degraded.
 - **Verified:** `npm run build` passes with zero errors. Routes include new `GET /api/traffic`.
+
+## Phase B — Redesign: Grid → Raster Tile Road Coloring (Jul 19)
+
+**What changed:** The traffic heatmap grid approach (bbox grid, per-point TomTom Flow
+calls, Supabase cache, `leaflet.heat`) was replaced with **TomTom Raster Flow Tiles** —
+transparent PNG tiles that render green/yellow/orange/red directly on roads, same visual
+as Google Maps traffic.
+
+**Why:** The grid heatmap produced blurry isolated circles, not road-aligned colors. The
+tile approach is visually correct, more efficient (tiles bundled, no per-point calls),
+and simpler (no cache table, no grid tuning).
+
+**Files deleted:**
+- `lib/tomtom.ts` — grid generator, concurrency-limited fetcher, cache read/write
+- `app/api/traffic/route.ts` — old points proxy
+- `supabase/migrations/20250717000010_add_traffic_cache.sql`
+
+**Files created:**
+- `app/api/traffic/tiles/[z]/[x]/[y]/route.ts` — proxies TomTom raster flow PNG tiles,
+  hides API key, sets `Cache-Control: max-age=300`
+
+**Files modified:**
+- `components/maps/traffic-layer.tsx` — replaced `HeatCanvas` wrapper with Leaflet
+  `TileLayer` (`url="/api/traffic/tiles/{z}/{x}/{y}"`, `opacity: 0.6`, `zIndex: 500`)
+- `components/browse/browse-map.tsx` — removed `trafficPoints` state, lazy fetch
+  effect, points prop from `TrafficLayer`; toggle now mounts/unmounts `TrafficLayer`
+  directly (TileLayer loads tiles automatically)
+- Context files (spec 23, current-issues, test-checklist, progress-tracker)
+
+**No DB migration needed.** No cache table. Key setup only.
+
+**Verified:** `npm run build` passes with zero errors. Route:
+`GET /api/traffic/tiles/[z]/[x]/[y]`.
+
+### Phase B — Enhancements (post-build)
+- [x] **Taytay boundary clip** — `TrafficLayer` (`components/maps/traffic-layer.tsx`) now
+  passes `bounds={TAYTAY_BOUNDS}` to `TileLayer`, restricting tile requests to the Taytay
+  bounding box `[14.48, 121.1] → [14.58, 121.17]`. Reduces TomTom free-tier tile
+  consumption and keeps traffic overlay scoped to the municipality.
+- [x] **Traffic legend** — `TrafficLegend` component renders a translucent pill at
+  `bottom-4 left-4` showing four colored dots with labels: Light (green), Moderate
+  (yellow), Heavy (orange), Severe (red). Visible only when Traffic toggle is ON.
+- [x] **Toggle layout fix** — HeatToggle and TrafficToggle now sit side by side in a
+  `flex-row` container; removed `absolute right-4 top-4 z-[1000]` from HeatToggle's
+  className (was preventing it from participating in flex layout).

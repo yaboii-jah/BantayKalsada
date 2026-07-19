@@ -42,9 +42,6 @@ Status badge backgrounds use a 10% opacity version of the status color (`--statu
 
 The browse-map heatmap (`components/maps/heat-layer.tsx`) renders a continuous blue → cyan → amber → orange → red ramp. This is an **explicit exception** to the "no hardcoded hex" rule: a heatmap requires a continuous color scale that CSS custom-property tokens cannot express. It follows the same precedent as the `TaytayBoundary` polygon fill (`#0d9488`), which is also hardcoded. The in-map Markers/Heatmap toggle uses only standard tokens (`bg-card`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`) and introduces no new tokens.
 
-### Traffic Layer Gradient (Allowed Color Exception, Phase B)
-
-The browse-map Traffic layer (`components/maps/traffic-layer.tsx`, Phase B) renders a separate green → yellow → orange → red congestion ramp (TomTom `jamFactor` 0–10). This is a **second allowed exception** to the "no hardcoded hex" rule, parallel to the hazard heatmap — a continuous scale CSS tokens cannot express.
 
 ---
 

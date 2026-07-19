@@ -130,86 +130,78 @@ Client component, child of `MapContainer`. In a `useEffect`: sets `window.L = L`
 
 In the `view === "map"` branch, a separate unfiltered query `.select("latitude, longitude, severity").in("status", ["APPROVED","RESOLVED"])` builds `heatPoints`, passed to `BrowseMapWrapper`.
 
-## Phase B — External Traffic Heatmap (TomTom) [BUILT]
+## Phase B — Traffic Road Coloring (TomTom Raster Flow Tiles) [BUILT]
 
-Add a **second, independent "Traffic" heat layer** sourced from the **TomTom Traffic
-Flow API** (live congestion), behind its own **Traffic toggle**. Distinct from the
-severity-weighted hazard heat (Phase A). Cached server-side in Supabase, rebuilt on a
-15-min TTL, shared across all visitors, strict free-tier budget.
+Show green→yellow→red **road coloring** on `/browse?view=map` via **TomTom Raster Flow
+Tiles**, behind its own **Traffic toggle**. Roads turn green (free flow) / yellow
+(moderate) / orange / red (heavy congestion). Uses transparent PNG tiles overlaid on
+the base map — the same visual style as Google Maps traffic.
 
-### Decisions (grilled)
-- **Provider:** TomTom Traffic Flow (`flowSegmentData`, `jamFactor` 0–10).
-- **Data:** Live congestion, served from a server-side cache (not client-polled).
-- **Layer:** Separate `TrafficLayer` + `TrafficToggle` (UI *does* change — supersedes
-  the earlier "no UI change required" note).
-- **Cache:** Supabase `traffic_cache` table; server rebuilds the grid once per TTL.
-- **Cost:** Strict free tier — ~20 bbox grid points × 96 rebuilds/day (15-min TTL)
-  ≈ **1,920 calls/day** < 2,500 TomTom free-tier limit.
-- **Deploy:** Serverless → external cache required (no in-memory).
-- **Fetch:** Lazy — client calls `GET /api/traffic` only when Traffic toggled ON.
-- **Grid:** Bounding-box lat/lng grid over Taytay (~1 km spacing, ~20 pts), no polygon clip.
-
-### TomTom API
-- `GET https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/Json?point={lat},{lng}&unit=KMPH&key=$TOMTOM_API_KEY`
-- Response: `flowSegmentData.{currentSpeed, freeFlowSpeed, jamFactor (0–10), confidence}`.
-- Point-based (no area endpoint) → grid sampling required.
+### Decisions
+- **Provider:** TomTom Raster Flow Tiles (`relative` style — speeds relative to free flow).
+- **Layer:** TileLayer (opacity 0.6, zIndex 500 above OSM base tiles), mounted/unmounted
+  by Traffic toggle. No per-point API calls, no Supabase cache, no grid.
+- **Proxy:** `GET /api/traffic/tiles/{z}/{x}/{y}` forwards tile requests to TomTom,
+  hides `TOMTOM_API_KEY`. Browser HTTP cache handles repeats (max-age 300).
+- **Key/server-only:** Same as Phase A — key never in client bundle.
 
 ### Architecture
 ```
-GET /api/traffic (server proxy, hides TOMTOM_API_KEY)
-  └─ lib/tomtom.ts: getTrafficHeatPoints()
-       ├─ cache-read traffic_cache (latest row; TTL 15 min) → return cached
-       └─ else buildTrafficGrid():
-            ├─ generate ~20 bbox points over TAYTAY_BBOX
-            ├─ fetch TomTom per point (concurrency-limited)
-            ├─ map jamFactor → intensity
-            └─ upsert traffic_cache row
+GET /api/traffic/tiles/{z}/{x}/{y}   (server proxy, hides TOMTOM_API_KEY)
+  └─ proxies to → https://api.tomtom.com/traffic/map/4/tile/flow/relative/{z}/{x}/{y}.png?key=…
+  └─ returns PNG with Cache-Control: public, max-age=300
+
 BrowseMap (client)
-  ├─ HeatToggle (Phase A, default on)
-  ├─ TrafficToggle (default OFF) → on first ON, fetch('/api/traffic') → trafficPoints
+  ├─ Toggle row (flex-row, top-right):
+  │   ├─ HeatToggle (Phase A, default on)
+  │   └─ TrafficToggle (default OFF) → mounts/unmounts TrafficLayer
   ├─ MarkerClusterGroup (ALWAYS, top)
-  ├─ {showHeat && <HeatLayer points={allHeatPoints} max={3} />}        (hazard underlay)
-  └─ {showTraffic && trafficPoints.length>0 && <TrafficLayer points={trafficPoints} max={10} />}  (traffic underlay)
+  ├─ {showHeat && <HeatLayer points={heatPoints} max={3} />}        (hazard underlay)
+  ├─ {showTraffic && <TrafficLayer bounds={TAYTAY_BOUNDS} />}        (road color overlay, clipped to Taytay)
+  ├─ {showTraffic && <TrafficLegend />}                               (bottom-left legend pill)
+  └─ CountBar (bottom center, viewport report count + Reset)
 ```
 
 ### Files
-- **New** `lib/tomtom.ts` (server-only): `TAYTAY_BBOX`, `buildTrafficGrid()`,
-  `getTrafficHeatPoints()` (cache + graceful degradation; no key → `[]`).
-  Replaces the dead `getExternalHeatPoints()` seam in `lib/heatmap.ts` (remove it).
-- **New** `app/api/traffic/route.ts` (GET, server-only): hides key, returns `{ points }`.
-- **New** `components/maps/traffic-layer.tsx` (client, `MapContainer` child): same
-  `window.L = L` + dynamic `import("leaflet.heat")` pattern; `max: 10`, `radius: ~35`,
-  `blur: 20`, green→yellow→red gradient. *Refactor `heat-layer.tsx` → shared
-  `HeatCanvas` with `HeatLayer`/`TrafficLayer` wrappers.*
-- **New** `supabase/migrations/…_add_traffic_cache.sql`:
-  `traffic_cache(bucket timestamptz PK, points jsonb, fetched_at timestamptz)`.
-  Server-only (service-role); browser never queries it.
-- **New** `.env.local` + deploy secrets: `TOMTOM_API_KEY` (user-supplied).
-- **Modified** `components/browse/browse-map.tsx`: `TrafficToggle` + `showTraffic`
-  state + lazy fetch effect; drop `externalPoints` from `allHeatPoints`.
-- **Modified** context: `architecture.md`, `app-codebase-context.md`, `ui-context.md`
-  (2nd hardcoded-hex gradient exception), `progress-tracker.md`.
-
-### Normalization & visual
-- Intensity = raw `jamFactor` (0–10); `TrafficLayer` `max: 10`.
-- Gradient: `#16a34a → #eab308 → #f97316 → #dc2626` (congestion ramp), distinct from
-  the hazard blue→red ramp.
+- **New** `app/api/traffic/tiles/[z]/[x]/[y]/route.ts` — tile proxy: fetches TomTom
+  raster flow tile with server-side key, returns PNG + cache headers.
+- **New** `components/maps/traffic-layer.tsx` — Leaflet `TileLayer` with
+  `url="/api/traffic/tiles/{z}/{x}/{y}"`, `opacity={0.6}`, `zIndex={500}`, and
+  `bounds={TAYTAY_BOUNDS}` (`L.latLngBounds([14.48, 121.1], [14.58, 121.17])`) to
+  restrict tile fetches to the Taytay bounding box, conserving TomTom free-tier quota.
+- **New** `TrafficLegend` (inline in `browse-map.tsx`) — translucent pill at
+  `bottom-4 left-4` with four colored dots and labels (Light→green, Moderate→yellow,
+  Heavy→orange, Severe→red); rendered only when `showTraffic` is `true`.
+- **Modified** `components/browse/browse-map.tsx` — `TrafficToggle` + `showTraffic`
+  state; no fetch effect (TileLayer loads tiles automatically). Toggles sit side by
+  side in a `flex-row` container; HeatToggle no longer has its own `absolute`
+  positioning (removed `absolute right-4 top-4 z-[1000]` from its className).
+- **Modified** context: `architecture.md`, `app-codebase-context.md`,
+  `progress-tracker.md`.
+- **Deleted** `lib/tomtom.ts` — grid/cache logic removed (replaced by tile proxy).
+- **Deleted** `app/api/traffic/route.ts` — old points proxy removed.
+- **Deleted** `supabase/migrations/20250717000010_add_traffic_cache.sql` — cache table
+  not needed (tiles are self-contained, browser-cached).
 
 ### Graceful degradation
-- No `TOMTOM_API_KEY` → `getTrafficHeatPoints()` returns `[]`; toggle inert.
-- TomTom 403/429/network error → serve stale cache or `[]`; log server-side; no crash.
-- Empty `trafficPoints` → `TrafficLayer` not rendered.
+- No `TOMTOM_API_KEY` → tile proxy returns HTTP 500; `TileLayer` shows nothing.
+- TomTom returns 404/403 for tiles without roads → tile is blank/transparent.
+- Toggle OFF → `TrafficLayer` unmounted.
 
 ### Invariants
-- Leaflet client-only (TrafficLayer inside `ssr:false` island).
+- Leaflet client-only (inside `ssr:false` island).
 - Key server-only (proxy route; never in client bundle).
-- `npm run build` passes; no `console.log`.
+- `npm run build` passes.
 
 ### Phase B Checklist
-- [x] `lib/tomtom.ts` + `traffic_cache` migration + `TOMTOM_API_KEY` wired (user supplies key)
-- [x] `GET /api/traffic` returns cached-or-rebuilt points; key not leaked
-- [x] Traffic toggle lazy-fetches; green→red blobs appear under markers
+- [x] `GET /api/traffic/tiles/{z}/{x}/{y}` proxies TomTom raster tiles; key hidden
+- [x] `TrafficToggle` mounts/unmounts `TileLayer`; no lazy fetch required
+- [x] Roads render green/yellow/orange/red where TomTom has traffic data
 - [x] Heat + Traffic independent; markers stay clickable above both
-- [x] Quota guard: first toggle ≈20 calls, repeats within 15 min = 0 (cache)
-- [x] Degradation: no key / API error → toggle inert, no crash
+- [x] No cache table, no Supabase dependency, no per-point API calls
+- [x] Degradation: no key → tile proxy returns 500, no crash
+- [x] Tile layer bounded to Taytay bbox (`bounds` prop) — reduces quota usage, keeps
+      overlay cleanly scoped to municipality
+- [x] TrafficLegend pill (bottom-left) shows Light/Moderate/Heavy/Severe color guide
+- [x] HeatToggle + TrafficToggle sit side by side in `flex-row` container
 - [x] `npm run build` passes with zero errors
