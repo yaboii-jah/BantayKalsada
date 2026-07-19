@@ -125,6 +125,15 @@
   --sidebar-ring: oklch(0.45 0 0);
 }
 
+@utility bg-dot-grid {
+  background-image: radial-gradient(oklch(0 0 0 / 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .bg-dot-grid {
+  background-image: radial-gradient(oklch(1 0 0 / 0.05) 1px, transparent 1px);
+}
+
 @utility bg-auth-gradient {
   background: linear-gradient(
     135deg,

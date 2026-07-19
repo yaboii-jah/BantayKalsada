@@ -463,6 +463,14 @@ change.
 - **Admin panel — review page** — Single-column layout (`max-w-4xl`): header → photo carousel → description → map → submitter info → reviewer history → rejection reason alert → action buttons. Reuses `PhotoGallery`, `ReportMapWrapper`, `ReportStatusBadge`, and `PaginationBar` from existing components.
 - **Admin panel — rejection dialog** — Inline Shadcn Dialog within `action-buttons.tsx`, not a separate component file. Handles states: closed, open, textarea-empty (confirm disabled), valid (≥10 chars), submitting, error. Follows the Hallmark component-scope 8-state discipline.
 
+### Dot Grid Background (User-Side Pages)
+- [x] **Dot grid background** — Added `bg-dot-grid` utility to `app/globals.css` using
+  `radial-gradient` (6% black dots in light mode, 5% white in dark mode, 24px spacing).
+  Applied to `<main className="flex-1 bg-dot-grid">` in both `(public)/layout.tsx` and
+  `(citizen)/layout.tsx`. Only affects user-side pages (landing, browse, submit,
+  my-reports, feedback). Auth pages maintain gradient background; admin panel unchanged.
+  Very subtle texture — barely visible, just adds depth behind content.
+
 ## Session Notes
 
 - Login page wraps `useSearchParams()` in `<Suspense>` per Next.js requirement.
