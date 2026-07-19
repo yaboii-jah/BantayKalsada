@@ -5,7 +5,7 @@ import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { AdminReportActions } from "./admin-report-actions";
 import { formatReportDate } from "@/lib/date-utils";
-import { MapPin, Calendar, User, AlertCircle, Building2 } from "lucide-react";
+import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const severityLabels: Record<string, string> = {
@@ -190,6 +190,30 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
                 {report.rejection_reason}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {report.status === "RESOLVED" && report.resolution_notes && (
+        <div className="mb-6 rounded-lg border border-status-resolved/20 bg-status-resolved/5 p-4">
+          <div className="flex items-start gap-2">
+            <CheckCheck className="mt-0.5 h-4 w-4 shrink-0 text-status-resolved" />
+            <div>
+              <p className="text-sm font-medium text-status-resolved">
+                Resolution notes
+              </p>
+              <p className="mt-1 text-sm text-foreground">
+                {report.resolution_notes}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {report.status === "RESOLVED" && report.resolved_image_urls != null && report.resolved_image_urls.length > 0 && (
+        <div className="mb-6 overflow-hidden rounded-lg border border-border bg-card">
+          <div className="p-2">
+            <PhotoGallery urls={report.resolved_image_urls} />
           </div>
         </div>
       )}

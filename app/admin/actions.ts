@@ -177,6 +177,8 @@ export async function rejectReport(
 
 export async function resolveReport(
   reportId: string,
+  resolutionNotes?: string,
+  resolvedImageUrls?: string[],
 ): Promise<AdminActionResponse> {
   try {
     const auth = await verifyAdmin();
@@ -184,9 +186,16 @@ export async function resolveReport(
       return { success: false, error: auth.error };
     }
 
-    const parsed = resolveReportSchema.safeParse({ reportId });
+    const parsed = resolveReportSchema.safeParse({
+      reportId,
+      resolutionNotes,
+      resolvedImageUrls,
+    });
     if (!parsed.success) {
-      return { success: false, error: "Invalid report ID" };
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
     }
 
     const reportData = await fetchReportWithSubmitter(parsed.data.reportId);
@@ -205,6 +214,8 @@ export async function resolveReport(
       .update({
         status: "RESOLVED",
         resolved_at: new Date().toISOString(),
+        resolution_notes: parsed.data.resolutionNotes ?? null,
+        resolved_image_urls: parsed.data.resolvedImageUrls ?? [],
       })
       .eq("id", parsed.data.reportId);
 
@@ -218,6 +229,8 @@ export async function resolveReport(
         reportData.title,
         reportData.submitter,
         "REPORT_RESOLVED",
+        undefined,
+        parsed.data.resolutionNotes,
       ).catch((err) => console.error("Failed to send resolution notification:", err));
     }
 

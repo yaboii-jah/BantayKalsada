@@ -24,7 +24,7 @@ export function AdminReportActions({
         status={status}
         onApprove={approveReport}
         onReject={rejectReport}
-        onResolve={resolveReport}
+        onResolve={(id, notes, urls) => resolveReport(id, notes, urls)}
       />
     </div>
   );

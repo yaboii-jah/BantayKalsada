@@ -20,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Database } from "@/types/database.types";
+import { PhotoUpload } from "@/components/reports/photo-upload";
 
 type ReportStatus = Database["public"]["Enums"]["report_status"];
 
@@ -28,7 +29,7 @@ interface ActionButtonsProps {
   status: ReportStatus;
   onApprove: (reportId: string) => Promise<{ success: boolean; error?: string }>;
   onReject: (reportId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
-  onResolve: (reportId: string) => Promise<{ success: boolean; error?: string }>;
+  onResolve: (reportId: string, resolutionNotes?: string, resolvedImageUrls?: string[]) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function ActionButtons({
@@ -54,33 +55,13 @@ export function ActionButtons({
     });
   };
 
-  const handleResolve = () => {
-    startTransition(async () => {
-      const result = await onResolve(reportId);
-      if (result.success) {
-        toast.success("Report marked as resolved");
-        router.push("/admin/approved");
-        router.refresh();
-      } else {
-        toast.error(result.error ?? "Failed to resolve report");
-      }
-    });
-  };
-
   if (status === "APPROVED") {
     return (
-      <Button
-        onClick={handleResolve}
+      <ResolveButton
+        reportId={reportId}
+        onResolve={onResolve}
         disabled={isPending}
-        size="lg"
-      >
-        {isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <CheckCheck className="mr-2 h-4 w-4" />
-        )}
-        Mark as Resolved
-      </Button>
+      />
     );
   }
 
@@ -108,6 +89,109 @@ export function ActionButtons({
         disabled={isPending}
       />
     </div>
+  );
+}
+
+function ResolveButton({
+  reportId,
+  onResolve,
+  disabled,
+}: {
+  reportId: string;
+  onResolve: (reportId: string, resolutionNotes?: string, resolvedImageUrls?: string[]) => Promise<{ success: boolean; error?: string }>;
+  disabled: boolean;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsSubmitting(true);
+    const result = await onResolve(
+      reportId,
+      notes.trim() || undefined,
+      imageUrls.length > 0 ? imageUrls : undefined,
+    );
+    setIsSubmitting(false);
+    if (result.success) {
+      toast.success("Report marked as resolved");
+      setOpen(false);
+      router.push("/admin/approved");
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Failed to resolve report");
+    }
+  };
+
+  return (
+    <>
+      <Button
+        size="lg"
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+      >
+        <CheckCheck className="mr-2 h-4 w-4" />
+        Mark as Resolved
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Resolve Report</DialogTitle>
+            <DialogDescription>
+              Mark this report as resolved. You can optionally add notes
+              describing how the issue was addressed and upload after-photos.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label
+                htmlFor="resolution-notes"
+                className="text-sm font-medium text-foreground"
+              >
+                Resolution notes <span className="text-muted-foreground">(optional)</span>
+              </label>
+              <textarea
+                id="resolution-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Describe how the issue was addressed..."
+                className="flex min-h-[100px] w-full rounded-md border border-border bg-input px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                maxLength={2000}
+              />
+              <div className="flex justify-end text-xs text-muted-foreground">
+                <span>{notes.length}/2000</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                After photos <span className="text-muted-foreground">(optional, max 3)</span>
+              </p>
+              <PhotoUpload onChange={setImageUrls} />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handleConfirm}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Mark as Resolved
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

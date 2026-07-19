@@ -43,7 +43,7 @@ export function PhotoGallery({ urls }: { urls: string[] }) {
             <CarouselItem key={index}>
               <div
                 className="aspect-[16/10] overflow-hidden rounded-lg bg-muted cursor-pointer"
-                onClick={() => setSelectedIndex(index)}
+                onClick={() => { setSelectedIndex(index); }}
               >
                 <img
                   src={getDisplayUrl(url)}

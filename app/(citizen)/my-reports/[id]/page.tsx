@@ -116,6 +116,31 @@ export default async function MyReportDetailPage({
         </p>
       </div>
 
+      {report.status === "RESOLVED" && report.resolution_notes && (
+        <div className="mb-8 border-l-4 border-status-resolved bg-status-resolved/5 pl-4">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">Resolution Update</span>
+            {report.resolved_at && (
+              <span className="text-xs text-muted-foreground">
+                {formatReportDate(report.resolved_at)}
+              </span>
+            )}
+          </div>
+          <p className="text-sm leading-relaxed text-foreground">
+            {report.resolution_notes}
+          </p>
+        </div>
+      )}
+
+      {report.status === "RESOLVED" && report.resolved_image_urls != null && report.resolved_image_urls.length > 0 && (
+        <div className="mb-8 border-l-4 border-status-resolved pl-4">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">
+            After Resolution
+          </h3>
+          <PhotoGallery urls={report.resolved_image_urls} />
+        </div>
+      )}
+
       <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-foreground">
           Location

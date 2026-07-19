@@ -63,6 +63,8 @@ export const rejectReportSchema = z.object({
 
 export const resolveReportSchema = z.object({
   reportId: z.string().uuid(),
+  resolutionNotes: z.string().max(2000).optional(),
+  resolvedImageUrls: z.array(z.string()).min(1).max(3).optional(),
 });
 
 export type ApproveReportInput = z.infer<typeof approveReportSchema>;
