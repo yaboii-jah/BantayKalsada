@@ -148,7 +148,7 @@ the base map — the same visual style as Google Maps traffic.
 ### Architecture
 ```
 GET /api/traffic/tiles/{z}/{x}/{y}   (server proxy, hides TOMTOM_API_KEY)
-  └─ proxies to → https://api.tomtom.com/traffic/map/4/tile/flow/relative/{z}/{x}/{y}.png?key=…
+  └─ proxies to → https://api.tomtom.com/maps/orbis/traffic/flow/raster/tile/{z}/{x}/{y}?apiVersion=2&key=…&style=light
   └─ returns PNG with Cache-Control: public, max-age=300
 
 BrowseMap (client)

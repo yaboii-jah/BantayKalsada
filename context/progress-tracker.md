@@ -463,6 +463,14 @@ change.
 - **Admin panel — review page** — Single-column layout (`max-w-4xl`): header → photo carousel → description → map → submitter info → reviewer history → rejection reason alert → action buttons. Reuses `PhotoGallery`, `ReportMapWrapper`, `ReportStatusBadge`, and `PaginationBar` from existing components.
 - **Admin panel — rejection dialog** — Inline Shadcn Dialog within `action-buttons.tsx`, not a separate component file. Handles states: closed, open, textarea-empty (confirm disabled), valid (≥10 chars), submitting, error. Follows the Hallmark component-scope 8-state discipline.
 
+### TomTom API URL Fix — Legacy → Orbis v2
+- [x] **TomTom tile URL updated** — The proxy route was using the deprecated v1 endpoint
+  (`.../traffic/map/4/tile/flow/relative/{z}/{x}/{y}.png`), which returned 404 for all
+  tiles. Changed to the current Orbis v2 format:
+  `.../maps/orbis/traffic/flow/raster/tile/{z}/{x}/{y}?apiVersion=2&style=light`.
+  Verified that the Orbis v2 endpoint is the actively maintained one per TomTom docs
+  (last edit: 2026.03.11), while the v1 page was last edited 2022.08.15.
+
 ### Soft Radial Glow Background (User-Side Pages)
 - [x] **Radial glow background** — Added `bg-radial-glow` utility to `app/globals.css`
   using `radial-gradient(ellipse at 50% 0%, oklch(0.488 0.243 264 / 0.06) 0%, transparent 60%)`.
