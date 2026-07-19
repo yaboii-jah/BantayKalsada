@@ -11,7 +11,7 @@ export async function GET(
     return new NextResponse("Missing API key", { status: 500 });
   }
 
-  const url = `https://api.tomtom.com/traffic/map/4/tile/flow/relative/${z}/${x}/${y}.png?key=${apiKey}`;
+  const url = `https://api.tomtom.com/maps/orbis/traffic/flow/raster/tile/${z}/${x}/${y}?apiVersion=2&key=${apiKey}&style=light`;
 
   const res = await fetch(url);
 
