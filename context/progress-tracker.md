@@ -463,13 +463,14 @@ change.
 - **Admin panel — review page** — Single-column layout (`max-w-4xl`): header → photo carousel → description → map → submitter info → reviewer history → rejection reason alert → action buttons. Reuses `PhotoGallery`, `ReportMapWrapper`, `ReportStatusBadge`, and `PaginationBar` from existing components.
 - **Admin panel — rejection dialog** — Inline Shadcn Dialog within `action-buttons.tsx`, not a separate component file. Handles states: closed, open, textarea-empty (confirm disabled), valid (≥10 chars), submitting, error. Follows the Hallmark component-scope 8-state discipline.
 
-### Dot Grid Background (User-Side Pages)
-- [x] **Dot grid background** — Added `bg-dot-grid` utility to `app/globals.css` using
-  `radial-gradient` (6% black dots in light mode, 5% white in dark mode, 24px spacing).
-  Applied to `<main className="flex-1 bg-dot-grid">` in both `(public)/layout.tsx` and
-  `(citizen)/layout.tsx`. Only affects user-side pages (landing, browse, submit,
-  my-reports, feedback). Auth pages maintain gradient background; admin panel unchanged.
-  Very subtle texture — barely visible, just adds depth behind content.
+### Soft Radial Glow Background (User-Side Pages)
+- [x] **Radial glow background** — Added `bg-radial-glow` utility to `app/globals.css`
+  using `radial-gradient(ellipse at 50% 0%, oklch(0.488 0.243 264 / 0.06) 0%, transparent 60%)`.
+  Applied to `<main className="flex-1 bg-radial-glow">` in both `(public)/layout.tsx` and
+  `(citizen)/layout.tsx`. Replaces the previous dot grid pattern (was too busy for the
+  civic aesthetic). Very faint primary-tinted wash emanating from the top-center of the
+  content area — adds subtle depth without competing with content. Auth pages maintain
+  gradient background; admin panel unchanged.
 
 ## Session Notes
 
