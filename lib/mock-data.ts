@@ -136,6 +136,8 @@ export function generateMockReports(count = 36): ReportRow[] {
       location: null,
       location_label: locations[i % locations.length],
       rejection_reason: null,
+      resolution_notes: status === "RESOLVED" ? "The reported issue has been inspected and addressed by the local engineering office. The road surface has been repaired and is now safe for use." : null,
+      resolved_image_urls: status === "RESOLVED" ? ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"] : [],
       submitted_by_id: "mock-user",
       severity: (["MINOR", "URGENT", "EMERGENCY"] as const)[i % 3],
       reviewed_by_id: "mock-admin",

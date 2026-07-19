@@ -36,11 +36,14 @@ export function renderRejectedEmail(citizenName: string, reportTitle: string, re
   return baseLayout(content);
 }
 
-export function renderResolvedEmail(citizenName: string, reportTitle: string, reportId: string): string {
+export function renderResolvedEmail(citizenName: string, reportTitle: string, reportId: string, resolutionNotes?: string): string {
+  const notesHtml = resolutionNotes
+    ? `<div style="background-color:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:12px;color:#1E40AF;font-size:13px;margin:16px 0">${resolutionNotes}</div>`
+    : "";
   const content = `
 <p>Hi ${citizenName},</p>
 <p>Your road incident report <strong>"${reportTitle}"</strong> has been marked as <strong>resolved</strong>.</p>
-<p>The reported issue has been addressed. Thank you for bringing it to attention — your report helped make the road safer for everyone.</p>
+<p>The reported issue has been addressed. Thank you for bringing it to attention — your report helped make the road safer for everyone.</p>${notesHtml}
 <p style="margin:24px 0">${button(`${process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"}/reports/${reportId}`, "View Report")}</p>`;
   return baseLayout(content);
 }

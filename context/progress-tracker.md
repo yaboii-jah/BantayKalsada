@@ -23,7 +23,25 @@ change.
 
 ## Current Goal
 
-- Scope the application to Taytay, Rizal: enforce geographic boundary, add barangay field, localize UX, fix submission bugs. All 5 phases complete. Report submission now working: RLS INSERT policy + boundary trigger fix + foreground color neutralized.
+- Resolution details: admin can optionally add notes and after-photos when resolving a report; visible on all report detail pages.
+
+## Completed
+
+### Resolution Details (Phase B)*
+
+- [x] Migration — `resolution_notes` (text, nullable) and `resolved_image_urls` (text[], default `'{}'`) columns on `reports` table
+- [x] Database types — added both columns to `Row`, `Insert`, and `Update` types in `types/database.types.ts`
+- [x] Zod schema — extended `resolveReportSchema` with optional `resolutionNotes` (max 2000 chars) and `resolvedImageUrls` (1–3 URLs)
+- [x] Server Action — `resolveReport` now accepts optional notes + image URLs, writes them alongside `status`/`resolved_at`; `bulkResolveReports` stays minimal (no notes/photos in bulk)
+- [x] Admin resolve dialog — replaces one-click resolve with a Shadcn `Dialog` containing optional textarea (with char counter) and `PhotoUpload` widget; only Confirm sends the data
+- [x] Email — `renderResolvedEmail` now accepts optional `resolutionNotes` and renders a blue-tipped info box inline when present
+- [x] Notification helper — `sendReportNotifications` passes `resolutionNotes` through to the email renderer
+- [x] `PhotoGallery` — extended with optional `resolvedImageUrls` prop; renders a separate "After Resolution" carousel below original photos with a blue left-border separator; lightbox navigates within each source independently
+- [x] Public detail page — shows "Resolution Update" section (blue left border, notes, resolved_at date) and resolution gallery when report is RESOLVED
+- [x] Citizen detail page — same resolution section as public page
+- [x] Admin review page — shows resolution notes in a `CheckCheck`-icon alert card and resolution gallery; `CheckCheck` icon imported
+- [x] Mock data — RESOLVED mock reports include sample `resolution_notes` and `resolved_image_urls`
+- [x] `npm run build` passes with zero errors
 
 ## Completed
 

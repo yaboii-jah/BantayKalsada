@@ -48,6 +48,7 @@ export async function sendReportNotifications(
   submitter: SubmitterInfo,
   type: NotificationType,
   rejectionReason?: string,
+  resolutionNotes?: string,
 ): Promise<void> {
   const message = getMessageForType(type, reportTitle);
   const subject = getSubjectForType(type);
@@ -69,7 +70,7 @@ export async function sendReportNotifications(
       htmlContent = renderRejectedEmail(submitter.full_name, reportTitle, reportId, rejectionReason ?? "");
       break;
     case "REPORT_RESOLVED":
-      htmlContent = renderResolvedEmail(submitter.full_name, reportTitle, reportId);
+      htmlContent = renderResolvedEmail(submitter.full_name, reportTitle, reportId, resolutionNotes);
       break;
   }
 
