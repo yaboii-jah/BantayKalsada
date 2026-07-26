@@ -24,6 +24,26 @@ export function getMessageForType(type: NotificationType, title: string): string
   }
 }
 
+export function getSmsMessageForType(
+  type: ReportNotificationType,
+  title: string,
+  rejectionReason?: string,
+): string {
+  const truncated =
+    title.length > 40 ? `${title.slice(0, 37)}...` : title;
+
+  switch (type) {
+    case "REPORT_APPROVED":
+      return `Bantay Kalsada: Your report "${truncated}" was approved and is now on the public feed.`;
+    case "REPORT_REJECTED":
+      return `Bantay Kalsada: Your report "${truncated}" was rejected${
+        rejectionReason ? `. Reason: ${rejectionReason}` : ""
+      }.`;
+    case "REPORT_RESOLVED":
+      return `Bantay Kalsada: Your report "${truncated}" was marked resolved. Thank you!`;
+  }
+}
+
 export function getSubjectForType(type: NotificationType): string {
   switch (type) {
     case "COMMENT_ADDED":

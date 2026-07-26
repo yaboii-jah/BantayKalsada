@@ -23,7 +23,7 @@ change.
 
 ## Current Goal
 
-- Resolution details: admin can optionally add notes and after-photos when resolving a report; visible on all report detail pages.
+- SMS notifications via PhilSMS — complete and working.
 
 ## Completed
 
@@ -41,6 +41,31 @@ change.
 - [x] Citizen detail page — same resolution section as public page
 - [x] Admin review page — shows resolution notes in a `CheckCheck`-icon alert card and resolution gallery; `CheckCheck` icon imported
 - [x] Mock data — RESOLVED mock reports include sample `resolution_notes` and `resolved_image_urls`
+- [x] `npm run build` passes with zero errors
+
+### SMS Notifications (v3.0)
+
+- [x] Migration — `phone` (text, nullable) and `sms_notifications` (boolean, default false) on `profiles` table
+- [x] Database types — added `phone` and `sms_notifications` to profiles Row/Insert/Update types
+- [x] `lib/sms.ts` — PhilSMS client with `sendSMS()` and `normalizePhoneNumber()`; 3-attempt retry with 1s delay
+- [x] `lib/notifications.ts` — `getSmsMessageForType()` for SMS-friendly status messages (approved, rejected, resolved)
+- [x] Zod schema — `updateProfileSettingsSchema` with PH phone validation regex, `phoneSchema`
+- [x] Server Action — `updateProfileSettings` in `app/actions.ts` normalizes phone, saves to profiles
+- [x] Account settings page — `app/(citizen)/account/page.tsx` + `account-form.tsx` with phone input + SMS toggle
+- [x] Nav links — "Account Settings" added to both desktop dropdown and mobile sheet
+- [x] `lib/admin-notifications.tsx` — extends `fetchReportWithSubmitter` to select phone/sms_notifications; `sendReportNotifications` conditionally dispatches SMS after email with retry + log on failure; returns `{ smsError? }` so callers can surface SMS issues
+- [x] `lib/sms.ts` — added `sendTestSms()` helper for the "Send Test SMS" button on account page
+- [x] `app/actions.ts` — added `sendTestSms` Server Action for testing PhilSMS integration
+- [x] `app/(citizen)/account/account-form.tsx` — added "Send Test SMS" button with loading state
+- [x] `app/admin/actions.ts` — all six callers of `sendReportNotifications` (`approveReport`, `rejectReport`, `resolveReport`, `bulkApproveReports`, `bulkRejectReports`, `bulkResolveReports`) now `await` the result and log `smsError` to console instead of fire-and-forget `.catch()`
+- [x] Email and SMS are fully independent — email failures wrapped in try/catch so SMS still fires
+- [x] `npm run build` passes with zero errors
+- [x] `lib/sms.ts` — `token.trim()` added to strip accidental whitespace from env var
+- [x] `app/api/sms/diagnose/route.ts` — admin-only diagnostic endpoint (`GET /api/sms/diagnose`) that fetches PhilSMS `/v3/me` and `/v3/balance` to verify token validity and credit balance
+- [x] `lib/sms.ts` — `token.trim()` added to strip accidental whitespace from env var
+- [x] `lib/sms.ts` — hardcoded `PHILSMS_ENDPOINT` replaced with `process.env.PHILSMS_API_BASE` (defaults to `https://app.philsms.com`); supports switching between old and new PhilSMS dashboard
+- [x] `app/api/sms/diagnose/route.ts` — admin-only diagnostic endpoint (`GET /api/sms/diagnose`) that probes both `app.philsms.com` and `dashboard.philsms.com` `/v3/me` and `/v3/balance` to verify token validity and credit balance side by side
+- [x] SMS confirmed working — PhilSMS new dashboard (`dashboard.philsms.com`) + its API token + `PHILSMS_API_BASE` set to `https://dashboard.philsms.com`
 - [x] `npm run build` passes with zero errors
 
 ## Completed
@@ -393,7 +418,7 @@ change.
 ### Quick Wins (v2.0)
 - [x] **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
-- [x] **PWA support** — manifest, service worker, app icons, install prompt
+- [x] **PWA suppo rt** — manifest, service worker, app icons, install prompt
 - [x] **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
 - **Export admin reports to CSV** — server-generated CSV download button
 
@@ -444,7 +469,7 @@ change.
 ### Ecosystem (v3.0+)
 - **LGU / DPWH dashboard** — region-scoped admin roles with filtered view
 - **Public REST API** — expose approved reports to third-party consumers
-- **SMS notifications** — integration with Philippine SMS gateway (Semaphore, Chikka)
+- **SMS multi-provider** — add fallback SMS gateway option
 - **Multi-language support** — Filipino + English + Cebuano/Ilocano
 
 ## Open Questions

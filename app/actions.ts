@@ -4,6 +4,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { barangayEnum, createReportSchema, type CreateReportInput } from "@/lib/validations/report";
 import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
+import {
+  updateProfileSettingsSchema,
+  type UpdateProfileSettingsInput,
+} from "@/lib/validations/profile";
+import { normalizePhoneNumber, sendSMS } from "@/lib/sms";
 
 export interface ActionResponse {
   success: boolean;
@@ -397,5 +402,78 @@ export async function deleteComment(
     return { success: true };
   } catch {
     return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
+export async function updateProfileSettings(
+  formData: UpdateProfileSettingsInput,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in to update settings" };
+    }
+
+    const parsed = updateProfileSettingsSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
+    const normalizedPhone = parsed.data.phone
+      ? normalizePhoneNumber(parsed.data.phone)
+      : null;
+
+    if (parsed.data.phone && !normalizedPhone) {
+      return { success: false, error: "Enter a valid Philippine mobile number" };
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        phone: normalizedPhone,
+        sms_notifications: parsed.data.sms_notifications,
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      return { success: false, error: "Failed to save settings. Please try again." };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
+export async function sendTestSms(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in" };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("phone, sms_notifications")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.phone || !profile.sms_notifications) {
+      return { success: false, error: "Set your phone number and enable SMS first" };
+    }
+
+    const result = await sendSMS(
+      profile.phone,
+      "Bantay Kalsada: This is a test SMS. Your notification settings are working!",
+    );
+
+    return result;
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
   }
 }

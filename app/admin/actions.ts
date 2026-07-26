@@ -102,12 +102,15 @@ export async function approveReport(
     }
 
     if (reportData.submitter) {
-      sendReportNotifications(
+      const notifResult = await sendReportNotifications(
         parsed.data.reportId,
         reportData.title,
         reportData.submitter,
         "REPORT_APPROVED",
-      ).catch((err) => console.error("Failed to send approval notification:", err));
+      );
+      if (notifResult.smsError) {
+        console.error("SMS warning:", notifResult.smsError);
+      }
     }
 
     return { success: true };
@@ -160,13 +163,16 @@ export async function rejectReport(
     }
 
     if (reportData.submitter) {
-      sendReportNotifications(
+      const notifResult = await sendReportNotifications(
         parsed.data.reportId,
         reportData.title,
         reportData.submitter,
         "REPORT_REJECTED",
         parsed.data.rejectionReason,
-      ).catch((err) => console.error("Failed to send rejection notification:", err));
+      );
+      if (notifResult.smsError) {
+        console.error("SMS warning:", notifResult.smsError);
+      }
     }
 
     return { success: true };
@@ -224,14 +230,17 @@ export async function resolveReport(
     }
 
     if (reportData.submitter) {
-      sendReportNotifications(
+      const notifResult = await sendReportNotifications(
         parsed.data.reportId,
         reportData.title,
         reportData.submitter,
         "REPORT_RESOLVED",
         undefined,
         parsed.data.resolutionNotes,
-      ).catch((err) => console.error("Failed to send resolution notification:", err));
+      );
+      if (notifResult.smsError) {
+        console.error("SMS warning:", notifResult.smsError);
+      }
     }
 
     return { success: true };
@@ -446,12 +455,15 @@ export async function bulkApproveReports(
       approved++;
 
       if (reportData.submitter) {
-        sendReportNotifications(
+        const notifResult = await sendReportNotifications(
           id,
           reportData.title,
           reportData.submitter,
           "REPORT_APPROVED",
-        ).catch(() => {});
+        );
+        if (notifResult.smsError) {
+          console.error("SMS warning for report", id, ":", notifResult.smsError);
+        }
       }
     }
 
@@ -516,13 +528,16 @@ export async function bulkRejectReports(
       rejected++;
 
       if (reportData.submitter) {
-        sendReportNotifications(
+        const notifResult = await sendReportNotifications(
           id,
           reportData.title,
           reportData.submitter,
           "REPORT_REJECTED",
           parsed.data.rejectionReason,
-        ).catch(() => {});
+        );
+        if (notifResult.smsError) {
+          console.error("SMS warning for report", id, ":", notifResult.smsError);
+        }
       }
     }
 
@@ -581,12 +596,15 @@ export async function bulkResolveReports(
       resolved++;
 
       if (reportData.submitter) {
-        sendReportNotifications(
+        const notifResult = await sendReportNotifications(
           id,
           reportData.title,
           reportData.submitter,
           "REPORT_RESOLVED",
-        ).catch(() => {});
+        );
+        if (notifResult.smsError) {
+          console.error("SMS warning for report", id, ":", notifResult.smsError);
+        }
       }
     }
 

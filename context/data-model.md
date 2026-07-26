@@ -103,17 +103,21 @@ CREATE TABLE profiles (
   full_name     text          NOT NULL DEFAULT '',
   email         text          NOT NULL DEFAULT '',
   role          user_role     NOT NULL DEFAULT 'CITIZEN',
+  phone         text          NULL,
+  sms_notifications boolean  NOT NULL DEFAULT false,
   created_at    timestamptz   NOT NULL DEFAULT now(),
   updated_at    timestamptz   NOT NULL DEFAULT now()
 );
 ```
 
 | Column | Type | Nullable | Default | Notes |
-|---|---|---|---|---|
+|---|---|---|---|---|---|
 | `id` | `uuid` | No | — | FK to `auth.users.id`. Cascade deletes when the auth user is deleted. |
 | `full_name` | `text` | No | `''` | Set from `raw_user_meta_data->>'full_name'` on user creation via trigger. |
 | `email` | `text` | No | `''` | Denormalized from `auth.users.email` for convenient access without joining the auth schema. Set via trigger. |
 | `role` | `user_role` | No | `'CITIZEN'` | Defaults to `CITIZEN`. Change to `ADMIN` via Supabase Studio or `supabase/seed.sql` only — no in-app UI. |
+| `phone` | `text` | Yes | `null` | Philippine mobile number in +63 format. Set by citizen via account settings. Used for SMS notifications. |
+| `sms_notifications` | `boolean` | No | `false` | Opt-in toggle for SMS alerts on report status changes. Set by citizen via account settings. |
 | `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
 | `updated_at` | `timestamptz` | No | `now()` | Must be updated via trigger whenever the row changes. |
 
