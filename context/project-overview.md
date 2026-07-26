@@ -84,11 +84,11 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Comments on reports: any logged-in user can comment on approved/resolved reports on the public detail page. Single-level threading (reply to top-level only). Editing and deletion by the comment author. Admin moderation via soft-delete (status = REMOVED). Report owner receives an in-app notification when someone comments.
 - Barangay field on reports: required dropdown on submission (Dolores, San Isidro, San Juan, Santa Ana, Muzon) manually selected by the citizen from an InlineSelect dropdown.
 - Municipality boundary enforcement: all pinned locations validated against Taytay boundary polygon at the database level (`trg_reports_location_boundary` trigger) and application level (`is_within_boundary` RPC in Server Action).
+- SMS notifications: citizens can opt in with a Philippine mobile number on the Account Settings page and receive SMS alerts when their reports are approved, rejected, or resolved. Powered by PhilSMS API (`/api/v3/sms/send`), with configurable base URL via `PHILSMS_API_BASE` env var (default `https://app.philsms.com`). Includes a "Send Test SMS" button on the account page and an admin-only diagnostic endpoint (`GET /api/sms/diagnose`) that probes both old and new PhilSMS API domains. Retry up to 3 times with 1s delay; failures logged but never block the status transition.
 
 ### Out of Scope
 
 - Native iOS or Android mobile applications.
-- SMS notifications.
 - Facebook or other OAuth login providers — planned for v1.1.
 - Comment list pagination — currently shows all comments without pagination.
 - User account management by admins (suspend, ban, or delete users).

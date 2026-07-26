@@ -1,6 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/service-role";
-import { createNotification, getMessageForType, getSubjectForType } from "@/lib/notifications";
+import {
+  createNotification,
+  getMessageForType,
+  getSubjectForType,
+  getSmsMessageForType,
+} from "@/lib/notifications";
 import { sendStatusEmail } from "@/lib/email";
+import { sendSMS } from "@/lib/sms";
 import {
   renderApprovedEmail,
   renderRejectedEmail,
@@ -11,6 +17,8 @@ interface SubmitterInfo {
   id: string;
   email: string;
   full_name: string;
+  phone?: string | null;
+  sms_notifications?: boolean | null;
 }
 
 type NotificationType = "REPORT_APPROVED" | "REPORT_REJECTED" | "REPORT_RESOLVED";
@@ -35,7 +43,7 @@ export async function fetchReportWithSubmitter(reportId: string): Promise<Report
 
   const { data: submitter } = await adminClient
     .from("profiles")
-    .select("id, email, full_name")
+    .select("id, email, full_name, phone, sms_notifications")
     .eq("id", report.submitted_by_id)
     .single();
 
@@ -49,7 +57,7 @@ export async function sendReportNotifications(
   type: NotificationType,
   rejectionReason?: string,
   resolutionNotes?: string,
-): Promise<void> {
+): Promise<{ smsError?: string }> {
   const message = getMessageForType(type, reportTitle);
   const subject = getSubjectForType(type);
 
@@ -74,10 +82,33 @@ export async function sendReportNotifications(
       break;
   }
 
-  await sendStatusEmail({
-    to: submitter.email,
-    toName: submitter.full_name,
-    subject,
-    htmlContent,
-  });
+  try {
+    await sendStatusEmail({
+      to: submitter.email,
+      toName: submitter.full_name,
+      subject,
+      htmlContent,
+    });
+  } catch (emailErr) {
+    console.error(
+      `Failed to send email for report ${reportId}:`,
+      emailErr instanceof Error ? emailErr.message : emailErr,
+    );
+  }
+
+  if (submitter.phone && submitter.sms_notifications) {
+    const smsMessage = getSmsMessageForType(
+      type,
+      reportTitle,
+      rejectionReason,
+    );
+    const result = await sendSMS(submitter.phone, smsMessage);
+    if (!result.success) {
+      const errMsg = `SMS failed for ${submitter.phone}: ${result.error}`;
+      console.error(`Failed to send SMS for report ${reportId}:`, errMsg);
+      return { smsError: errMsg };
+    }
+  }
+
+  return {};
 }

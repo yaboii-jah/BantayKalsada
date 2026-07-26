@@ -125,6 +125,14 @@ export function PublicNav() {
                         <FileText className="size-4" />
                         My Reports
                       </Link>
+                      <Link
+                        href="/account"
+                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <FileText className="size-4" />
+                        Account Settings
+                      </Link>
                       <button
                         type="button"
                         onClick={handleSignOut}
@@ -203,6 +211,13 @@ export function PublicNav() {
                         onClick={() => setSheetOpen(false)}
                       >
                         My Reports
+                      </Link>
+                      <Link
+                        href="/account"
+                        className="text-sm font-medium text-foreground hover:text-primary"
+                        onClick={() => setSheetOpen(false)}
+                      >
+                        Account Settings
                       </Link>
                       <div className="flex-1" />
                       <Button
