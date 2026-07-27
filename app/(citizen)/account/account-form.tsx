@@ -6,17 +6,25 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Phone, MessageCircle, Send, Loader2 } from "lucide-react";
+import { Phone, MessageCircle, Send, Loader2, BellRing } from "lucide-react";
 import { updateProfileSettings, sendTestSms } from "@/app/actions";
+import {
+  requestPushSubscription,
+  unsubscribeFromPush,
+} from "@/components/push-subscription-manager";
 
 interface AccountFormProps {
   currentPhone: string | null;
   currentSmsNotifications: boolean;
+  pushSubscribed: boolean;
+  userId: string;
 }
 
 export function AccountForm({
   currentPhone,
   currentSmsNotifications,
+  pushSubscribed,
+  userId,
 }: AccountFormProps) {
   const router = useRouter();
   const [testing, setTesting] = useState(false);
@@ -44,6 +52,24 @@ export function AccountForm({
     },
     [router],
   );
+
+  const [pushBusy, setPushBusy] = useState(false);
+
+  const handleTogglePush = useCallback(async () => {
+    setPushBusy(true);
+    if (pushSubscribed) {
+      await unsubscribeFromPush(userId);
+      toast.success("Push notifications disabled");
+    } else {
+      const result = await requestPushSubscription(userId);
+      if (result.success) {
+        toast.success("Push notifications enabled");
+      } else {
+        toast.error(result.error);
+      }
+    }
+    setPushBusy(false);
+  }, [pushSubscribed, userId]);
 
   const handleTestSms = useCallback(async () => {
     setTesting(true);
@@ -106,24 +132,54 @@ export function AccountForm({
           </div>
         </div>
 
+        <div className="mt-6 space-y-5 pt-6 border-t border-border">
+          <div className="flex items-center justify-between rounded-md border border-border p-3">
+            <div className="flex items-start gap-3">
+              <BellRing className="mt-0.5 size-4 text-muted-foreground shrink-0" />
+              <div>
+                <Label className="text-sm font-medium cursor-pointer">
+                  Push notifications
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Receive browser push alerts for report status changes.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant={pushSubscribed ? "secondary" : "default"}
+              size="sm"
+              disabled={pushBusy}
+              onClick={handleTogglePush}
+            >
+              {pushBusy ? (
+                <Loader2 className="mr-1 size-3.5 animate-spin" />
+              ) : null}
+              {pushSubscribed ? "Disable" : "Enable"}
+            </Button>
+          </div>
+        </div>
+
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Button type="submit" className="w-full sm:w-auto">
             Save Settings
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={testing}
-            onClick={handleTestSms}
-            className="w-full sm:w-auto"
-          >
-            {testing ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Send className="mr-2 size-4" />
-            )}
-            Send Test SMS
-          </Button>
+          {currentPhone && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={testing}
+              onClick={handleTestSms}
+              className="w-full sm:w-auto"
+            >
+              {testing ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 size-4" />
+              )}
+              Send Test SMS
+            </Button>
+          )}
         </div>
       </div>
     </form>

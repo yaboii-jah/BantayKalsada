@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/service-role";
 import { AccountForm } from "./account-form";
 
 export default async function AccountPage() {
@@ -12,6 +13,12 @@ export default async function AccountPage() {
     .select("full_name, email, phone, sms_notifications")
     .eq("id", user.id)
     .single();
+
+  const adminClient = createAdminClient();
+  const { count: pushSubCount } = await adminClient
+    .from("push_subscriptions")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
@@ -38,6 +45,8 @@ export default async function AccountPage() {
         <AccountForm
           currentPhone={profile?.phone ?? null}
           currentSmsNotifications={profile?.sms_notifications ?? false}
+          pushSubscribed={(pushSubCount ?? 0) > 0}
+          userId={user.id}
         />
       </div>
     </div>

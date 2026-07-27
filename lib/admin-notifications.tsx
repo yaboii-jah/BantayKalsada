@@ -7,6 +7,7 @@ import {
 } from "@/lib/notifications";
 import { sendStatusEmail } from "@/lib/email";
 import { sendSMS } from "@/lib/sms";
+import { sendPushNotification } from "@/lib/push";
 import {
   renderApprovedEmail,
   renderRejectedEmail,
@@ -109,6 +110,11 @@ export async function sendReportNotifications(
       return { smsError: errMsg };
     }
   }
+
+  const pushUrl = `/my-reports/${reportId}`;
+  sendPushNotification(submitter.id, subject, message, pushUrl).catch((err) =>
+    console.error(`Push failed for report ${reportId}:`, err),
+  );
 
   return {};
 }

@@ -454,9 +454,27 @@ change.
 - [x] Admin — barangay column in `admin-queue-table.tsx`, barangay in queue page queries, display on review page, barangay distribution chart in analytics
 - [x] Boundary enforcement tested (inside/outside Taytay via trigger + `is_within_boundary` RPC). Barangay is selected manually via `InlineSelect` — Nominatim auto-detect was NOT implemented (reverse geocode sets `location_label` only).
 
+### Push Notifications + Realtime Live Badge (v2.2)
+
+- [x] `web-push` npm package installed; VAPID keys generated and added to `.env.local`
+- [x] `supabase/migrations/20250727000001_add_push_subscriptions.sql` created — `push_subscriptions` table (id, user_id, subscription JSON, created_at)
+- [x] `lib/push.ts` — `sendPushNotification()` with VAPID config, subscription cleanup on expired keys
+- [x] `app/sw.ts` — `push` and `notificationclick` event listeners for receiving and handling push notifications
+- [x] `components/push-subscription-manager.tsx` — `PushSubscriptionManager`, `requestPushSubscription()`, `unsubscribeFromPush()` exported
+- [x] `app/actions.ts` — `savePushSubscription` Server Action for persisting browser subscriptions
+- [x] `lib/admin-notifications.tsx` — push wired after SMS dispatch in `sendReportNotifications`
+- [x] `lib/admin-feedback-notifications.tsx` — push wired after email dispatch in `sendFeedbackNotifications`
+- [x] `app/actions.ts` — push wired in `addComment` after notification insert
+- [x] `components/notification-bell.tsx` — Supabase Realtime channel for live unread count updates
+- [x] `app/(citizen)/account/page.tsx` — fetches `push_subscriptions` count, passes `pushSubscribed` + `userId` to form
+- [x] `app/(citizen)/account/account-form.tsx` — push enable/disable toggle button with permission request/unsubscribe
+- [x] `app/(citizen)/layout.tsx` — mounts `PushSubscriptionManager` for logged-in users
+- [x] `types/database.types.ts` — `push_subscriptions` table added to types
+- [x] `@types/web-push` installed
+- [x] `npm run build` passes with zero errors
+
 ### Mobile & Notifications (v2.2)
 - **Heatmap external traffic API (Phase B)** — fill the `getExternalHeatPoints()` seam in `lib/heatmap.ts` with a specified traffic provider (TomTom/HERE/Google) via a server proxy; merges into the existing heatmap points
-- **Push notifications** — service worker + Supabase Realtime for real-time status alerts
 - **Offline submission** — queue report data in localStorage, submit on reconnect
 - **Geographic search / barangay filter** — filter browse feed by location
 

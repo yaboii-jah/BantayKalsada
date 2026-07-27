@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { toCsv } from "@/lib/csv";
+import type { Database } from "@/types/database.types";
 
 const VALID_STATUSES = ["PENDING", "APPROVED", "REJECTED", "RESOLVED"] as const;
 
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
       .order("submitted_at", { ascending: false });
 
     if (status) {
-      query = query.eq("status", status);
+      query = query.eq("status", status as Database["public"]["Enums"]["report_status"]);
     }
 
     const { data: reports, error: fetchError } = await query;

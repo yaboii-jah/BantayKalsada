@@ -64,18 +64,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [isPending, startTransition] = useTransition();
   const fetchedRef = useRef(false);
 
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("is_read", false)
-      .then(({ count }) => {
-        setUnreadCount(count ?? 0);
-      });
-  }, [userId]);
-
   const fetchNotifications = useCallback(async () => {
     setFetching(true);
     const supabase = createSupabaseBrowserClient();
@@ -91,6 +79,46 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     }
     setFetching(false);
   }, [userId]);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+
+    supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("is_read", false)
+      .then(({ count }) => {
+        setUnreadCount(count ?? 0);
+      });
+
+    const channel = supabase
+      .channel("notifications-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          supabase
+            .from("notifications")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .eq("is_read", false)
+            .then(({ count }) => {
+              setUnreadCount(count ?? 0);
+            });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, fetchNotifications]);
 
   const handleToggle = useCallback(() => {
     if (!open && !fetchedRef.current) {
