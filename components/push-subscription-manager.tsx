@@ -59,7 +59,20 @@ export async function requestPushSubscription(
   }
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                "Service worker not available. Try reloading or running the production build (npm run build && npm start).",
+              ),
+            ),
+          15000,
+        ),
+      ),
+    ]);
     const publicKeyVapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!publicKeyVapid) {
       return { success: false, error: "Push is not configured on the server" };
