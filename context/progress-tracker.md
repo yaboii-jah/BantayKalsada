@@ -23,7 +23,7 @@ change.
 
 ## Current Goal
 
-- Offline submission — complete and working.
+- SMS notifications via PhilSMS — complete and working.
 
 ## Completed
 
@@ -399,18 +399,6 @@ change.
 - [x] **Comments on reports** — threaded discussion with admin moderation
 - **Nearby existing reports on submit** — show existing reports within X meters when pinning a location
 
-### Offline Submission (v2.2)
-
-- [x] `lib/offline/db.ts` — IndexedDB CRUD via `idb` (saveDraft, getDraft, getAllDrafts, updateDraftStatus, deleteDraft, getDraftCount, getQueuedCount, clearSubmittedDrafts)
-- [x] `lib/offline/queue.ts` — `processDraft()` uploads Blobs to Cloudinary then calls `submitReport` Server Action; `processQueue()` iterates all queued/failed drafts; rate-limit failures marked `failed`, queue continues
-- [x] `lib/offline/draft-context.tsx` — `DraftProvider` + `useDrafts()` hook exposing `draftCount`, `queuedCount`, `processing`, `refreshDrafts`, `submitQueue`; auto-processes on `online` and `focus` events
-- [x] `components/reports/photo-upload.tsx` — added `offline` / `onBlobsChange` / `initialBlobs` props; stores Blobs locally when offline
-- [x] `components/reports/report-form.tsx` — offline detection banner, Save Draft button, loads draft from `?draftId=` URL param, Submit button becomes "Save Draft" when offline
-- [x] `app/(citizen)/my-drafts/page.tsx` — draft list with status badges, Edit/Submit/Retry/Delete actions, Submit All, Clear submitted, empty state
-- [x] `components/public-nav.tsx` — "My Drafts" link with badge (draft count) in desktop dropdown + mobile sheet
-- [x] `app/(citizen)/layout.tsx` — wrapped with `<DraftProvider>`
-- [x] `npm run build` passes with zero errors
-
 ## Next Up
 
 
@@ -432,7 +420,7 @@ change.
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
 - [x] **PWA suppo rt** — manifest, service worker, app icons, install prompt
 - [x] **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
-- **Export admin reports to CSV** — server-generated CSV download button
+- [x] **Export admin reports to CSV** — `lib/csv.ts` (BOM-prefixed UTF-8, proper field escaping), `GET /api/admin/export?status=` API route (admin-only, auth + role guard, fetches all matching reports + profile join, returns CSV download), Export CSV buttons on all 4 queue pages + Export All CSV button on dashboard
 
 ### Community Features (v2.1)
 - [x] **Report severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
