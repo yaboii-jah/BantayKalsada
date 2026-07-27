@@ -17,6 +17,7 @@ The development sequence follows the natural dependency order of the system: inf
 - Do not combine unrelated system boundaries in a single implementation step. The public feed and the admin queue are separate boundaries — implement and verify them independently.
 - Do not implement a feature in its "final" form if a simpler version satisfies the current requirement. Build the minimum that passes the relevant success criterion in `project-overview.md`.
 - Do not implement anything listed under **Out of Scope** in `project-overview.md`, even if it seems like a natural extension of what is being built.
+- Do not push changes to github unless i say so
 
 ---
 

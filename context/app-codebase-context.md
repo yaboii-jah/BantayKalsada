@@ -391,6 +391,7 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   (public)/              — landing, browse, reports/[id]
   admin/                 — dashboard, queues, review, admin Server Actions
   api/uploads/sign       — Cloudinary signed upload preset
+  api/admin/export       — admin-only CSV report export (GET, ?status= filter)
   verify-email/          — email verification prompt
 
 components/
@@ -403,6 +404,7 @@ components/
 
 lib/
   supabase/              — client factories (server, client, middleware, service-role)
+  csv.ts                 — CSV generation utility (BOM-prefixed UTF-8, field escaping)
   validations/           — Zod schemas + inferred types
   cloudinary.ts          — Cloudinary config + signing
   cloudinary-url.ts      — CDN URL rewriting (res → res-3 for Asia/Pacific)

@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { AdminQueueTable } from "@/components/admin/admin-queue-table";
 import { PaginationBar } from "@/components/browse/pagination-bar";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Download } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -54,15 +54,26 @@ export default async function AdminApprovedPage({ searchParams }: PageProps) {
 
   return (
     <div>
-      <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold text-foreground">
-        <CheckCircle className="h-6 w-6 text-status-approved" />
-        Approved Reports
-        {totalCount !== null && (
-          <span className="text-base font-normal text-muted-foreground">
-            ({totalCount})
-          </span>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+          <CheckCircle className="h-6 w-6 text-status-approved" />
+          Approved Reports
+          {totalCount !== null && (
+            <span className="text-base font-normal text-muted-foreground">
+              ({totalCount})
+            </span>
+          )}
+        </h1>
+        {totalCount !== null && totalCount > 0 && (
+          <a
+            href="/api/admin/export?status=APPROVED"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </a>
         )}
-      </h1>
+      </div>
       {rows.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <CheckCircle className="h-12 w-12 text-muted-foreground" />

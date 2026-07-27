@@ -420,7 +420,7 @@ change.
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
 - [x] **PWA suppo rt** — manifest, service worker, app icons, install prompt
 - [x] **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
-- **Export admin reports to CSV** — server-generated CSV download button
+- [x] **Export admin reports to CSV** — `lib/csv.ts` (BOM-prefixed UTF-8, proper field escaping), `GET /api/admin/export?status=` API route (admin-only, auth + role guard, fetches all matching reports + profile join, returns CSV download), Export CSV buttons on all 4 queue pages + Export All CSV button on dashboard
 
 ### Community Features (v2.1)
 - [x] **Report severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
