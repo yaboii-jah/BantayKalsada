@@ -1,16 +1,13 @@
 import type { ReactNode } from "react";
 import { PublicNav } from "@/components/public-nav";
-import { DraftProvider } from "@/lib/offline/draft-context";
 import Link from "next/link";
 import { Map } from "lucide-react";
 
 export default function CitizenLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <DraftProvider>
       <PublicNav />
       <main className="flex-1 bg-radial-glow">{children}</main>
-      </DraftProvider>
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 text-xs text-muted-foreground sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">

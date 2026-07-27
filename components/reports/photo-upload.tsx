@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, X, Loader2, Camera } from "lucide-react";
-import type { PhotoBlob } from "@/lib/offline/db";
 
 interface PhotoItem {
   id: string;
@@ -14,9 +13,6 @@ interface PhotoItem {
 
 interface PhotoUploadProps {
   onChange: (urls: string[]) => void;
-  offline?: boolean;
-  onBlobsChange?: (blobs: PhotoBlob[]) => void;
-  initialBlobs?: PhotoBlob[];
 }
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -48,54 +44,23 @@ async function uploadToCloudinary(file: File): Promise<string> {
   return result.secure_url as string;
 }
 
-export function PhotoUpload({
-  onChange,
-  offline = false,
-  onBlobsChange,
-  initialBlobs,
-}: PhotoUploadProps) {
-  const [photos, setPhotos] = useState<PhotoItem[]>(() => {
-    if (initialBlobs) {
-      return initialBlobs.map((b) => ({
-        id: b.id,
-        localUrl: URL.createObjectURL(b.blob),
-        uploading: false,
-      }));
-    }
-    return [];
-  });
-  const [fileMap, setFileMap] = useState<Map<string, File>>(new Map());
+export function PhotoUpload({ onChange }: PhotoUploadProps) {
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
-  const onBlobsChangeRef = useRef(onBlobsChange);
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
   useEffect(() => {
-    onBlobsChangeRef.current = onBlobsChange;
-  }, [onBlobsChange]);
-
-  useEffect(() => {
-    if (offline) {
-      const blobs: PhotoBlob[] = [];
-      for (const photo of photos) {
-        const file = fileMap.get(photo.id);
-        if (file) {
-          blobs.push({ id: photo.id, blob: file, name: file.name });
-        }
-      }
-      onBlobsChangeRef.current?.(blobs);
-    } else {
-      const urls = photos
-        .filter((p) => p.cloudinaryUrl)
-        .map((p) => p.cloudinaryUrl!);
-      onChangeRef.current(urls);
-    }
-  }, [photos, fileMap, offline]);
+    const urls = photos
+      .filter((p) => p.cloudinaryUrl)
+      .map((p) => p.cloudinaryUrl!);
+    onChangeRef.current(urls);
+  }, [photos]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -124,37 +89,29 @@ export function PhotoUpload({
 
         const id = crypto.randomUUID();
         const localUrl = URL.createObjectURL(file);
-        const item: PhotoItem = { id, localUrl, uploading: !offline };
+        const item: PhotoItem = { id, localUrl, uploading: true };
         newPhotos.push(item);
 
-        setFileMap((prev) => {
-          const next = new Map(prev);
-          next.set(id, file);
-          return next;
-        });
-
-        if (!offline) {
-          uploadToCloudinary(file)
-            .then((url) => {
-              setPhotos((prev) =>
-                prev.map((p) =>
-                  p.id === id ? { ...p, cloudinaryUrl: url, uploading: false } : p,
-                ),
-              );
-            })
-            .catch((err: Error) => {
-              setPhotos((prev) =>
-                prev.map((p) =>
-                  p.id === id ? { ...p, uploading: false, error: err.message } : p,
-                ),
-              );
-            });
-        }
+        uploadToCloudinary(file)
+          .then((url) => {
+            setPhotos((prev) =>
+              prev.map((p) =>
+                p.id === id ? { ...p, cloudinaryUrl: url, uploading: false } : p,
+              ),
+            );
+          })
+          .catch((err: Error) => {
+            setPhotos((prev) =>
+              prev.map((p) =>
+                p.id === id ? { ...p, uploading: false, error: err.message } : p,
+              ),
+            );
+          });
       }
 
       setPhotos((prev) => [...prev, ...newPhotos]);
     },
-    [photos.length, offline],
+    [photos.length],
   );
 
   const removePhoto = useCallback(
@@ -163,11 +120,6 @@ export function PhotoUpload({
         const item = prev.find((p) => p.id === id);
         if (item) URL.revokeObjectURL(item.localUrl);
         return prev.filter((p) => p.id !== id);
-      });
-      setFileMap((prev) => {
-        const next = new Map(prev);
-        next.delete(id);
-        return next;
       });
     },
     [],

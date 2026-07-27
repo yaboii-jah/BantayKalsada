@@ -1,17 +1,14 @@
 "use client";
 
-import { useCallback, useState, useTransition, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Send, Loader2, Save, WifiOff } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 
 import { barangayEnum, createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
 import { submitReport } from "@/app/actions";
-import { saveDraft, getDraft, deleteDraft, updateDraftStatus, type OfflineDraft, type PhotoBlob } from "@/lib/offline/db";
-import { processDraft } from "@/lib/offline/queue";
-import { useDrafts } from "@/lib/offline/draft-context";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,48 +50,14 @@ const severityCheckStyles: Record<string, string> = {
 
 export function ReportForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const [initialBlobs, setInitialBlobs] = useState<PhotoBlob[] | undefined>(undefined);
-  const { refreshDrafts } = useDrafts();
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    const id = searchParams.get("draftId");
-    if (!id) return;
-    setDraftId(id);
-    getDraft(id).then((draft) => {
-      if (!draft) return;
-      setInitialBlobs(draft.photos);
-      for (const [key, value] of Object.entries(draft.formData)) {
-        if (value !== undefined) {
-          setValue(key as keyof CreateReportInput, value as never, { shouldValidate: false });
-        }
-      }
-    });
-  }, [searchParams]);
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    getValues,
     formState: { errors },
   } = useForm<CreateReportInput>({
     resolver: zodResolver(createReportSchema),
@@ -113,19 +76,9 @@ export function ReportForm() {
   const selectedCategory = watch("category");
   const selectedBarangay = watch("barangay");
 
-  const [photoBlobs, setPhotoBlobs] = useState<PhotoBlob[]>([]);
-
   const onPhotosChange = useCallback(
     (urls: string[]) => {
       setValue("photo_urls", urls, { shouldValidate: true });
-    },
-    [setValue],
-  );
-
-  const onBlobsChange = useCallback(
-    (blobs: PhotoBlob[]) => {
-      setPhotoBlobs(blobs);
-      setValue("photo_urls", blobs.length > 0 ? ["__draft__"] : [], { shouldValidate: false });
     },
     [setValue],
   );
@@ -141,62 +94,13 @@ export function ReportForm() {
     [setValue],
   );
 
-  const saveDraftHandler = useCallback(async () => {
-    const values = getValues();
-    if (!values.title || !values.category) {
-      toast.error("Please fill in at least the title and category before saving.");
-      return;
-    }
-    setSavingDraft(true);
-    try {
-      const id = draftId ?? crypto.randomUUID();
-      const draft: OfflineDraft = {
-        id,
-        formData: {
-          title: values.title,
-          description: values.description ?? "",
-          category: values.category,
-          barangay: values.barangay,
-          severity: values.severity ?? "MINOR",
-          latitude: values.latitude ?? 0,
-          longitude: values.longitude ?? 0,
-          location_label: values.location_label,
-        },
-        photos: photoBlobs,
-        status: "draft",
-        createdAt: new Date().toISOString(),
-      };
-      await saveDraft(draft);
-      setDraftId(id);
-      toast.success("Draft saved!");
-      await refreshDrafts();
-      if (!isOnline) {
-        router.push("/my-drafts");
-      }
-    } catch {
-      toast.error("Failed to save draft");
-    } finally {
-      setSavingDraft(false);
-    }
-  }, [getValues, draftId, photoBlobs, refreshDrafts, isOnline, router]);
-
   const onSubmit = useCallback(
     (data: CreateReportInput) => {
-      if (!isOnline) {
-        saveDraftHandler();
-        return;
-      }
       setSubmitError(null);
       startTransition(async () => {
         const result = await submitReport(null, data);
         if (result.success && result.data) {
           toast.success("Report submitted successfully! It will be reviewed by an administrator.");
-          if (draftId) {
-            await updateDraftStatus(draftId, "submitted", {
-              reportId: result.data.id,
-              submittedAt: new Date().toISOString(),
-            });
-          }
           router.push("/my-reports");
         } else {
           setSubmitError(result.error ?? "Failed to submit report");
@@ -204,33 +108,11 @@ export function ReportForm() {
         }
       });
     },
-    [router, isOnline, saveDraftHandler, draftId],
+    [router],
   );
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {!isOnline && (
-        <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400">
-          <WifiOff className="size-4 shrink-0" />
-          <span>
-            You&apos;re offline. Your report will be saved as a draft and you can submit it once you&apos;re back online.
-          </span>
-        </div>
-      )}
-
-      {draftId && (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
-          Editing draft.{" "}
-          <button
-            type="button"
-            className="underline hover:text-primary"
-            onClick={() => router.push("/my-drafts")}
-          >
-            View all drafts
-          </button>
-        </div>
-      )}
-
       {submitError && (
         <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {submitError}
@@ -313,12 +195,7 @@ export function ReportForm() {
 
       <div className="space-y-2">
         <Label>Photos</Label>
-        <PhotoUpload
-          onChange={onPhotosChange}
-          offline={!isOnline}
-          onBlobsChange={onBlobsChange}
-          initialBlobs={initialBlobs}
-        />
+        <PhotoUpload onChange={onPhotosChange} />
         {errors.photo_urls && (
           <p className="text-xs text-destructive">{errors.photo_urls.message}</p>
         )}
@@ -334,41 +211,24 @@ export function ReportForm() {
         )}
       </div>
 
-      <div className="flex gap-3">
-        <Button
-          type="submit"
-          disabled={pending || savingDraft}
-          className="flex-1"
-          size="lg"
-        >
-          {pending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              Submitting…
-            </>
-          ) : (
-            <>
-              <Send className="mr-2 size-4" />
-              {isOnline ? "Submit Report" : "Save Draft"}
-            </>
-          )}
-        </Button>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          disabled={savingDraft || pending}
-          onClick={saveDraftHandler}
-        >
-          {savingDraft ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
-          <span className="sr-only md:not-sr-only md:ml-2">Save Draft</span>
-        </Button>
-      </div>
+      <Button
+        type="submit"
+        disabled={pending}
+        className="w-full"
+        size="lg"
+      >
+        {pending ? (
+          <>
+            <Loader2 className="mr-2 size-4 animate-spin" />
+            Submitting…
+          </>
+        ) : (
+          <>
+            <Send className="mr-2 size-4" />
+            Submit Report
+          </>
+        )}
+      </Button>
     </form>
   );
 }

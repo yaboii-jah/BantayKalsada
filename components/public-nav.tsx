@@ -7,10 +7,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Map, Menu, LogOut, FileText, MessageSquare, FileEdit } from "lucide-react";
+import { Map, Menu, LogOut, FileText, MessageSquare } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useDrafts } from "@/lib/offline/draft-context";
 import type { User } from "@supabase/supabase-js";
 
 export function PublicNav() {
@@ -20,7 +19,6 @@ export function PublicNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { draftCount } = useDrafts();
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -128,19 +126,6 @@ export function PublicNav() {
                         My Reports
                       </Link>
                       <Link
-                        href="/my-drafts"
-                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        <FileEdit className="size-4" />
-                        My Drafts
-                        {draftCount > 0 && (
-                          <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-                            {draftCount > 9 ? "9+" : draftCount}
-                          </span>
-                        )}
-                      </Link>
-                      <Link
                         href="/account"
                         className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
                         onClick={() => setMenuOpen(false)}
@@ -226,18 +211,6 @@ export function PublicNav() {
                         onClick={() => setSheetOpen(false)}
                       >
                         My Reports
-                      </Link>
-                      <Link
-                        href="/my-drafts"
-                        className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary"
-                        onClick={() => setSheetOpen(false)}
-                      >
-                        My Drafts
-                        {draftCount > 0 && (
-                          <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-                            {draftCount > 9 ? "9+" : draftCount}
-                          </span>
-                        )}
                       </Link>
                       <Link
                         href="/account"
