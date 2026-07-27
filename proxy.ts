@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const authRoutes = ["/login", "/register", "/reset-password"];
-const protectedRoutes = ["/my-reports", "/my-feedback", "/admin"];
+const protectedRoutes = ["/submit", "/my-reports", "/my-feedback", "/admin"];
 
 export async function proxy(request: NextRequest) {
   const supabaseResponse = await updateSession(request);
