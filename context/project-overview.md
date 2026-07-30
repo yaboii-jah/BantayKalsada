@@ -78,6 +78,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - In-app notification center: bell icon with unread badge, lazy-loaded dropdown, mark as read, and delete/clear all.
 - Map-view bounding box filter: as the user pans/zooms the map on `/browse?view=map`, markers and report count auto-constrain to the current viewport.
 - Browse map heatmap: a Markers/Heatmap toggle on `/browse?view=map` shows overall hazard density across Taytay, weighted by report severity (Minor/Urgent/Emergency).
+- Browse map base layer toggle: a **Street / Terrain / Satellite** selector on `/browse?view=map` switches between OSM, OpenTopoMap, and ESRI World Imagery tile sources.
 - App feedback system: any logged-in user can submit bug reports, feature requests, or general feedback with an optional 1–5 star rating. Admins view submissions in a dedicated inbox and can acknowledge or close them. Status changes and admin notes trigger in-app notifications and emails. Admins can add, edit, and remove internal notes on feedback submissions that are visible to the citizen.
 - Progressive Web App (PWA) support: manifest.json for installability, service worker for offline caching (static assets, pages, and images), and an in-app install banner.
 - Share report via link/social: Open Graph meta tags on report detail pages for rich link previews on social platforms, plus an in-app share button using the Web Share API with clipboard fallback.
