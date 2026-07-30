@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { createNotification, getMessageForType, getSubjectForType } from "@/lib/notifications";
 import { sendStatusEmail } from "@/lib/email";
+import { sendPushNotification } from "@/lib/push";
 import {
   renderFeedbackAcknowledgedEmail,
   renderFeedbackNoteAddedEmail,
@@ -82,4 +83,9 @@ export async function sendFeedbackNotifications(
     subject,
     htmlContent,
   });
+
+  const pushUrl = `/my-feedback/${feedbackId}`;
+  sendPushNotification(submitter.id, subject, message, pushUrl).catch((err) =>
+    console.error(`Push failed for feedback ${feedbackId}:`, err),
+  );
 }

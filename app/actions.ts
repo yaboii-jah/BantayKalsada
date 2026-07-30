@@ -9,6 +9,7 @@ import {
   type UpdateProfileSettingsInput,
 } from "@/lib/validations/profile";
 import { normalizePhoneNumber, sendSMS } from "@/lib/sms";
+import { sendPushNotification } from "@/lib/push";
 
 export interface ActionResponse {
   success: boolean;
@@ -333,12 +334,19 @@ export async function addComment(
 
     if (report.submitted_by_id !== user.id) {
       const adminClient = createAdminClient();
+      const message = `${profile?.full_name ?? "Someone"} commented on the report "${report.title}".`;
       await adminClient.from("notifications").insert({
         user_id: report.submitted_by_id,
         report_id: formData.report_id,
         type: "COMMENT_ADDED",
-        message: `${profile?.full_name ?? "Someone"} commented on the report "${report.title}".`,
+        message,
       });
+      sendPushNotification(
+        report.submitted_by_id,
+        "New Comment",
+        message,
+        `/reports/${formData.report_id}`,
+      ).catch((err) => console.error("Push failed for comment:", err));
     }
 
     return { success: true, data: comment as { id: string } };
@@ -474,6 +482,52 @@ export async function sendTestSms(): Promise<{ success: boolean; error?: string 
 
     return result;
   } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function savePushSubscription(
+  userId: string,
+  subscriptionJson: string,
+): Promise<ActionResponse> {
+  try {
+    const subscription = JSON.parse(subscriptionJson) as PushSubscriptionJSON;
+
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    if (user.id !== userId) {
+      return { success: false, error: "Forbidden" };
+    }
+
+    const existing = await supabase
+      .from("push_subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("subscription->>endpoint", subscription.endpoint)
+      .maybeSingle();
+
+    if (existing.data) {
+      return { success: true };
+    }
+
+    const { error: insertError } = await supabase
+      .from("push_subscriptions")
+      .insert({
+        user_id: userId,
+        subscription: subscription as unknown as never,
+      });
+
+    if (insertError) {
+      return { success: false, error: "Failed to save push subscription" };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("savePushSubscription error:", err);
     return { success: false, error: "An unexpected error occurred" };
   }
 }
