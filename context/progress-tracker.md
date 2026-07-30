@@ -471,7 +471,21 @@ change.
 - [x] `app/(citizen)/layout.tsx` — mounts `PushSubscriptionManager` for logged-in users
 - [x] `types/database.types.ts` — `push_subscriptions` table added to types
 - [x] `@types/web-push` installed
+- [x] Feature spec: `context/feature-specs/26-push-notifications.md`
 - [x] `npm run build` passes with zero errors
+
+### Bugs Fixed During Implementation
+
+- [x] **SW not available in dev** — serwist is disabled in dev mode (`next.config.ts:9`), causing `navigator.serviceWorker.ready` to hang indefinitely. Fixed by wrapping in `Promise.race` with 15s timeout that rejects with a clear error message.
+- [x] **SW `no-response` navigation error** — `navigationPreload: true` caused race condition where SW preload completed before the page fetch, producing `no-response` errors. Fixed by setting `navigationPreload: false` in `app/sw.ts`.
+- [x] **VAPID private key validation** — `webpush.setVapidDetails()` rejects base64 keys with `=` padding. Fixed by adding `.replace(/=+$/, "")` to both VAPID keys in `lib/push.ts`.
+- [x] **VAPID env var whitespace** — trailing whitespace/newlines in `.env.local` VAPID keys caused invalid key format. Fixed by adding `.trim()` in both `lib/push.ts` and `components/push-subscription-manager.tsx`.
+- [x] **Duplicate env vars** — `.env.local` had duplicate VAPID key entries; the last entry (with spaces in the private key) won, causing validation failure. Fixed by removing the duplicate block.
+- [x] **Server Action error mapping** — Chrome's `AbortError: Registration failed - push service error` was shown raw to the user. Fixed by categorizing error by `err.name` and showing actionable messages (Brave FCM fix, try Firefox, etc.).
+- [x] **Dynamic import of Server Action** — `await import("@/app/actions")` in a client component caused "Server Components render" error in production due to chunk resolution issues. Fixed by using static `import { savePushSubscription } from "@/app/actions"` instead.
+- [x] **Nested object Server Action serialization** — Next.js production build can fail serializing nested `PushSubscriptionJSON` objects through the Server Action boundary. Fixed by accepting a pre-serialized `subscriptionJson: string` and parsing internally with `JSON.parse()`.
+- [x] **Button doesn't toggle after subscribe** — `pushSubscribed` prop only updated on page reload. Fixed by adding `router.refresh()` after successful subscribe/unsubscribe in `handleTogglePush`.
+- [x] **`[object Object]` JSON parse error** — `saveSubscription` was called with a parsed object (`JSON.parse`) instead of a JSON string after the parameter type changed to `string`. Fixed by passing `JSON.stringify()` directly.
 
 ### Mobile & Notifications (v2.2)
 - **Heatmap external traffic API (Phase B)** — fill the `getExternalHeatPoints()` seam in `lib/heatmap.ts` with a specified traffic provider (TomTom/HERE/Google) via a server proxy; merges into the existing heatmap points

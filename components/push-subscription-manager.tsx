@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { savePushSubscription } from "@/app/actions";
 
 interface PushSubscriptionManagerProps {
   userId: string;
@@ -30,7 +31,7 @@ export function PushSubscriptionManager({
         .getSubscription()
         .then((existingSubscription) => {
           if (existingSubscription) {
-            saveSubscription(userId, JSON.parse(JSON.stringify(existingSubscription)));
+            saveSubscription(userId, JSON.stringify(existingSubscription));
           }
         });
     });
@@ -73,7 +74,7 @@ export async function requestPushSubscription(
         ),
       ),
     ]);
-    const publicKeyVapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const publicKeyVapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
     if (!publicKeyVapid) {
       return { success: false, error: "Push is not configured on the server" };
     }
@@ -83,13 +84,24 @@ export async function requestPushSubscription(
       applicationServerKey: urlBase64ToUint8Array(publicKeyVapid) as BufferSource,
     });
 
-    await saveSubscription(userId, JSON.parse(JSON.stringify(subscription)));
+    await saveSubscription(userId, JSON.stringify(subscription));
     return { success: true };
   } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Failed to subscribe to push",
-    };
+    console.error("Push subscribe error:", err);
+    const message =
+      err instanceof Error ? err.message : "Failed to subscribe to push";
+    const name = err instanceof Error ? err.name : "";
+    let userMessage = message;
+    if (name === "AbortError" || message.includes("push service")) {
+      userMessage =
+        "Your browser couldn't reach its push service. Try Firefox (uses a different provider) or check if Google services are accessible.";
+    } else if (name === "NotAllowedError") {
+      userMessage =
+        "Notification permission was denied. Update your browser settings to allow notifications for this site.";
+    } else if (name === "InvalidStateError") {
+      userMessage = "Service worker not ready yet. Close and reopen the page, then try again.";
+    }
+    return { success: false, error: userMessage };
   }
 }
 
@@ -110,10 +122,9 @@ export async function unsubscribeFromPush(
 
 async function saveSubscription(
   userId: string,
-  subscription: PushSubscriptionJSON,
+  subscriptionJson: string,
 ): Promise<void> {
-  const { savePushSubscription } = await import("@/app/actions");
-  await savePushSubscription(userId, subscription);
+  await savePushSubscription(userId, subscriptionJson);
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

@@ -1,8 +1,8 @@
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/service-role";
 
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY ?? "";
+const vapidPublicKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim().replace(/=+$/, "");
+const vapidPrivateKey = (process.env.VAPID_PRIVATE_KEY ?? "").trim().replace(/=+$/, "");
 const vapidSubject =
   process.env.VAPID_SUBJECT ?? "mailto:admin@bantay-kalsada.app";
 

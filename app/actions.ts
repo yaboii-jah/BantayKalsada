@@ -488,9 +488,11 @@ export async function sendTestSms(): Promise<{ success: boolean; error?: string 
 
 export async function savePushSubscription(
   userId: string,
-  subscription: PushSubscriptionJSON,
+  subscriptionJson: string,
 ): Promise<ActionResponse> {
   try {
+    const subscription = JSON.parse(subscriptionJson) as PushSubscriptionJSON;
+
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -524,7 +526,8 @@ export async function savePushSubscription(
     }
 
     return { success: true };
-  } catch {
+  } catch (err) {
+    console.error("savePushSubscription error:", err);
     return { success: false, error: "An unexpected error occurred" };
   }
 }

@@ -57,18 +57,26 @@ export function AccountForm({
 
   const handleTogglePush = useCallback(async () => {
     setPushBusy(true);
-    if (pushSubscribed) {
-      await unsubscribeFromPush(userId);
-      toast.success("Push notifications disabled");
-    } else {
-      const result = await requestPushSubscription(userId);
-      if (result.success) {
-        toast.success("Push notifications enabled");
+    try {
+      if (pushSubscribed) {
+        await unsubscribeFromPush(userId);
+        toast.success("Push notifications disabled");
+        router.refresh();
       } else {
-        toast.error(result.error);
+        const result = await requestPushSubscription(userId);
+        if (result.success) {
+          toast.success("Push notifications enabled");
+          router.refresh();
+        } else {
+          toast.error(result.error);
+        }
       }
+    } catch (err) {
+      console.error("Push toggle error:", err);
+      toast.error("Something went wrong. Check the console for details.");
+    } finally {
+      setPushBusy(false);
     }
-    setPushBusy(false);
   }, [pushSubscribed, userId]);
 
   const handleTestSms = useCallback(async () => {
