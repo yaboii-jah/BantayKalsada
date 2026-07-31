@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ShareButton } from "@/components/reports/share-button";
 import { CommentSection } from "@/components/reports/comment-section";
+import { FlagReportButtons } from "@/components/reports/flag-report-buttons";
 import { cn } from "@/lib/utils";
 
 const severityLabels: Record<string, string> = {
@@ -176,6 +177,12 @@ export default async function ReportDetailPage({
           {report.description}
         </p>
       </div>
+
+      {user && user.id !== report.submitted_by_id && (
+        <div className="mb-8 border-t pt-6">
+          <FlagReportButtons reportId={report.id} />
+        </div>
+      )}
 
       {report.status === "RESOLVED" && report.resolution_notes && (
         <div className="mb-8 border-l-4 border-status-resolved bg-status-resolved/5 pl-4">

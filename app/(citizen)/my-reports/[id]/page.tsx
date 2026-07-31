@@ -4,7 +4,7 @@ import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { formatReportDate } from "@/lib/date-utils";
-import { MapPin, Calendar, XCircle, ArrowLeft } from "lucide-react";
+import { MapPin, Calendar, XCircle, ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -55,12 +55,22 @@ export default async function MyReportDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <Link href="/my-reports">
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2">
-          <ArrowLeft className="mr-1 size-4" />
-          Back to my reports
-        </Button>
-      </Link>
+      <div className="mb-6 flex items-center justify-between">
+        <Link href="/my-reports">
+          <Button variant="ghost" size="sm" className="-ml-2">
+            <ArrowLeft className="mr-1 size-4" />
+            Back to my reports
+          </Button>
+        </Link>
+        {report.status === "PENDING" && (
+          <Link href={`/my-reports/${report.id}/edit`}>
+            <Button variant="outline" size="sm">
+              <Pencil className="mr-1 size-4" />
+              Edit
+            </Button>
+          </Link>
+        )}
+      </div>
 
       <div className="mb-8">
         <div className="mb-3 flex flex-wrap items-center gap-2">

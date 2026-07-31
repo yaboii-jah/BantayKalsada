@@ -1,0 +1,121 @@
+import Link from "next/link";
+import { createAdminClient } from "@/lib/supabase/service-role";
+import { Flag, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
+
+const flagLabels: Record<string, string> = {
+  ALREADY_FIXED: "Already fixed",
+  WRONG_LOCATION: "Wrong location",
+};
+
+const statusStyles: Record<string, string> = {
+  PENDING: "border-status-pending/30 bg-status-pending/10 text-status-pending",
+  APPROVED: "border-status-approved/30 bg-status-approved/10 text-status-approved",
+  REJECTED: "border-status-rejected/30 bg-status-rejected/10 text-status-rejected",
+  RESOLVED: "border-status-resolved/30 bg-status-resolved/10 text-status-resolved",
+};
+
+export default async function AdminFlagsPage() {
+  const adminClient = createAdminClient();
+
+  const { data: flags } = await adminClient
+    .from("report_flags")
+    .select("id, report_id, flag_type, created_at");
+
+  const flagsByReport = new Map<string, { count: number; types: string[]; latest: string }>();
+  for (const flag of flags ?? []) {
+    const entry = flagsByReport.get(flag.report_id) ?? { count: 0, types: [], latest: "" };
+    entry.count += 1;
+    entry.types.push(flag.flag_type);
+    if (!entry.latest || flag.created_at > entry.latest) {
+      entry.latest = flag.created_at;
+    }
+    flagsByReport.set(flag.report_id, entry);
+  }
+
+  const reportIds = [...flagsByReport.keys()];
+  const { data: reports } = reportIds.length
+    ? await adminClient
+        .from("reports")
+        .select("id, title, status, category")
+        .in("id", reportIds)
+    : { data: null };
+
+  const reportMap = new Map(reports?.map((r) => [r.id, r]) ?? []);
+  const rows = reportIds
+    .map((id) => ({
+      report: reportMap.get(id),
+      ...flagsByReport.get(id)!,
+    }))
+    .filter((r) => r.report)
+    .sort((a, b) => (a.latest < b.latest ? 1 : -1));
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+          <Flag className="h-6 w-6 text-yellow-600" />
+          Flagged Reports
+          {rows.length > 0 && (
+            <span className="text-base font-normal text-muted-foreground">
+              ({rows.length})
+            </span>
+          )}
+        </h1>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-16 text-center">
+          <Flag className="h-12 w-12 text-muted-foreground" />
+          <p className="text-lg font-medium text-foreground">
+            No flagged reports
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Citizens have not flagged any reports for review.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border">
+            {rows.map(({ report, count, types, latest }) => (
+              <li key={report!.id}>
+                <Link
+                  href={`/admin/reports/${report!.id}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-medium text-foreground">
+                        {report!.title}
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
+                          statusStyles[report!.status] ?? "",
+                        )}
+                      >
+                        {report!.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {[...new Set(types)].map((t) => flagLabels[t] ?? t).join(", ")} ·{" "}
+                      {count} flag{count === 1 ? "" : "s"} · latest{" "}
+                      {new Date(latest).toLocaleDateString("fil-PH", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

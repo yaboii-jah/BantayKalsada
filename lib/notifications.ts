@@ -3,7 +3,8 @@ import { createAdminClient } from "@/lib/supabase/service-role";
 export type ReportNotificationType = "REPORT_APPROVED" | "REPORT_REJECTED" | "REPORT_RESOLVED";
 export type CommentNotificationType = "COMMENT_ADDED";
 export type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED";
-export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType;
+export type FlagNotificationType = "REPORT_FLAGGED";
+export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType | FlagNotificationType;
 
 export function getMessageForType(type: NotificationType, title: string): string {
   switch (type) {
@@ -21,6 +22,8 @@ export function getMessageForType(type: NotificationType, title: string): string
       return `Your feedback "${title}" has been closed.`;
     case "FEEDBACK_NOTE_ADDED":
       return `An admin has added a note to your feedback "${title}".`;
+    case "REPORT_FLAGGED":
+      return `Report "${title}" was flagged by a citizen for admin review.`;
   }
 }
 
@@ -60,6 +63,8 @@ export function getSubjectForType(type: NotificationType): string {
       return "Feedback Closed — Bantay Kalsada";
     case "FEEDBACK_NOTE_ADDED":
       return "Admin Note Added to Your Feedback — Bantay Kalsada";
+    case "REPORT_FLAGGED":
+      return "Report Flagged for Review — Bantay Kalsada";
   }
 }
 

@@ -14,6 +14,7 @@ import {
   MessageSquare,
   LogOut,
   ShieldCheck,
+  Flag,
 } from "lucide-react";
 
 const navItems = [
@@ -22,14 +23,17 @@ const navItems = [
   { href: "/admin/approved", label: "Approved", icon: CheckCircle },
   { href: "/admin/rejected", label: "Rejected", icon: XCircle },
   { href: "/admin/resolved", label: "Resolved", icon: CheckCheck },
+  { href: "/admin/flags", label: "Flags", icon: Flag },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
 ] as const;
 
 export function AdminSidebar({
   pendingCount,
+  flagsCount,
   adminName,
 }: {
   pendingCount: number;
+  flagsCount: number;
   adminName: string;
 }) {
   const pathname = usePathname();
@@ -76,6 +80,11 @@ export function AdminSidebar({
               {item.label === "Pending" && pendingCount > 0 && (
                 <span className="ml-auto inline-flex items-center rounded-full bg-status-pending/10 px-2 py-0.5 text-xs font-medium text-status-pending">
                   {pendingCount}
+                </span>
+              )}
+              {item.label === "Flags" && flagsCount > 0 && (
+                <span className="ml-auto inline-flex items-center rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-600">
+                  {flagsCount}
                 </span>
               )}
             </Link>

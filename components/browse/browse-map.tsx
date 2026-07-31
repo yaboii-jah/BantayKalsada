@@ -6,11 +6,11 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import Link from "next/link";
-import { Car, Flame } from "lucide-react";
+import { Car, Flame, Layers, Check } from "lucide-react";
 import { TaytayBoundary } from "@/components/maps/taytay-boundary";
 import { HeatLayer } from "@/components/maps/heat-layer";
 import { TrafficLayer } from "@/components/maps/traffic-layer";
-import { severityWeight, type HeatPoint } from "@/lib/heatmap";
+import { type HeatPoint } from "@/lib/heatmap";
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -40,6 +40,100 @@ const statusColors: Record<string, string> = {
   APPROVED: "bg-status-approved/10 text-status-approved",
   RESOLVED: "bg-status-resolved/10 text-status-resolved",
 };
+
+type BaseMapType = "street" | "terrain" | "satellite";
+
+const BASE_MAP_OPTIONS: {
+  value: BaseMapType;
+  label: string;
+  url: string;
+  attribution: string;
+  maxZoom: number;
+}[] = [
+  {
+    value: "street",
+    label: "Street",
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  {
+    value: "terrain",
+    label: "Terrain",
+    url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    attribution:
+      '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> contributors',
+    maxZoom: 17,
+  },
+  {
+    value: "satellite",
+    label: "Satellite",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution:
+      '&copy; <a href="https://www.esri.com">ESRI</a>',
+    maxZoom: 19,
+  },
+];
+
+function BaseMapToggle({
+  baseMap,
+  onChange,
+}: {
+  baseMap: BaseMapType;
+  onChange: (value: BaseMapType) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const option = BASE_MAP_OPTIONS.find((o) => o.value === baseMap) ?? BASE_MAP_OPTIONS[0];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow transition-colors hover:text-foreground"
+      >
+        <Layers className="size-3.5" />
+        {option.label}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-[1100] mt-1 w-28 overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10">
+          {BASE_MAP_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs font-medium ${
+                baseMap === opt.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-accent"
+              }`}
+            >
+              {opt.label}
+              {baseMap === opt.value && <Check className="size-3" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function HeatToggle({
   showHeat,
@@ -115,9 +209,13 @@ function TrafficToggle({
 function MapContent({
   reports,
   heatPoints,
+  baseMap,
+  onBaseMapChange,
 }: {
   reports: BrowseMapReport[];
   heatPoints: HeatPoint[];
+  baseMap: BaseMapType;
+  onBaseMapChange: (value: BaseMapType) => void;
 }) {
   const map = useMap();
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
@@ -175,6 +273,7 @@ function MapContent({
   return (
     <>
       <div className="absolute right-4 top-4 z-[1000] flex flex-row gap-1.5">
+        <BaseMapToggle baseMap={baseMap} onChange={onBaseMapChange} />
         <HeatToggle showHeat={showHeat} onToggle={() => setShowHeat((v) => !v)} />
         <TrafficToggle showTraffic={showTraffic} onToggle={() => setShowTraffic((v) => !v)} />
       </div>
@@ -268,6 +367,9 @@ export function BrowseMap({
   reports: BrowseMapReport[];
   heatPoints: HeatPoint[];
 }) {
+  const [baseMap, setBaseMap] = useState<BaseMapType>("street");
+  const option = BASE_MAP_OPTIONS.find((o) => o.value === baseMap) ?? BASE_MAP_OPTIONS[0];
+
   if (reports.length === 0 && heatPoints.length === 0) {
     return (
       <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-muted lg:aspect-[3/2]">
@@ -285,15 +387,18 @@ export function BrowseMap({
     <MapContainer
       center={center}
       zoom={12}
+      maxZoom={19}
       className="aspect-[4/3] w-full rounded-lg lg:aspect-[3/2]"
       scrollWheelZoom={true}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <TileLayer key={baseMap} url={option.url} attribution={option.attribution} maxZoom={option.maxZoom} />
       <TaytayBoundary />
-      <MapContent reports={reports} heatPoints={heatPoints} />
+      <MapContent
+        reports={reports}
+        heatPoints={heatPoints}
+        baseMap={baseMap}
+        onBaseMapChange={setBaseMap}
+      />
     </MapContainer>
   );
 }

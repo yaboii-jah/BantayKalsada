@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Save } from "lucide-react";
 
 import { barangayEnum, createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
-import { submitReport } from "@/app/actions";
+import { submitReport, updateReport } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,10 +48,16 @@ const severityCheckStyles: Record<string, string> = {
   EMERGENCY: "has-[:checked]:border-status-rejected/50 has-[:checked]:bg-status-rejected/10",
 };
 
-export function ReportForm() {
+interface ReportFormProps {
+  defaultValues?: CreateReportInput;
+  reportId?: string;
+}
+
+export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const isEdit = !!defaultValues && !!reportId;
 
   const {
     register,
@@ -61,9 +67,10 @@ export function ReportForm() {
     formState: { errors },
   } = useForm<CreateReportInput>({
     resolver: zodResolver(createReportSchema),
-    defaultValues: {
+    defaultValues: defaultValues ?? {
       title: "",
       description: "",
+      category: undefined,
       severity: "MINOR",
       barangay: undefined,
       photo_urls: [],
@@ -98,17 +105,28 @@ export function ReportForm() {
     (data: CreateReportInput) => {
       setSubmitError(null);
       startTransition(async () => {
-        const result = await submitReport(null, data);
-        if (result.success && result.data) {
-          toast.success("Report submitted successfully! It will be reviewed by an administrator.");
-          router.push("/my-reports");
+        if (isEdit && reportId) {
+          const result = await updateReport(reportId, data);
+          if (result.success) {
+            toast.success("Report updated successfully.");
+            router.push(`/my-reports/${reportId}`);
+          } else {
+            setSubmitError(result.error ?? "Failed to update report");
+            toast.error(result.error ?? "Failed to update report");
+          }
         } else {
-          setSubmitError(result.error ?? "Failed to submit report");
-          toast.error(result.error ?? "Failed to submit report");
+          const result = await submitReport(null, data);
+          if (result.success && result.data) {
+            toast.success("Report submitted successfully! It will be reviewed by an administrator.");
+            router.push("/my-reports");
+          } else {
+            setSubmitError(result.error ?? "Failed to submit report");
+            toast.error(result.error ?? "Failed to submit report");
+          }
         }
       });
     },
-    [router],
+    [router, isEdit, reportId],
   );
 
   return (
@@ -195,7 +213,10 @@ export function ReportForm() {
 
       <div className="space-y-2">
         <Label>Photos</Label>
-        <PhotoUpload onChange={onPhotosChange} />
+        <PhotoUpload
+          onChange={onPhotosChange}
+          initialUrls={isEdit ? defaultValues!.photo_urls : undefined}
+        />
         {errors.photo_urls && (
           <p className="text-xs text-destructive">{errors.photo_urls.message}</p>
         )}
@@ -203,7 +224,14 @@ export function ReportForm() {
 
       <div className="space-y-2">
         <Label>Location</Label>
-        <LocationPickerWrapper value={null} onChange={onLocationChange} />
+        <LocationPickerWrapper
+          value={
+            isEdit
+              ? { lat: defaultValues!.latitude, lng: defaultValues!.longitude, label: defaultValues!.location_label }
+              : null
+          }
+          onChange={onLocationChange}
+        />
         {(errors.latitude || errors.longitude) && (
           <p className="text-xs text-destructive">
             Please pin the location on the map
@@ -220,12 +248,12 @@ export function ReportForm() {
         {pending ? (
           <>
             <Loader2 className="mr-2 size-4 animate-spin" />
-            Submitting…
+            {isEdit ? "Updating…" : "Submitting…"}
           </>
         ) : (
           <>
-            <Send className="mr-2 size-4" />
-            Submit Report
+            {isEdit ? <Save className="mr-2 size-4" /> : <Send className="mr-2 size-4" />}
+            {isEdit ? "Update Report" : "Submit Report"}
           </>
         )}
       </Button>
