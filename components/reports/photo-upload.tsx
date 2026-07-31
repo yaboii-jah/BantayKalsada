@@ -13,6 +13,7 @@ interface PhotoItem {
 
 interface PhotoUploadProps {
   onChange: (urls: string[]) => void;
+  initialUrls?: string[];
 }
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -44,8 +45,17 @@ async function uploadToCloudinary(file: File): Promise<string> {
   return result.secure_url as string;
 }
 
-export function PhotoUpload({ onChange }: PhotoUploadProps) {
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
+  const [photos, setPhotos] = useState<PhotoItem[]>(() =>
+    initialUrls
+      ? initialUrls.map((url) => ({
+          id: crypto.randomUUID(),
+          localUrl: url,
+          cloudinaryUrl: url,
+          uploading: false,
+        }))
+      : [],
+  );
   const [globalError, setGlobalError] = useState<string | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);

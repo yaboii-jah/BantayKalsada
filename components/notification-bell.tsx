@@ -14,6 +14,7 @@ import {
   Check,
   Loader2,
   X,
+  Flag,
 } from "lucide-react";
 import {
   markNotificationAsRead,
@@ -41,11 +42,15 @@ const NOTIFICATION_ICONS: Record<
   FEEDBACK_ACKNOWLEDGED: MessageSquare,
   FEEDBACK_CLOSED: Check,
   FEEDBACK_NOTE_ADDED: MessageSquare,
+  REPORT_FLAGGED: Flag,
 };
 
 function getNotificationHref(notification: Notification): string {
   if (notification.type === "COMMENT_ADDED" && notification.report_id) {
     return `/reports/${notification.report_id}`;
+  }
+  if (notification.type === "REPORT_FLAGGED" && notification.report_id) {
+    return `/admin/reports/${notification.report_id}`;
   }
   if (notification.type.startsWith("FEEDBACK_") && notification.feedback_id) {
     return `/my-feedback/${notification.feedback_id}`;
@@ -280,6 +285,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                             ? "text-status-approved"
                             : notification.type === "REPORT_REJECTED"
                               ? "text-status-rejected"
+                              : notification.type === "REPORT_FLAGGED"
+                                ? "text-yellow-500"
                               : notification.type === "FEEDBACK_ACKNOWLEDGED"
                                 ? "text-status-approved"
                             : notification.type === "FEEDBACK_CLOSED"

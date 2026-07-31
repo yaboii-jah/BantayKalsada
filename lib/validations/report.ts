@@ -67,6 +67,14 @@ export const resolveReportSchema = z.object({
   resolvedImageUrls: z.array(z.string()).min(1).max(3).optional(),
 });
 
+export const reportFlagTypeEnum = z.enum(["ALREADY_FIXED", "WRONG_LOCATION"]);
+
+export const flagReportSchema = z.object({
+  reportId: z.string().uuid(),
+  flagType: reportFlagTypeEnum,
+});
+
 export type ApproveReportInput = z.infer<typeof approveReportSchema>;
 export type RejectReportInput = z.infer<typeof rejectReportSchema>;
 export type ResolveReportInput = z.infer<typeof resolveReportSchema>;
+export type FlagReportInput = z.infer<typeof flagReportSchema>;

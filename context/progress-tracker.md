@@ -418,9 +418,10 @@ change.
 ### Quick Wins (v2.0)
 - [x] **Share report via link/social** — OG meta tags on report detail pages + share button via `navigator.share()`
 - [x] **Dark mode** — `next-themes` integration with existing CSS tokens, toggle in nav
-- [x] **PWA suppo rt** — manifest, service worker, app icons, install prompt
+- [x] **PWA support** — manifest, service worker, app icons, install prompt
 - [x] **Bulk admin actions** — multi-select checkboxes on queue pages with batch approve/reject Server Action
 - [x] **Export admin reports to CSV** — `lib/csv.ts` (BOM-prefixed UTF-8, proper field escaping), `GET /api/admin/export?status=` API route (admin-only, auth + role guard, fetches all matching reports + profile join, returns CSV download), Export CSV buttons on all 4 queue pages + Export All CSV button on dashboard
+- [x] **Base map layer toggle** — Street / Terrain / Satellite selector on browse map via local dropdown (no Radix portal to avoid Leaflet conflict), `key={baseMap}` for clean TileLayer remounting, per-source `maxZoom`, `maxZoom={19}` on `MapContainer`
 
 ### Community Features (v2.1)
 - [x] **Report severity tagging** — Minor / Urgent / Emergency enum, radio group on submit form, colored badges on feed + detail pages
@@ -545,6 +546,40 @@ change.
   `.../maps/orbis/traffic/flow/raster/tile/{z}/{x}/{y}?apiVersion=2&style=light`.
   Verified that the Orbis v2 endpoint is the actively maintained one per TomTom docs
   (last edit: 2026.03.11), while the v1 page was last edited 2022.08.15.
+
+- [x] `npm run build` passes with zero errors
+
+### Citizen Can Edit Their Own Pending Report
+
+- [x] `PhotoUpload` — accepts optional `initialUrls` prop for edit mode, lazy-initializes state from existing Cloudinary URLs
+- [x] `report-form.tsx` — accepts `defaultValues?: CreateReportInput` and `reportId?: string` props; calls `updateReport` in edit mode; shows "Update Report" button with Save icon; passes initial photos/location to sub-components
+- [x] `app/actions.ts` — `updateReport` Server Action: auth check, ownership guard, PENDING status guard, conditional boundary RPC on lat/lng change, Zod validation, UPDATE query
+- [x] `app/(citizen)/my-reports/[id]/edit/page.tsx` — server component that fetches report, verifies ownership + PENDING, renders `ReportForm` with defaultValues
+- [x] `app/(citizen)/my-reports/[id]/page.tsx` — added "Edit" button in header when `status === "PENDING"`
+- [x] Created `supabase/migrations/20250730000001_add_reports_update_rls_policy.sql` — adds `"Citizens can update their own pending reports"` UPDATE policy; without it `supabase-js` UPDATE calls are silently rejected by RLS default-deny
+- [x] `context/architecture.md` — citizen section now mentions `updateReport` + edit page; access control tier updated to include `UPDATE` for citizens
+- [x] `context/data-model.md` — `reports` RLS section now includes the UPDATE policy
+- [x] `npm run build` passes with zero errors
+
+### Citizen Report Flagging (v3.0)
+
+- [x] Migration `20250730000002_create_report_flags.sql` — `report_flag_type` enum (`ALREADY_FIXED`, `WRONG_LOCATION`), `report_flags` table with `UNIQUE (report_id, user_id)`, GIST-friendly index on `report_id`, INSERT/SELECT RLS policies, `REPORT_FLAGGED` added to `notification_type`
+- [x] `types/database.types.ts` — `report_flags` table (Row/Insert/Update), `report_flag_type` enum, `REPORT_FLAGGED` notification value
+- [x] Zod — `flagReportSchema` (`reportId` uuid, `flagType` enum) in `lib/validations/report.ts`
+- [x] `lib/notifications.ts` — `REPORT_FLAGGED` in `NotificationType` union, `getMessageForType`, `getSubjectForType`
+- [x] `app/actions.ts` — `flagReport` Server Action (toggle semantics: INSERT on first flag, DELETE to unflag, UPDATE to switch type; admin in-app notifications only on INSERT)
+- [x] `components/reports/flag-report-buttons.tsx` — two toggle buttons (Already fixed / Wrong location) with loading/active/submitting/error states, fetches own flag on mount
+- [x] Public detail page — renders `FlagReportButtons` below description when logged in and not the owner
+- [x] `components/notification-bell.tsx` — Flag icon, yellow tint, routes `REPORT_FLAGGED` to `/admin/reports/[id]`
+- [x] Admin report review page — "Citizen Flags" card (type, flagger name, date, empty state)
+- [x] Admin sidebar — new "Flags" nav item with count badge (distinct flagged report_ids)
+- [x] `app/admin/flags/page.tsx` — lists reports with active flags, each linking to admin review page
+- [x] Feature spec: `context/feature-specs/27-citizen-report-flagging.md`
+- [x] Applied to remote — linked Supabase project (`gvhyajfarhdbmgkloeit`), ran migration `20250730000002_create_report_flags.sql` via `supabase db query --linked`; verified `report_flags` table, `report_flag_type` enum, `REPORT_FLAGGED` notification value, and both RLS policies exist (the `20250730000001` edit-pending RLS policy was already applied). CLI migration history table is out of sync (only `20250709000001` recorded — DB was set up manually via dashboard), so migrations are applied via `db query` rather than `migration up`.
+- [x] **Toggle bug fix (RLS)** — user reported that after flagging once, switching type / re-toggling failed (button disabled, no state change). Root cause: `report_flags` only had INSERT/SELECT RLS policies, so the `flagReport` Server Action's UPDATE (switch type) and DELETE (unflag) branches via the anon-key server client were silently blocked by RLS default-deny — same class of bug as the earlier missing `reports` UPDATE policy. Fix: migration `20250731000001_add_report_flags_update_delete_policies.sql` adds `"Citizens can update own flags"` (UPDATE, USING + WITH CHECK `auth.uid() = user_id`) and `"Citizens can delete own flags"` (DELETE, USING `auth.uid() = user_id`).
+- [x] Applied migration `20250731000001_add_report_flags_update_delete_policies.sql` to remote via `supabase db query --linked`; verified all four `report_flags` policies (INSERT/SELECT/UPDATE/DELETE) exist remotely
+- [x] **Allow both flags (dual-flag change)** — user requested both flag types be toggleable at once. Migration `20250731000002_allow_dual_report_flags.sql` drops `UNIQUE (report_id, user_id)` and adds `UNIQUE (report_id, user_id, flag_type)`; applied to remote and verified (`report_flags_unique_per_type` present, old constraint gone). `flagReport` Server Action now filters the existing-row lookup by `flag_type` and only INSERT/DELETE (UPDATE branch removed; notification on every INSERT per user decision). `FlagReportButtons` tracks `activeFlags: FlagType[]`, fetches with a multi-row select (dropped `.maybeSingle()`), and each button toggles independently (only self-disables while pending). Admin pages needed no changes (review card lists rows per flag; `/admin/flags` already dedupes types). Docs updated: `data-model.md` (constraint + invariant), feature spec `27` (semantics/states/edge cases/files), `architecture.md` note.
+- [x] `npm run build` passes with zero errors
 
 ### Soft Radial Glow Background (User-Side Pages)
 - [x] **Radial glow background** — Added `bg-radial-glow` utility to `app/globals.css`

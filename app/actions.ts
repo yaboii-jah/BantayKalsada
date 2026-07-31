@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
-import { barangayEnum, createReportSchema, type CreateReportInput } from "@/lib/validations/report";
+import { barangayEnum, createReportSchema, flagReportSchema, type CreateReportInput } from "@/lib/validations/report";
 import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
 import {
   updateProfileSettingsSchema,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/validations/profile";
 import { normalizePhoneNumber, sendSMS } from "@/lib/sms";
 import { sendPushNotification } from "@/lib/push";
+import { createNotification, getMessageForType } from "@/lib/notifications";
 
 export interface ActionResponse {
   success: boolean;
@@ -199,6 +200,85 @@ export async function submitReport(
     }
 
     return { success: true, data: { id: report.id } };
+  } catch {
+    return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
+export async function updateReport(
+  reportId: string,
+  formData: CreateReportInput,
+): Promise<ActionResponse> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in to update a report" };
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from("reports")
+      .select("status, submitted_by_id, latitude, longitude")
+      .eq("id", reportId)
+      .single();
+
+    if (fetchError || !existing) {
+      return { success: false, error: "Report not found" };
+    }
+
+    if (existing.submitted_by_id !== user.id) {
+      return { success: false, error: "You can only edit your own reports" };
+    }
+
+    if (existing.status !== "PENDING") {
+      return { success: false, error: "Only pending reports can be edited" };
+    }
+
+    const latChanged = existing.latitude !== formData.latitude;
+    const lngChanged = existing.longitude !== formData.longitude;
+    if (latChanged || lngChanged) {
+      const { data: withinBoundary } = await supabase.rpc("is_within_boundary", {
+        lat: formData.latitude,
+        lng: formData.longitude,
+        municipality_name: "Taytay",
+      });
+      if (!withinBoundary) {
+        return {
+          success: false,
+          error: "Reports are accepted for Taytay, Rizal only. Please pin a location within Taytay.",
+        };
+      }
+    }
+
+    const parsed = createReportSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
+    const { error: updateError } = await supabase
+      .from("reports")
+      .update({
+        title: parsed.data.title,
+        description: parsed.data.description,
+        category: parsed.data.category,
+        barangay: parsed.data.barangay,
+        severity: parsed.data.severity,
+        photo_urls: parsed.data.photo_urls,
+        latitude: parsed.data.latitude,
+        longitude: parsed.data.longitude,
+        location_label: parsed.data.location_label ?? null,
+      })
+      .eq("id", reportId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to update report. Please try again." };
+    }
+
+    return { success: true };
   } catch {
     return { success: false, error: "An unexpected error occurred. Please try again." };
   }
@@ -529,5 +609,98 @@ export async function savePushSubscription(
   } catch (err) {
     console.error("savePushSubscription error:", err);
     return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function flagReport(
+  reportId: string,
+  flagType: "ALREADY_FIXED" | "WRONG_LOCATION",
+): Promise<{ success: boolean; error?: string; active?: boolean }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "You must be signed in to flag a report" };
+    }
+
+    const parsed = flagReportSchema.safeParse({ reportId, flagType });
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues.map((e) => e.message).join(", ") };
+    }
+
+    const { data: report } = await supabase
+      .from("reports")
+      .select("title, status, submitted_by_id")
+      .eq("id", reportId)
+      .single();
+
+    if (!report) {
+      return { success: false, error: "Report not found" };
+    }
+
+    if (report.submitted_by_id === user.id) {
+      return { success: false, error: "You cannot flag your own report" };
+    }
+
+    if (report.status !== "APPROVED" && report.status !== "RESOLVED") {
+      return { success: false, error: "This report cannot be flagged" };
+    }
+
+    const { data: existing } = await supabase
+      .from("report_flags")
+      .select("id")
+      .eq("report_id", reportId)
+      .eq("user_id", user.id)
+      .eq("flag_type", parsed.data.flagType)
+      .maybeSingle();
+
+    if (existing) {
+      const { error: deleteError } = await supabase
+        .from("report_flags")
+        .delete()
+        .eq("id", existing.id);
+      if (deleteError) {
+        return { success: false, error: "Failed to remove flag" };
+      }
+      return { success: true, active: false };
+    }
+
+    const { error: insertError } = await supabase
+      .from("report_flags")
+      .insert({
+        report_id: reportId,
+        user_id: user.id,
+        flag_type: parsed.data.flagType,
+      });
+
+    if (insertError) {
+      return { success: false, error: "Failed to flag report. Please try again." };
+    }
+
+    const adminClient = createAdminClient();
+    const { data: admins } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("role", "ADMIN");
+
+    const label = parsed.data.flagType === "ALREADY_FIXED" ? "already fixed" : "wrong location";
+    const message = `Report "${report.title}" was flagged as ${label}.`;
+
+    if (admins) {
+      for (const admin of admins) {
+        await createNotification({
+          userId: admin.id,
+          reportId,
+          type: "REPORT_FLAGGED",
+          message,
+        });
+      }
+    }
+
+    return { success: true, active: true };
+  } catch (err) {
+    console.error("flagReport error:", err);
+    return { success: false, error: "An unexpected error occurred. Please try again." };
   }
 }

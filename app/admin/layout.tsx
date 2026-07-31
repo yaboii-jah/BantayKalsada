@@ -33,10 +33,19 @@ export default async function AdminLayout({
     .select("*", { count: "exact", head: true })
     .eq("status", "PENDING");
 
+  const { data: flaggedReports } = await adminClient
+    .from("report_flags")
+    .select("report_id");
+
+  const flagsCount = flaggedReports
+    ? new Set(flaggedReports.map((f) => f.report_id)).size
+    : 0;
+
   return (
     <div className="flex min-h-screen">
       <AdminSidebar
         pendingCount={pendingCount ?? 0}
+        flagsCount={flagsCount}
         adminName={profile.full_name}
       />
       <main className="flex-1 overflow-y-auto bg-muted p-6">{children}</main>

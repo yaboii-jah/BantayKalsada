@@ -5,8 +5,13 @@ import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { AdminReportActions } from "./admin-report-actions";
 import { formatReportDate } from "@/lib/date-utils";
-import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck } from "lucide-react";
+import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const flagLabels: Record<string, string> = {
+  ALREADY_FIXED: "Already fixed",
+  WRONG_LOCATION: "Wrong location",
+};
 
 const severityLabels: Record<string, string> = {
   MINOR: "Minor",
@@ -69,6 +74,23 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
         .eq("id", report.reviewed_by_id)
         .single()
     : null;
+
+  const { data: flags } = await adminClient
+    .from("report_flags")
+    .select("id, flag_type, created_at, user_id")
+    .eq("report_id", report.id)
+    .order("created_at", { ascending: true });
+
+  const flaggerIds = [...new Set((flags ?? []).map((f) => f.user_id))];
+  const { data: flaggerProfiles } = flaggerIds.length
+    ? await adminClient
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", flaggerIds)
+    : { data: null };
+
+  const flaggerName = (userId: string): string =>
+    flaggerProfiles?.find((p) => p.id === userId)?.full_name ?? "Unknown";
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -175,6 +197,40 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
               </>
             )}
           </div>
+        )}
+      </div>
+
+      <div className="mb-6 rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Flag className="h-4 w-4 text-yellow-600" />
+          Citizen Flags
+        </h2>
+        {flags && flags.length > 0 ? (
+          <ul className="space-y-2">
+            {flags.map((flag) => (
+              <li key={flag.id} className="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">
+                    {flagLabels[flag.flag_type] ?? flag.flag_type}
+                  </span>
+                  <span className="text-muted-foreground">
+                    by {flaggerName(flag.user_id)}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(flag.created_at).toLocaleDateString("fil-PH", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No flags from citizens on this report.
+          </p>
         )}
       </div>
 
