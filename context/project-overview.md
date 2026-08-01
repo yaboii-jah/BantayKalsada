@@ -89,6 +89,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - SMS notifications: citizens can opt in with a Philippine mobile number on the Account Settings page and receive SMS alerts when their reports are approved, rejected, or resolved. Powered by PhilSMS API (`/api/v3/sms/send`), with configurable base URL via `PHILSMS_API_BASE` env var (default `https://app.philsms.com`). Includes a "Send Test SMS" button on the account page and an admin-only diagnostic endpoint (`GET /api/sms/diagnose`) that probes both old and new PhilSMS API domains. Retry up to 3 times with 1s delay; failures logged but never block the status transition.
 - Export admin reports to CSV: server-generated CSV download from any admin queue page and the dashboard. Admin-only `GET /api/admin/export?status=` endpoint returns a BOM-prefixed UTF-8 CSV with full report details and submitter info.
 - Push notifications: web push via VAPID keys, `web-push` server library, and `PushSubscriptionManager` component. Citizens can enable/disable on Account Settings. Notifications sent on report approval, rejection, resolution, feedback notes, and new comments. Supabase Realtime channel (`postgres_changes` on `notifications` table) provides live unread count updates on the notification bell badge.
+- Public REST API: read-only JSON API (`GET /api/reports`, `GET /api/reports/[id]`) exposing approved/resolved reports to third-party consumers. Anonymous access gated by RLS + a curated field whitelist; DB-backed rate limiting (120 req/hour + 1,000/day per IP hash via `api_request_log`); edge caching (`s-maxage=60`) and CORS enabled. Contract is designed to stay additive for the multi-municipality roadmap (`?municipality=` param/field later).
 
 ### Out of Scope
 
@@ -99,7 +100,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Integration with government systems such as MMDA, DPWH, or LGU APIs.
 - AI-assisted moderation or duplicate detection.
 - Multi-role or region-scoped administrator accounts.
-- Multi-municipality or nationwide deployment — currently scoped to Taytay, Rizal only.
+- Multi-municipality or nationwide deployment — currently scoped to Taytay, Rizal only. (See the **Future Plan** section — this is the stated long-term direction, phased and gated, not yet In Scope.)
 
 ## Success Criteria
 
@@ -110,3 +111,43 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 5. Any visitor without an account can browse the public feed in grid or map view, search by keyword, filter by category, barangay, and status, and view the full details of an approved report including its photo gallery.
 6. No report submitted by a citizen is visible on the public feed until an administrator explicitly approves it.
 7. A citizen who submits more than 5 reports within a 24-hour window is blocked from submitting additional reports until the window resets.
+
+## Future Plan
+
+### Vision
+
+Bantay Kalsada grows from a Taytay-only app into a multi-municipality civic platform for the Province of Rizal: every municipality gets its own report feed and moderation dashboard, and a province-wide Rizal dashboard aggregates across all of them. Adoption is driven through social media promotion and direct outreach to LGUs.
+
+### Deployment & Tenancy Model (Decision)
+
+- **Single multi-tenant app** (one Next.js app, one Supabase database) — NOT one instance per municipality. A Rizal-wide dashboard requires unified data; N separate databases/instances make aggregation genuinely painful.
+- Each municipality = a `municipality` dimension on `reports` + subdomain/path routing + scoped admin roles. The provincial dashboard is a scope-less query.
+
+### Phased Roadmap
+
+| Phase | Scope | Gate to advance |
+| ----- | ----- | --------------- |
+| 1. Prove Taytay (now) | Ship Taytay-scoped Public REST API; drive real users + consumers via socials | Sustained real usage: reports submitted, moderated <48h, resolved |
+| 2. Retain in Taytay | Offline submission, geographic/barangay search, admin report editing, activity log/audit trail, report lifecycle timeline | Measurable repeat usage + a real (non-demo) moderation queue |
+| 3. Pilot municipalities | Add `municipality` to `reports` (backfill Taytay); load all Rizal municipality polygons; rework `barangay` enum → per-municipality reference table; municipality-aware boundary enforcement; add `MUNICIPALITY_ADMIN` + `PROVINCE_ADMIN` roles; onboard 1–2 pilot municipalities (e.g. Binangonan/Angono/Cainta) | Pilot municipality actively moderating its own feed |
+| 4. Province-wide | Onboard all 13 Rizal municipalities; provincial Rizal dashboard; then government integrations (DPWH/MMDA/LGU APIs) as a separate track | Funding/sustainability secured |
+
+### Data-Model Seams for Multi-Municipality (cheap now, expensive later)
+
+- `municipality_boundaries` is already a multi-row table — the key enabler, keep it that way.
+- `reports.barangay` is a Taytay-only Postgres enum — will become a per-municipality reference table with `reports.barangay` as text/FK.
+- Boundary enforcement (`is_within_boundary`, `trg_reports_location_boundary`) is Taytay-scoped — becomes municipality-aware.
+- Public RLS read is unscoped — works for the province feed; per-municipality feeds scope by the future `municipality` column.
+- `profiles` should be shaped so a future `municipality_id` column for scoped admins slots in cleanly.
+- The Public REST API contract must stay additive: add `?municipality=` and a `municipality` response field later without breaking consumers; a `GET /api/municipalities` endpoint is a follow-up.
+
+### Sustainability (Non-Code Constraint)
+
+Free tiers are a proof-of-concept runway, not a province-scale foundation. Before Phase 4, secure a revenue path — LGU funding, a per-municipality SaaS tier, or a DPWH/LGU digitization grant — to cover: Vercel Pro (bandwidth/invocations, subdomain routing), Supabase paid tier (DB size), Cloudinary (province-wide photo volume), and PhilSMS (per-message SMS cost).
+
+### Out of Scope Until These Decisions
+
+- Multi-municipality deployment, region-scoped admin roles, and government-system integration are currently **Out of Scope** (see Scope section). Each becomes In Scope only via an explicit scope decision when its phase starts.
+
+
+## Future Plan

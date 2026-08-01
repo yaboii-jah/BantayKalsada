@@ -23,9 +23,26 @@ change.
 
 ## Current Goal
 
-- SMS notifications via PhilSMS — complete and working.
+- Public REST API (Ecosystem v3.0+) — complete and verified.
 
 ## Completed
+
+### Public REST API (Ecosystem v3.0+)
+
+- [x] Migration `20250801000001_create_api_request_log.sql` — `api_request_log(id, ip_hash, created_at)` + index `(ip_hash, created_at)`; RLS enabled with no policies (service-role only access path)
+- [x] Applied to remote via `supabase db query --linked`; table + index + RLS verified
+- [x] `types/database.types.ts` regenerated via `supabase gen types typescript --linked`
+- [x] `lib/validations/api.ts` — `listReportsQuerySchema` (category/severity/status/barangay/q/page/page_size, `z.coerce` ints, empty strings dropped), `reportParamsSchema` (uuid), `publicReportSchema` + response types
+- [x] `lib/api-rate-limit.ts` — `hashIp` (SHA-256 + pepper from `API_RATE_LIMIT_SECRET`), `clientIp`, `enforceApiRateLimit` (120/hr + 1,000/day sliding window, 1% prune chance, accurate `Retry-After`)
+- [x] `lib/api-reports.ts` — `serializePublicReport` (whitelist + `getDisplayUrl` + public-status guard), `fetchPublicReports` (single round-trip count+range), `fetchPublicReportById`
+- [x] `app/api/reports/route.ts` — list handler (validate → rate limit → service → `{ success, data }` + cache/CORS headers)
+- [x] `app/api/reports/[id]/route.ts` — single handler (`await params` in Next 16), `400` invalid uuid / `404` not found
+- [x] `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` + `Access-Control-Allow-Origin: *`
+- [x] Feature spec `context/feature-specs/28-public-rest-api.md` written
+- [x] Context updated — `project-overview.md` (In Scope), `architecture.md` (boundary + storage model)
+- [x] `npm run build` passes with zero errors; typecheck clean
+- [x] Smoke tests passed — list, all filters, pagination, `q` search (sanitized), `400` invalid params, `404`, rate limit 429 with `Retry-After`, CORS/cache headers, hashed-IP storage verified
+- [x] Service-role deviation documented: rate-limit bookkeeping uses the service-role client because the table has no user association and zero RLS policies (documented in feature spec + architecture.md)
 
 ### Resolution Details (Phase B)*
 
@@ -501,13 +518,31 @@ change.
 
 ### Ecosystem (v3.0+)
 - **LGU / DPWH dashboard** — region-scoped admin roles with filtered view
-- **Public REST API** — expose approved reports to third-party consumers
+- [x] **Public REST API** — expose approved reports to third-party consumers (complete, see "Public REST API (Ecosystem v3.0+)" above)
 - **SMS multi-provider** — add fallback SMS gateway option
 - **Multi-language support** — Filipino + English + Cebuano/Ilocano
 
 ## Open Questions
 
 - None.
+
+## Architecture Decisions
+
+### Multi-Municipality Future Direction (Recorded, Not In Scope)
+
+- **Decision:** Bantay Kalsada is the seed of a province-wide, multi-municipality civic platform for
+  Rizal. Single **multi-tenant app** (one Next.js app, one Supabase DB) — not one instance per
+  municipality. Municipality = a `municipality` dimension on `reports` + routing + scoped roles.
+- **Recorded as a roadmap only** — `context/project-overview.md` now has a `## Future Plan` section
+  with a 4-phase plan (Prove Taytay → Retain → Pilot municipalities → Province-wide) and gates.
+- **Not building any multi-tenancy now.** Multi-municipality deployment, region-scoped roles, and
+  government integration stay **Out of Scope** until an explicit scope decision starts a phase.
+- **Current-phase implications (cheap now, expensive later):** keep the Public REST API contract
+  additive (`?municipality=` / `municipality` field later); keep `municipality_boundaries` multi-row;
+  shape `profiles` so a future `municipality_id` slots in cleanly; keep RLS migration-friendly.
+- **Sustainability constraint:** free tiers (Vercel Hobby, Supabase free, Cloudinary credits,
+  PhilSMS per-message cost) are a PoC runway, not a province-scale foundation — a revenue path must
+  be secured before Phase 4.
 
 ## Architecture Decisions
 
