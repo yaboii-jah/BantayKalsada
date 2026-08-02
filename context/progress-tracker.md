@@ -24,6 +24,7 @@ change.
 ## Current Goal
 
 - Offline report submission (Mobile & Notifications v2.2) — complete and verified.
+- Offline report editing + offline map preload (Offline Experience v2.3) — complete and verified.
 
 ## Completed
 
@@ -41,6 +42,18 @@ change.
 - [x] Context updated — `project-overview.md` (In Scope), `architecture.md` (citizen boundary), `app-codebase-context.md` (offline data flow)
 - [x] `npm run build` passes with zero errors; ESLint zero errors on touched files
 - [x] No server, schema, migration, or dependency changes — `submitReport` remains the only write path
+
+### Offline Report Editing & Offline Map (Offline Experience v2.3)
+
+- [x] `lib/taytay-boundary.ts` — `TAYTAY_POLYGON` (full ~180-point list) + `isPointInTaytay()` ray-casting point-in-polygon helper; single source of truth
+- [x] `components/maps/taytay-boundary.tsx` — re-imports `TAYTAY_POLYGON` from `lib/taytay-boundary` (removes duplicated array)
+- [x] `lib/offline-queue.ts` — added `overwriteQueuedReport(id, updated)` (full replace; fixes queued-draft editing where `updateQueuedReport` only handled `lastError`)
+- [x] `components/reports/photo-upload.tsx` — added `initialUrls`/`initialFiles` seeds (used to repopulate both Cloudinary URLs and local-blob `offlinePending` files when editing a draft)
+- [x] `components/reports/report-form.tsx` — new props `draftId`, `draftMeta`, `draftInitialPhotoFiles`; `isDraft` mode: "Save draft only" button that calls `overwriteQueuedReport` (clears `lastError`); raw submit gates on offline schema + photo count + `isPointInTaytay`; photo seed handled for drafts
+- [x] `components/offline/taytay-tiles-preloader.tsx` — warms OSM tiles at zoom 15–16 around Taytay center (14.5587, 121.136), radius 2 tiles, into the `static-image-assets` SW cache (best-effort; mounted in `ReportForm`)
+- [x] `components/offline/offline-reports-panel.tsx` — "Edit" link per saved draft → `/offline-edit/[draftId]`
+- [x] `app/(citizen)/offline-edit/[draftId]/page.tsx` — client route loading the draft from IndexedDB and rendering `ReportForm` in edit-draft mode
+- [x] `npm run build` passes with zero errors (route `/offline-edit/[draftId]` compiles); ESLint zero errors on touched files
 
 ### Public REST API (Ecosystem v3.0+)
 

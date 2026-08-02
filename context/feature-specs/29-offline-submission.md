@@ -160,6 +160,20 @@ Submit while navigator.onLine === true but the network drops mid-call
 | ESLint zero errors on touched files | ✅ |
 | Docs (spec, project-overview, architecture, app-codebase-context, progress-tracker) | ✅ |
 
+### Offline Experience v2.3 — draft editing + offline map
+
+| Item | Status |
+|------|--------|
+| `lib/taytay-boundary.ts` — polygon + `isPointInTaytay`, single source of truth | ✅ |
+| `components/maps/taytay-boundary.tsx` — re-imports polygon | ✅ |
+| `lib/offline-queue.ts` — `overwriteQueuedReport(id, updated)` full replace | ✅ |
+| `components/reports/photo-upload.tsx` — `initialUrls`/`initialFiles` draft seeds | ✅ |
+| `components/reports/report-form.tsx` — `draftId`/`draftMeta`/`draftInitialPhotoFiles`; `isDraft` "Save draft only" | ✅ |
+| `components/offline/offline-reports-panel.tsx` — Edit link per draft | ✅ |
+| `app/(citizen)/offline-edit/[draftId]/page.tsx` — client draft-edit route | ✅ |
+| `components/offline/taytay-tiles-preloader.tsx` — warm zoom 15–16 OSM tiles into SW cache | ✅ |
+| Boundary gate (offline + draft submit) rejects pins outside Taytay | ✅ |
+
 ## Check When Done
 
 - [x] Offline: full form fills, photos preview locally, submit queues to IndexedDB
@@ -176,6 +190,7 @@ Submit while navigator.onLine === true but the network drops mid-call
 
 - No Background Sync SW `sync` event — the queue drains on page load, `online`, and
   `visibilitychange`, so the tab must be open to auto-submit.
-- Map tiles do not load offline (network-only per SW config); pinning still works on a
-  blank canvas.
+- Map tiles load offline only if pre-warmed by `taytay-tiles-preloader` (zoom 15–16
+  around Taytay center) while online; unvisited areas still show a blank canvas, but
+  the boundary polygon + `isPointInTaytay` gate still apply.
 - Queue is browser-local — clearing site data loses pending drafts.

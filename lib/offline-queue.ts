@@ -110,6 +110,20 @@ export async function updateQueuedReport(
   });
 }
 
+export async function overwriteQueuedReport(
+  id: string,
+  updated: QueuedReport,
+): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put({ ...updated, id });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("Failed to update offline report"));
+    tx.onabort = () => reject(tx.error ?? new Error("Failed to update offline report"));
+  });
+}
+
 export async function removeQueuedReport(id: string): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {

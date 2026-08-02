@@ -17,24 +17,31 @@ interface PhotoItem {
 interface PhotoUploadProps {
   onChange: (urls: string[], pendingFiles: File[]) => void;
   initialUrls?: string[];
+  initialFiles?: File[];
 }
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_PHOTOS = 3;
 
-export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
-  const [photos, setPhotos] = useState<PhotoItem[]>(() =>
-    initialUrls
-      ? initialUrls.map((url) => ({
-          id: crypto.randomUUID(),
-          localUrl: url,
-          cloudinaryUrl: url,
-          uploading: false,
-          offlinePending: false,
-        }))
-      : [],
-  );
+export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUploadProps) {
+  const [photos, setPhotos] = useState<PhotoItem[]>(() => {
+    const fromUrls = (initialUrls ?? []).map((url) => ({
+      id: crypto.randomUUID(),
+      localUrl: url,
+      cloudinaryUrl: url,
+      uploading: false,
+      offlinePending: false,
+    }));
+    const fromFiles = (initialFiles ?? []).map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      localUrl: URL.createObjectURL(file),
+      uploading: false,
+      offlinePending: true,
+    }));
+    return [...fromFiles, ...fromUrls];
+  });
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(() =>
     typeof navigator !== "undefined" && !navigator.onLine,

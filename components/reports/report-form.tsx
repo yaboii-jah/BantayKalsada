@@ -9,7 +9,8 @@ import { Send, Loader2, Save, WifiOff, CheckCircle } from "lucide-react";
 
 import { createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
 import { submitReport, updateReport } from "@/app/actions";
-import { addQueuedReport } from "@/lib/offline-queue";
+import { addQueuedReport, overwriteQueuedReport } from "@/lib/offline-queue";
+import { isPointInTaytay } from "@/lib/taytay-boundary";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { PhotoUpload } from "@/components/reports/photo-upload";
 import { LocationPickerWrapper } from "@/components/maps/location-picker-wrapper";
 import { InlineSelect } from "@/components/ui/inline-select";
+import { TaytayTilesPreloader } from "@/components/offline/taytay-tiles-preloader";
 
 import { cn } from "@/lib/utils";
 
@@ -60,9 +62,12 @@ function isNetworkError(err: unknown): boolean {
 interface ReportFormProps {
   defaultValues?: CreateReportInput;
   reportId?: string;
+  draftId?: string;
+  draftMeta?: { userId: string; queuedAt: string };
+  draftInitialPhotoFiles?: File[];
 }
 
-export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
+export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftInitialPhotoFiles }: ReportFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -73,6 +78,7 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
   const [queuedOffline, setQueuedOffline] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const isEdit = !!defaultValues && !!reportId;
+  const isDraft = !!defaultValues && !!draftId;
 
   const {
     register,
@@ -164,6 +170,26 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
     setResetKey((k) => k + 1);
   }, [reset]);
 
+  const saveDraft = useCallback(async (data: CreateReportInput) => {
+    if (!draftId || !draftMeta) return;
+    await overwriteQueuedReport(draftId, {
+      id: draftId,
+      userId: draftMeta.userId,
+      queuedAt: draftMeta.queuedAt,
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      barangay: data.barangay,
+      severity: data.severity,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      location_label: data.location_label,
+      photoUrls: data.photo_urls.filter((url) => /^https?:\/\//.test(url)),
+      photoFiles: pendingFiles,
+      lastError: undefined,
+    });
+  }, [draftId, draftMeta, pendingFiles]);
+
   const onSubmit = useCallback(
     (data: CreateReportInput) => {
       setSubmitError(null);
@@ -221,6 +247,35 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
       setSubmitError(null);
       setQueuedOffline(false);
 
+      if (isDraft) {
+        const values = getValues();
+        const totalPhotos = values.photo_urls.length + pendingFiles.length;
+        if (totalPhotos < 1 || totalPhotos > 3) {
+          setSubmitError("Please add between 1 and 3 photos");
+          return;
+        }
+        const parsed = offlineReportSchema.safeParse(values);
+        if (!parsed.success) {
+          const first = parsed.error.issues[0];
+          if (first && typeof first.path[0] === "string") {
+            setError(first.path[0] as FieldPath<CreateReportInput>, {
+              message: first.message,
+            });
+          }
+          return;
+        }
+        if (!isPointInTaytay(parsed.data.latitude, parsed.data.longitude)) {
+          setSubmitError(
+            "Reports accepted for Taytay, Rizal only. Pin a location within Taytay.",
+          );
+          return;
+        }
+        void saveDraft({ ...parsed.data, photo_urls: values.photo_urls });
+        toast.success("Offline draft updated.");
+        router.push("/my-reports");
+        return;
+      }
+
       if (!navigator.onLine) {
         if (isEdit) {
           setSubmitError(
@@ -247,6 +302,13 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
           return;
         }
 
+        if (!isPointInTaytay(parsed.data.latitude, parsed.data.longitude)) {
+          setSubmitError(
+            "Reports accepted for Taytay, Rizal only. Pin a location within Taytay.",
+          );
+          return;
+        }
+
         void queueOfflineReport({ ...parsed.data, photo_urls: values.photo_urls });
         toast.success(
           "You're offline — your report was saved and will be submitted automatically when you're back online.",
@@ -258,11 +320,12 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
 
       void handleSubmit(onSubmit)(e);
     },
-    [getValues, pendingFiles, queueOfflineReport, clearForm, setError, handleSubmit, onSubmit, isEdit],
+    [getValues, pendingFiles, queueOfflineReport, clearForm, setError, handleSubmit, onSubmit, isEdit, isDraft, saveDraft, router],
   );
 
   return (
     <form onSubmit={handleRawSubmit} className="space-y-6">
+      <TaytayTilesPreloader />
       {isOffline && !isEdit && (
         <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
           <WifiOff className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -369,7 +432,8 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
         <PhotoUpload
           key={resetKey}
           onChange={onPhotosChange}
-          initialUrls={isEdit ? defaultValues!.photo_urls : undefined}
+          initialUrls={isEdit || isDraft ? defaultValues!.photo_urls : undefined}
+          initialFiles={isDraft ? draftInitialPhotoFiles : undefined}
         />
         {errors.photo_urls && (
           <p className="text-xs text-destructive">{errors.photo_urls.message}</p>

@@ -428,9 +428,24 @@ OfflineQueueProcessor ((citizen)/layout.tsx, client)
 OfflineReportsPanel (/my-reports, client)
   → lists drafts for the current user: title, queued date, photo count, lastError
   → Retry → submitQueuedReport + router.refresh(); Discard → removeQueuedReport
+  → Edit → /offline-edit/[draftId] (client route seeding ReportForm in draft mode)
+
+Offline Report Editing + Offline Map (v2.3)
+  ReportForm (draft mode: draftId + draftMeta props)
+    → "Save draft only" → overwriteQueuedReport(id, updated) (clears lastError); never hits a server
+  offline-edit/[draftId]/page.tsx (client)
+    → loads draft from IndexedDB via getQueuedReports (matches draftId + userId)
+    → seeds ReportForm defaultValues + PhotoUpload initialUrls/initialFiles
+  lib/taytay-boundary.ts (client-safe)
+    → TAYTAY_POLYGON (~180 lat/lng points) + isPointInTaytay(lat, lng) ray-casting helper
+    → single source of truth; taytay-boundary.tsx imports from it
+    → boundary gate on offline + draft submit: pins outside Taytay are rejected client-side
+  TaytayTilesPreloader (mounted in ReportForm, client)
+    → warms OSM tiles zoom 15–16 around (14.5587, 121.136) radius 2 into the "static-image-assets" SW cache
+    → best-effort; makes pinning usable offline in the pre-warmed area
 ```
 
-**Key decisions:** IndexedDB over localStorage (photo blobs up to 10 MB each; base64 would blow the quota and block the main thread). Server Action is the only write path — no duplicated validation. Drafts are user-scoped so a different login on a shared device can't submit someone else's draft. No offline redirect (RSC navigation is unreliable offline). No SW `sync` event in MVP — the queue drains on load/online/visibility, so the tab must be open to auto-submit.
+**Key decisions:** IndexedDB over localStorage (photo blobs up to 10 MB each; base64 would blow the quota and block the main thread). Server Action is the only write path — no duplicated validation. Drafts are user-scoped so a different login on a shared device can't submit someone else's draft. No offline redirect (RSC navigation is unreliable offline). No SW `sync` event in MVP — the queue drains on load/online/visibility, so the tab must be open to auto-submit. Boundary check is duplicated client-side only to give the user immediate feedback; the server remains the source of truth.
 
 ---
 

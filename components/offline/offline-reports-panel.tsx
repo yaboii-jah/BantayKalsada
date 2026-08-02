@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { CloudOff, RefreshCw, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { CloudOff, RefreshCw, Trash2, AlertTriangle, Loader2, Pencil } from "lucide-react";
 import {
   getQueuedReportsForUser,
   removeQueuedReport,
@@ -118,6 +119,16 @@ export function OfflineReportsPanel() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  asChild
+                >
+                  <Link href={`/offline-edit/${report.id}`}>
+                    <Pencil className="mr-1.5 size-3.5" />
+                    Edit
+                  </Link>
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
