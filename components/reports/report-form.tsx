@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,7 @@ import { createReportSchema, reportSeverityEnum, type CreateReportInput } from "
 import { submitReport, updateReport } from "@/app/actions";
 import { addQueuedReport, overwriteQueuedReport } from "@/lib/offline-queue";
 import { isPointInTaytay } from "@/lib/taytay-boundary";
+import { useOnline } from "@/lib/use-online";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
@@ -72,9 +73,8 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [isOffline, setIsOffline] = useState(() =>
-    typeof navigator !== "undefined" && !navigator.onLine,
-  );
+  const { isOnline } = useOnline();
+  const isOffline = !isOnline;
   const [queuedOffline, setQueuedOffline] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [isSubmittingOffline, setIsSubmittingOffline] = useState(false);
@@ -107,17 +107,6 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
 
   const selectedCategory = watch("category");
   const selectedBarangay = watch("barangay");
-
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
 
   const onPhotosChange = useCallback(
     (urls: string[], files: File[]) => {
@@ -277,7 +266,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
         return;
       }
 
-      if (!navigator.onLine) {
+      if (!isOnline) {
         if (isEdit) {
           setSubmitError(
             "You're offline. Connect to the internet to edit your report.",
@@ -326,7 +315,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
 
       void handleSubmit(onSubmit)(e);
     },
-    [getValues, pendingFiles, queueOfflineReport, clearForm, setError, handleSubmit, onSubmit, isEdit, isDraft, saveDraft, router],
+    [getValues, pendingFiles, queueOfflineReport, clearForm, setError, handleSubmit, onSubmit, isEdit, isDraft, saveDraft, router, isOnline],
   );
 
   return (
@@ -451,7 +440,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
         <LocationPickerWrapper
           key={resetKey}
           value={
-            isEdit
+            isEdit || isDraft
               ? { lat: defaultValues!.latitude, lng: defaultValues!.longitude, label: defaultValues!.location_label }
               : null
           }

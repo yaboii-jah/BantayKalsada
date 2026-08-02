@@ -23,9 +23,10 @@ change.
 
 ## Current Goal
 
-- Offline report submission (Mobile & Notifications v2.2) — complete and verified.
+- Offline submission (Mobile & Notifications v2.2) — complete and verified.
 - Offline report editing + offline map preload (Offline Experience v2.3) — complete and verified.
 - Offline upload UX + reliability (Offline Experience v2.4) — complete and verified.
+- Offline connectivity detection + retained photos (Offline Experience v2.5) — complete and verified.
 
 ## Completed
 
@@ -64,6 +65,15 @@ change.
 - [x] `components/reports/report-form.tsx` — offline submit now awaits the IndexedDB write with a loading state; submit button shows a spinner + "Saving…" and is disabled until the draft is queued (previously fire-and-forget `void queueOfflineReport`)
 - [x] `components/offline/offline-reports-panel.tsx` — subscribes to the processing store so each in-flight report shows an "Uploading…" spinner and its Edit/Retry/Discard buttons are disabled; refreshes drafts on `online` + `visibilitychange` so reports added/removed by the processor appear/disappear correctly
 - [x] `lib/offline-submit.ts` — network `TypeError`/`fetch|network|load failed` errors now map to a friendly "You're offline — this report will auto-submit when you're back online." instead of raw "Failed to fetch"
+- [x] `npm run build` passes with zero errors; ESLint zero errors on touched files
+
+### Offline Detection & Reliability (Offline Experience v2.5)
+
+- [x] `app/api/healthz/route.ts` — lightweight `204` connectivity probe endpoint (no auth, no rate limit, SW-cacheable)
+- [x] `lib/use-online.ts` — `useOnline()` hook: combines `navigator.onLine` + a real `/api/healthz` probe so "offline" is detected even when DevTools SW-offline keeps `navigator.onLine` true (the root cause of PC "failed to fetch"/"submit does nothing")
+- [x] `components/reports/photo-upload.tsx` — replaced local `isOffline` with `useOnline`; on a Cloudinary network error the file is kept as a local `offlinePending` blob (instead of a terminal "failed to fetch" error) and reported via `onChange` so it uploads later
+- [x] `components/reports/report-form.tsx` — offline gate now uses `useOnline().isOnline`; photo files that failed due to network are retained and included when queueing offline
+- [x] `components/reports/report-form.tsx` — `LocationPickerWrapper` seeds `value` for `isEdit` OR `isDraft`, so a saved draft shows its pinned location (fixes "offline report has no location unless edited")
 - [x] `npm run build` passes with zero errors; ESLint zero errors on touched files
 
 ### Public REST API (Ecosystem v3.0+)

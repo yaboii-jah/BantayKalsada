@@ -185,6 +185,15 @@ Submit while navigator.onLine === true but the network drops mid-call
 | `offline-reports-panel.tsx` — per-item "Uploading…" + disabled buttons; refresh on online/visibility | ✅ |
 | `lib/offline-submit.ts` — friendly offline message for network errors | ✅ |
 
+### Offline Experience v2.5 — connectivity detection & retained photos
+
+| Item | Status |
+|------|--------|
+| `app/api/healthz/route.ts` — lightweight `204` probe endpoint | ✅ |
+| `lib/use-online.ts` — `useOnline()` combining `navigator.onLine` + real `/api/healthz` probe | ✅ |
+| `photo-upload.tsx` — Cloudinary network failures keep file as local `offlinePending` blob (no "failed to fetch") | ✅ |
+| `report-form.tsx` — offline gate uses detected `isOnline`; LocationPicker seeds value for edit AND draft | ✅ |
+
 ## Check When Done
 
 - [x] Offline: full form fills, photos preview locally, submit queues to IndexedDB
@@ -204,4 +213,8 @@ Submit while navigator.onLine === true but the network drops mid-call
 - Map tiles load offline only if pre-warmed by `taytay-tiles-preloader` (zoom 15–16
   around Taytay center) while online; unvisited areas still show a blank canvas, but
   the boundary polygon + `isPointInTaytay` gate still apply.
+- Offline state is detected via `useOnline()` (combined `navigator.onLine` + `/api/healthz`
+  probe) because DevTools "Service Workers → Offline" keeps `navigator.onLine` true while
+  killing requests. Files/adds attempted in that state are retained locally as
+  `offlinePending` blobs.
 - Queue is browser-local — clearing site data loses pending drafts.

@@ -3,6 +3,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, X, Loader2, Camera, CloudOff } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import { useOnline } from "@/lib/use-online";
+
+function isNetworkError(err: Error): boolean {
+  if (err instanceof TypeError) return true;
+  return /fetch|network|load failed|failed to fetch|offline/i.test(err.message);
+}
 
 interface PhotoItem {
   id: string;
@@ -43,9 +49,7 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
     return [...fromFiles, ...fromUrls];
   });
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const [isOffline, setIsOffline] = useState(() =>
-    typeof navigator !== "undefined" && !navigator.onLine,
-  );
+  const { isOnline } = useOnline();
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
@@ -70,18 +74,7 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
   }, [photos]);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isOffline) return;
+    if (!isOnline) return;
     const pending = photosRef.current.filter((p) => p.offlinePending && p.file);
     if (pending.length === 0) return;
 
@@ -118,7 +111,7 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
           );
         });
     }
-  }, [isOffline]);
+  }, [isOnline]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -139,7 +132,7 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
         const id = crypto.randomUUID();
         const localUrl = URL.createObjectURL(file);
 
-        if (isOffline) {
+        if (!isOnline) {
           newPhotos.push({ id, file, localUrl, uploading: false, offlinePending: true });
           continue;
         }
@@ -168,7 +161,12 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
             setPhotos((prev) =>
               prev.map((p) =>
                 p.id === id
-                  ? { ...p, uploading: false, offlinePending: false, error: err.message }
+                  ? {
+                      ...p,
+                      uploading: false,
+                      offlinePending: true,
+                      error: isNetworkError(err) ? undefined : err.message,
+                    }
                   : p,
               ),
             );
@@ -177,7 +175,7 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
 
       setPhotos((prev) => [...prev, ...newPhotos]);
     },
-    [photos.length, isOffline],
+    [photos.length, isOnline],
   );
 
   const removePhoto = useCallback((id: string) => {
@@ -261,7 +259,7 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
         )}
       </div>
 
-      {isOffline && (
+      {!isOnline && (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <CloudOff className="size-3.5" />
           You&apos;re offline — photos are saved on this device and will be
