@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReportCard } from "@/components/reports/report-card";
 import { MyReportsFilter } from "@/components/reports/my-reports-filter";
+import { OfflineReportsPanel } from "@/components/offline/offline-reports-panel";
 import { PaginationBar } from "@/components/browse/pagination-bar";
 import { ReportsGridSkeleton } from "@/components/reports/reports-grid-skeleton";
 import { FileText } from "lucide-react";
@@ -154,6 +155,8 @@ export default async function MyReportsPage({
           <MyReportsFilter />
         </Suspense>
       </div>
+
+      <OfflineReportsPanel />
 
       <Suspense key={suspenseKey} fallback={<ReportsGridSkeleton />}>
         <MyReportsContent

@@ -1,49 +1,27 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ImagePlus, X, Loader2, Camera } from "lucide-react";
+import { ImagePlus, X, Loader2, Camera, CloudOff } from "lucide-react";
+import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 
 interface PhotoItem {
   id: string;
+  file?: File;
   localUrl: string;
   cloudinaryUrl?: string;
   uploading: boolean;
+  offlinePending: boolean;
   error?: string;
 }
 
 interface PhotoUploadProps {
-  onChange: (urls: string[]) => void;
+  onChange: (urls: string[], pendingFiles: File[]) => void;
   initialUrls?: string[];
 }
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_PHOTOS = 3;
-
-async function uploadToCloudinary(file: File): Promise<string> {
-  const res = await fetch("/api/uploads/sign");
-  const { data: config } = await res.json();
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", config.upload_preset);
-  formData.append("api_key", config.api_key);
-  formData.append("timestamp", String(config.timestamp));
-  formData.append("signature", config.signature);
-
-  const uploadRes = await fetch(
-    `https://api.cloudinary.com/v1_1/${config.cloud_name}/image/upload`,
-    { method: "POST", body: formData },
-  );
-
-  if (!uploadRes.ok) {
-    const err = await uploadRes.json();
-    throw new Error(err.error?.message ?? "Upload failed");
-  }
-
-  const result = await uploadRes.json();
-  return result.secure_url as string;
-}
 
 export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
   const [photos, setPhotos] = useState<PhotoItem[]>(() =>
@@ -53,24 +31,87 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
           localUrl: url,
           cloudinaryUrl: url,
           uploading: false,
+          offlinePending: false,
         }))
       : [],
   );
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(() =>
+    typeof navigator !== "undefined" && !navigator.onLine,
+  );
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
+  const photosRef = useRef(photos);
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
   useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
+
+  useEffect(() => {
     const urls = photos
       .filter((p) => p.cloudinaryUrl)
       .map((p) => p.cloudinaryUrl!);
-    onChangeRef.current(urls);
+    const pendingFiles = photos
+      .filter((p) => p.offlinePending && p.file)
+      .map((p) => p.file!);
+    onChangeRef.current(urls, pendingFiles);
   }, [photos]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOffline) return;
+    const pending = photosRef.current.filter((p) => p.offlinePending && p.file);
+    if (pending.length === 0) return;
+
+    for (const item of pending) {
+      setPhotos((prev) =>
+        prev.map((p) =>
+          p.id === item.id ? { ...p, uploading: true, error: undefined } : p,
+        ),
+      );
+      uploadToCloudinary(item.file!)
+        .then((url) => {
+          setPhotos((prev) =>
+            prev.map((p) =>
+              p.id === item.id
+                ? {
+                    ...p,
+                    cloudinaryUrl: url,
+                    uploading: false,
+                    offlinePending: false,
+                    file: undefined,
+                    error: undefined,
+                  }
+                : p,
+            ),
+          );
+        })
+        .catch((err: Error) => {
+          setPhotos((prev) =>
+            prev.map((p) =>
+              p.id === item.id
+                ? { ...p, uploading: false, offlinePending: true, error: err.message }
+                : p,
+            ),
+          );
+        });
+    }
+  }, [isOffline]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -99,21 +140,29 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
 
         const id = crypto.randomUUID();
         const localUrl = URL.createObjectURL(file);
-        const item: PhotoItem = { id, localUrl, uploading: true };
-        newPhotos.push(item);
 
+        if (isOffline) {
+          newPhotos.push({ id, file, localUrl, uploading: false, offlinePending: true });
+          continue;
+        }
+
+        newPhotos.push({ id, localUrl, uploading: true, offlinePending: false });
         uploadToCloudinary(file)
           .then((url) => {
             setPhotos((prev) =>
               prev.map((p) =>
-                p.id === id ? { ...p, cloudinaryUrl: url, uploading: false } : p,
+                p.id === id
+                  ? { ...p, cloudinaryUrl: url, uploading: false, offlinePending: false }
+                  : p,
               ),
             );
           })
           .catch((err: Error) => {
             setPhotos((prev) =>
               prev.map((p) =>
-                p.id === id ? { ...p, uploading: false, error: err.message } : p,
+                p.id === id
+                  ? { ...p, uploading: false, offlinePending: false, error: err.message }
+                  : p,
               ),
             );
           });
@@ -121,19 +170,16 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
 
       setPhotos((prev) => [...prev, ...newPhotos]);
     },
-    [photos.length],
+    [photos.length, isOffline],
   );
 
-  const removePhoto = useCallback(
-    (id: string) => {
-      setPhotos((prev) => {
-        const item = prev.find((p) => p.id === id);
-        if (item) URL.revokeObjectURL(item.localUrl);
-        return prev.filter((p) => p.id !== id);
-      });
-    },
-    [],
-  );
+  const removePhoto = useCallback((id: string) => {
+    setPhotos((prev) => {
+      const item = prev.find((p) => p.id === id);
+      if (item) URL.revokeObjectURL(item.localUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -165,8 +211,14 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
               </div>
             )}
             {photo.error && (
-              <div className="absolute inset-0 flex items-center justify-center bg-destructive/80 p-1 text-[10px] leading-tight text-destructive-foreground">
+              <div className="absolute inset-0 flex items-center justify-center bg-destructive/80 p-1 text-center text-[10px] leading-tight text-destructive-foreground">
                 {photo.error}
+              </div>
+            )}
+            {photo.offlinePending && !photo.uploading && !photo.error && (
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/50 px-1 py-0.5 text-[9px] font-medium text-white">
+                <CloudOff className="size-2.5" />
+                Saved locally
               </div>
             )}
             <button
@@ -201,6 +253,14 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
           </>
         )}
       </div>
+
+      {isOffline && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <CloudOff className="size-3.5" />
+          You&apos;re offline — photos are saved on this device and will be
+          uploaded when you&apos;re back online.
+        </p>
+      )}
 
       {globalError && (
         <p className="text-xs text-destructive">{globalError}</p>

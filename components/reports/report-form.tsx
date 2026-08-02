@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Send, Loader2, Save } from "lucide-react";
+import { Send, Loader2, Save, WifiOff, CheckCircle } from "lucide-react";
 
-import { barangayEnum, createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
+import { createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
 import { submitReport, updateReport } from "@/app/actions";
+import { addQueuedReport } from "@/lib/offline-queue";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +21,8 @@ import { LocationPickerWrapper } from "@/components/maps/location-picker-wrapper
 import { InlineSelect } from "@/components/ui/inline-select";
 
 import { cn } from "@/lib/utils";
+
+const offlineReportSchema = createReportSchema.omit({ photo_urls: true });
 
 const categoryLabels: Record<CreateReportInput["category"], string> = {
   POTHOLE: "Pothole",
@@ -48,6 +52,11 @@ const severityCheckStyles: Record<string, string> = {
   EMERGENCY: "has-[:checked]:border-status-rejected/50 has-[:checked]:bg-status-rejected/10",
 };
 
+function isNetworkError(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  return err instanceof Error && /fetch|network|load failed/i.test(err.message);
+}
+
 interface ReportFormProps {
   defaultValues?: CreateReportInput;
   reportId?: string;
@@ -57,12 +66,21 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isOffline, setIsOffline] = useState(() =>
+    typeof navigator !== "undefined" && !navigator.onLine,
+  );
+  const [queuedOffline, setQueuedOffline] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
   const isEdit = !!defaultValues && !!reportId;
 
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
+    getValues,
+    reset,
     watch,
     formState: { errors },
   } = useForm<CreateReportInput>({
@@ -83,9 +101,21 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
   const selectedCategory = watch("category");
   const selectedBarangay = watch("barangay");
 
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   const onPhotosChange = useCallback(
-    (urls: string[]) => {
+    (urls: string[], files: File[]) => {
       setValue("photo_urls", urls, { shouldValidate: true });
+      setPendingFiles(files);
     },
     [setValue],
   );
@@ -101,6 +131,39 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
     [setValue],
   );
 
+  const queueOfflineReport = useCallback(
+    async (data: CreateReportInput) => {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setSubmitError("You must be signed in to submit a report");
+        return;
+      }
+      await addQueuedReport({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        queuedAt: new Date().toISOString(),
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        barangay: data.barangay,
+        severity: data.severity,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        location_label: data.location_label,
+        photoUrls: data.photo_urls,
+        photoFiles: pendingFiles,
+      });
+    },
+    [pendingFiles],
+  );
+
+  const clearForm = useCallback(() => {
+    reset();
+    setPendingFiles([]);
+    setResetKey((k) => k + 1);
+  }, [reset]);
+
   const onSubmit = useCallback(
     (data: CreateReportInput) => {
       setSubmitError(null);
@@ -114,7 +177,18 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
             setSubmitError(result.error ?? "Failed to update report");
             toast.error(result.error ?? "Failed to update report");
           }
-        } else {
+          return;
+        }
+
+        if (pendingFiles.length > 0) {
+          setSubmitError(
+            "Photos are still being saved on this device — please wait a moment and try again.",
+          );
+          toast.error("Please wait for your photos to finish uploading.");
+          return;
+        }
+
+        try {
           const result = await submitReport(null, data);
           if (result.success && result.data) {
             toast.success("Report submitted successfully! It will be reviewed by an administrator.");
@@ -123,14 +197,93 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
             setSubmitError(result.error ?? "Failed to submit report");
             toast.error(result.error ?? "Failed to submit report");
           }
+        } catch (err) {
+          if (isNetworkError(err)) {
+            await queueOfflineReport(data);
+            toast.success(
+              "You're offline — your report was saved and will be submitted automatically when you're back online.",
+            );
+            setQueuedOffline(true);
+            clearForm();
+          } else {
+            setSubmitError("An unexpected error occurred. Please try again.");
+            toast.error("An unexpected error occurred. Please try again.");
+          }
         }
       });
     },
-    [router, isEdit, reportId],
+    [router, isEdit, reportId, pendingFiles, queueOfflineReport, clearForm],
+  );
+
+  const handleRawSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setSubmitError(null);
+      setQueuedOffline(false);
+
+      if (!navigator.onLine) {
+        if (isEdit) {
+          setSubmitError(
+            "You're offline. Connect to the internet to edit your report.",
+          );
+          return;
+        }
+
+        const values = getValues();
+        const totalPhotos = values.photo_urls.length + pendingFiles.length;
+        if (totalPhotos < 1 || totalPhotos > 3) {
+          setSubmitError("Please add between 1 and 3 photos");
+          return;
+        }
+
+        const parsed = offlineReportSchema.safeParse(values);
+        if (!parsed.success) {
+          const first = parsed.error.issues[0];
+          if (first && typeof first.path[0] === "string") {
+            setError(first.path[0] as FieldPath<CreateReportInput>, {
+              message: first.message,
+            });
+          }
+          return;
+        }
+
+        void queueOfflineReport({ ...parsed.data, photo_urls: values.photo_urls });
+        toast.success(
+          "You're offline — your report was saved and will be submitted automatically when you're back online.",
+        );
+        setQueuedOffline(true);
+        clearForm();
+        return;
+      }
+
+      void handleSubmit(onSubmit)(e);
+    },
+    [getValues, pendingFiles, queueOfflineReport, clearForm, setError, handleSubmit, onSubmit, isEdit],
   );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleRawSubmit} className="space-y-6">
+      {isOffline && !isEdit && (
+        <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+          <WifiOff className="mt-0.5 size-4 shrink-0 text-primary" />
+          <span>
+            You&apos;re offline. Your report will be saved on this device and
+            submitted automatically when you&apos;re back online.
+          </span>
+        </div>
+      )}
+
+      {queuedOffline && (
+        <div className="flex items-start gap-2 rounded-lg border border-status-approved/20 bg-status-approved/10 px-4 py-3 text-sm text-foreground">
+          <CheckCircle className="mt-0.5 size-4 shrink-0 text-status-approved" />
+          <span>
+            Your report was saved offline. It will be submitted automatically
+            when you&apos;re back online. You can also review it under &quot;Saved
+            offline reports&quot; on My Reports.
+          </span>
+        </div>
+      )}
+
       {submitError && (
         <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {submitError}
@@ -214,6 +367,7 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
       <div className="space-y-2">
         <Label>Photos</Label>
         <PhotoUpload
+          key={resetKey}
           onChange={onPhotosChange}
           initialUrls={isEdit ? defaultValues!.photo_urls : undefined}
         />
@@ -225,6 +379,7 @@ export function ReportForm({ defaultValues, reportId }: ReportFormProps) {
       <div className="space-y-2">
         <Label>Location</Label>
         <LocationPickerWrapper
+          key={resetKey}
           value={
             isEdit
               ? { lat: defaultValues!.latitude, lng: defaultValues!.longitude, label: defaultValues!.location_label }

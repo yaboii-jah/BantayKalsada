@@ -23,9 +23,24 @@ change.
 
 ## Current Goal
 
-- Public REST API (Ecosystem v3.0+) — complete and verified.
+- Offline report submission (Mobile & Notifications v2.2) — complete and verified.
 
 ## Completed
+
+### Offline Submission (Mobile & Notifications v2.2)
+
+- [x] `lib/cloudinary-upload.ts` — `uploadToCloudinary(file)` extracted from `photo-upload.tsx`; shared by the photo widget and the queue processor
+- [x] `lib/offline-queue.ts` — hand-rolled IndexedDB wrapper (no `idb` dependency): `addQueuedReport`, `getQueuedReports`, `getQueuedReportsForUser`, `updateQueuedReport`, `removeQueuedReport`; `QueuedReport` stores `File` blobs + already-uploaded Cloudinary URLs; drafts are user-scoped via `userId`. `openDb()` memoizes a single shared connection (module-level promise) so concurrent callers can't race; it opens with no explicit version (never requests a version lower than the existing DB — fixes a `VersionError` when a prior self-heal had bumped the DB to v2), and if the store is missing on an existing DB it self-heals by reopening at `db.version + 1`; cache resets on `onversionchange`/`onclose` and on open error (fixes production `NotFoundError` — "object store was not found" — from fresh-connection opens without the store)
+- [x] `lib/offline-submit.ts` — `submitQueuedReport(draft)`: uploads pending files → Cloudinary, assembles a normal `CreateReportInput`, replays `submitReport` (all existing server guards apply)
+- [x] `components/reports/photo-upload.tsx` — offline-aware: files selected offline are held locally ("Saved locally" chip, no upload error), reported via `onChange(urls, pendingFiles)`; auto-uploads pending files on reconnect while the form is open
+- [x] `components/reports/report-form.tsx` — raw submit handler branches on `!navigator.onLine` (queues directly, validates via `createReportSchema.omit({ photo_urls: true })` + manual photo count); online `submitReport` await wrapped in try/catch so a network `TypeError` falls back to queueing (previously an unhandled rejection / stuck spinner); offline + queued-confirmation banners; edit mode never queues; form reset via `reset()` + `resetKey` remount
+- [x] `components/offline/offline-queue-processor.tsx` — drains the queue on mount / `online` / `visibilitychange`; `navigator.locks` + `processingRef` guard against double submits; skips drafts for the wrong session user; success removes draft, failure keeps it with `lastError`
+- [x] `components/offline/offline-reports-panel.tsx` — "Saved offline reports" card on `/my-reports`: lists drafts (title, queued date, photo count), Retry / Discard buttons, `lastError` shown on failed drafts
+- [x] Wired into `app/(citizen)/layout.tsx` (processor) and `app/(citizen)/my-reports/page.tsx` (panel)
+- [x] Feature spec: `context/feature-specs/29-offline-submission.md`
+- [x] Context updated — `project-overview.md` (In Scope), `architecture.md` (citizen boundary), `app-codebase-context.md` (offline data flow)
+- [x] `npm run build` passes with zero errors; ESLint zero errors on touched files
+- [x] No server, schema, migration, or dependency changes — `submitReport` remains the only write path
 
 ### Public REST API (Ecosystem v3.0+)
 
@@ -506,8 +521,7 @@ change.
 - [x] **`[object Object]` JSON parse error** — `saveSubscription` was called with a parsed object (`JSON.parse`) instead of a JSON string after the parameter type changed to `string`. Fixed by passing `JSON.stringify()` directly.
 
 ### Mobile & Notifications (v2.2)
-- **Heatmap external traffic API (Phase B)** — fill the `getExternalHeatPoints()` seam in `lib/heatmap.ts` with a specified traffic provider (TomTom/HERE/Google) via a server proxy; merges into the existing heatmap points
-- **Offline submission** — queue report data in localStorage, submit on reconnect
+- **Offline submission** — queue report data in localStorage, submit on reconnect (complete, see "Offline Submission" below)
 - **Geographic search / barangay filter** — filter browse feed by location
 
 ### Admin Power Tools (v3.0)

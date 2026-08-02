@@ -381,6 +381,57 @@ Data sources:
 
 ---
 
+## Offline Submission Data Flow
+
+```
+Submit Form (report-form.tsx, client)
+  → handleRawSubmit: e.preventDefault()
+  → if !navigator.onLine (and NOT edit mode):
+      validate via createReportSchema.omit({ photo_urls: true })
+      + manual photo count (photo_urls.length + pendingFiles.length must be 1–3)
+      → addQueuedReport({ id, userId, queuedAt, ...fields,
+                         photoUrls: uploaded Cloudinary URLs, photoFiles: File[] })
+      → toast "saved, will submit when back online" + green confirmation banner
+      → reset() + resetKey bump (remounts PhotoUpload + LocationPicker)
+  → else: handleSubmit(onSubmit)
+      onSubmit → submitReport(null, data) wrapped in try/catch
+        → network TypeError (flaky connection) → same queue path as above
+        → pendingFiles.length > 0 while online → blocked ("photos still saving")
+
+PhotoUpload (photo-upload.tsx, client)
+  → isOffline state from navigator.onLine + online/offline events
+  → files added offline: kept as { file, localUrl, offlinePending: true } —
+       no Cloudinary attempt, "Saved locally" chip, reported via onChange(urls, pendingFiles)
+  → reconnect while form open: auto-uploads pending files, flips to Cloudinary URLs
+
+lib/offline-queue.ts (client-only, IndexedDB "bantay-kalsada-offline")
+  → addQueuedReport / getQueuedReports / getQueuedReportsForUser / updateQueuedReport / removeQueuedReport
+  → QueuedReport: { id, userId, queuedAt, title, description, category, barangay,
+                    severity, latitude, longitude, location_label?, photoUrls, photoFiles, lastError? }
+  → File objects are structured-cloneable → stored directly as blobs
+
+lib/offline-submit.ts (client)
+  → submitQueuedReport(draft):
+      1. upload each photoFile → Cloudinary (uploadToCloudinary)
+      2. photo_urls = [...photoUrls, ...newUrls]
+      3. submitReport(null, payload)   ← all server guards (auth/verified/rate-limit/boundary/Zod) run here
+      → { ok: true } | { ok: false, error }
+
+OfflineQueueProcessor ((citizen)/layout.tsx, client)
+  → drains queue on mount / online event / visibilitychange → "visible"
+  → navigator.locks.request("bantay-kalsada-offline-queue") + processingRef (cross-tab + same-tab guard)
+  → skips drafts whose userId ≠ current session user
+  → success: removeQueuedReport + toast; failure: updateQueuedReport({ lastError }) + toast
+
+OfflineReportsPanel (/my-reports, client)
+  → lists drafts for the current user: title, queued date, photo count, lastError
+  → Retry → submitQueuedReport + router.refresh(); Discard → removeQueuedReport
+```
+
+**Key decisions:** IndexedDB over localStorage (photo blobs up to 5 MB each; base64 would blow the quota and block the main thread). Server Action is the only write path — no duplicated validation. Drafts are user-scoped so a different login on a shared device can't submit someone else's draft. No offline redirect (RSC navigation is unreliable offline). No SW `sync` event in MVP — the queue drains on load/online/visibility, so the tab must be open to auto-submit.
+
+---
+
 ## File Organization Reference
 
 ```
