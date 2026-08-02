@@ -12,6 +12,7 @@ import {
   type QueuedReport,
 } from "@/lib/offline-queue";
 import { submitQueuedReport } from "@/lib/offline-submit";
+import { subscribeProcessing } from "@/lib/offline-processing";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { formatReportDate } from "@/lib/date-utils";
@@ -20,6 +21,7 @@ export function OfflineReportsPanel() {
   const router = useRouter();
   const [reports, setReports] = useState<QueuedReport[]>([]);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -47,6 +49,21 @@ export function OfflineReportsPanel() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const unsub = subscribeProcessing((ids) => setProcessingIds(ids));
+    const handleOnline = () => void refresh();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      unsub();
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refresh]);
 
   const handleRetry = useCallback(
     async (report: QueuedReport) => {
@@ -117,11 +134,18 @@ export function OfflineReportsPanel() {
                     ? "s"
                     : ""}
                 </p>
+                {processingIds.has(report.id) && (
+                  <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-primary">
+                    <Loader2 className="size-3 animate-spin" />
+                    Uploading…
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <Button
                   size="sm"
                   variant="outline"
+                  disabled={processingIds.has(report.id)}
                   asChild
                 >
                   <Link href={`/offline-edit/${report.id}`}>
@@ -132,10 +156,10 @@ export function OfflineReportsPanel() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={retryingId === report.id}
+                  disabled={retryingId === report.id || processingIds.has(report.id)}
                   onClick={() => handleRetry(report)}
                 >
-                  {retryingId === report.id ? (
+                  {retryingId === report.id || processingIds.has(report.id) ? (
                     <Loader2 className="mr-1.5 size-3.5 animate-spin" />
                   ) : (
                     <RefreshCw className="mr-1.5 size-3.5" />
@@ -145,6 +169,7 @@ export function OfflineReportsPanel() {
                 <Button
                   size="sm"
                   variant="ghost"
+                  disabled={processingIds.has(report.id)}
                   onClick={() => handleDiscard(report.id)}
                 >
                   <Trash2 className="mr-1.5 size-3.5" />

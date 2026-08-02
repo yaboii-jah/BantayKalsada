@@ -77,6 +77,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
   );
   const [queuedOffline, setQueuedOffline] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [isSubmittingOffline, setIsSubmittingOffline] = useState(false);
   const isEdit = !!defaultValues && !!reportId;
   const isDraft = !!defaultValues && !!draftId;
 
@@ -242,7 +243,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
   );
 
   const handleRawSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setSubmitError(null);
       setQueuedOffline(false);
@@ -309,7 +310,12 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
           return;
         }
 
-        void queueOfflineReport({ ...parsed.data, photo_urls: values.photo_urls });
+        setIsSubmittingOffline(true);
+        try {
+          await queueOfflineReport({ ...parsed.data, photo_urls: values.photo_urls });
+        } finally {
+          setIsSubmittingOffline(false);
+        }
         toast.success(
           "You're offline — your report was saved and will be submitted automatically when you're back online.",
         );
@@ -460,14 +466,14 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
 
       <Button
         type="submit"
-        disabled={pending}
+        disabled={pending || isSubmittingOffline}
         className="w-full"
         size="lg"
       >
-        {pending ? (
+        {pending || isSubmittingOffline ? (
           <>
             <Loader2 className="mr-2 size-4 animate-spin" />
-            {isEdit ? "Updating…" : "Submitting…"}
+            {isSubmittingOffline ? "Saving…" : isEdit ? "Updating…" : "Submitting…"}
           </>
         ) : (
           <>

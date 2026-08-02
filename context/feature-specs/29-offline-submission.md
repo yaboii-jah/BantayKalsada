@@ -174,6 +174,17 @@ Submit while navigator.onLine === true but the network drops mid-call
 | `components/offline/taytay-tiles-preloader.tsx` — warm zoom 15–16 OSM tiles into SW cache | ✅ |
 | Boundary gate (offline + draft submit) rejects pins outside Taytay | ✅ |
 
+### Offline Experience v2.4 — upload UX & reliability
+
+| Item | Status |
+|------|--------|
+| `lib/offline-processing.ts` — shared processing-id store | ✅ |
+| Processor bails offline (`navigator.onLine` guard) — kills spurious "Failed to fetch" | ✅ |
+| `components/offline/offline-upload-banner.tsx` — spinner + skeleton, mounted in `(citizen)/layout.tsx` | ✅ |
+| `report-form.tsx` — offline submit awaited with loading state + "Saving…" spinner | ✅ |
+| `offline-reports-panel.tsx` — per-item "Uploading…" + disabled buttons; refresh on online/visibility | ✅ |
+| `lib/offline-submit.ts` — friendly offline message for network errors | ✅ |
+
 ## Check When Done
 
 - [x] Offline: full form fills, photos preview locally, submit queues to IndexedDB

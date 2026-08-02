@@ -31,6 +31,12 @@ export async function submitQueuedReport(
     }
     return { ok: false, error: result.error ?? "Failed to submit report" };
   } catch (err) {
+    if (err instanceof TypeError || (err instanceof Error && /fetch|network|load failed/i.test(err.message))) {
+      return {
+        ok: false,
+        error: "You're offline — this report will auto-submit when you're back online.",
+      };
+    }
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Failed to submit report",

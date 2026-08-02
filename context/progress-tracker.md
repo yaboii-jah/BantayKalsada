@@ -25,6 +25,7 @@ change.
 
 - Offline report submission (Mobile & Notifications v2.2) — complete and verified.
 - Offline report editing + offline map preload (Offline Experience v2.3) — complete and verified.
+- Offline upload UX + reliability (Offline Experience v2.4) — complete and verified.
 
 ## Completed
 
@@ -54,6 +55,16 @@ change.
 - [x] `components/offline/offline-reports-panel.tsx` — "Edit" link per saved draft → `/offline-edit/[draftId]`
 - [x] `app/(citizen)/offline-edit/[draftId]/page.tsx` — client route loading the draft from IndexedDB and rendering `ReportForm` in edit-draft mode
 - [x] `npm run build` passes with zero errors (route `/offline-edit/[draftId]` compiles); ESLint zero errors on touched files
+
+### Offline Upload UX & Reliability (Offline Experience v2.4)
+
+- [x] `lib/offline-processing.ts` — tiny module-level store publishing the set of report ids currently being processed (`setProcessingIds` / `subscribeProcessing`); avoids prop drilling between processor, panel, and banner
+- [x] `components/offline/offline-queue-processor.tsx` — `processQueue` now bails unless `navigator.onLine` (no more mount-time `fetch("/api/uploads/sign")` → spurious "Failed to fetch" while offline); publishes the active report id set at run start and clears it in `finally`
+- [x] `components/offline/offline-upload-banner.tsx` — fixed bottom banner with spinner + skeleton shimmer; shows while any report is uploading; mounted in `(citizen)/layout.tsx`
+- [x] `components/reports/report-form.tsx` — offline submit now awaits the IndexedDB write with a loading state; submit button shows a spinner + "Saving…" and is disabled until the draft is queued (previously fire-and-forget `void queueOfflineReport`)
+- [x] `components/offline/offline-reports-panel.tsx` — subscribes to the processing store so each in-flight report shows an "Uploading…" spinner and its Edit/Retry/Discard buttons are disabled; refreshes drafts on `online` + `visibilitychange` so reports added/removed by the processor appear/disappear correctly
+- [x] `lib/offline-submit.ts` — network `TypeError`/`fetch|network|load failed` errors now map to a friendly "You're offline — this report will auto-submit when you're back online." instead of raw "Failed to fetch"
+- [x] `npm run build` passes with zero errors; ESLint zero errors on touched files
 
 ### Public REST API (Ecosystem v3.0+)
 

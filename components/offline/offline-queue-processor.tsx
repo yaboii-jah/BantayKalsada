@@ -9,21 +9,36 @@ import {
 } from "@/lib/offline-queue";
 import { submitQueuedReport } from "@/lib/offline-submit";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { setProcessingIds } from "@/lib/offline-processing";
 
 export function OfflineQueueProcessor() {
   const processingRef = useRef(false);
 
   const processQueue = useCallback(async () => {
     if (processingRef.current) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
     processingRef.current = true;
 
     const run = async () => {
       const reports = await getQueuedReports();
-      if (reports.length === 0) return;
+      if (reports.length === 0) {
+        setProcessingIds(new Set());
+        return;
+      }
 
       const supabase = createSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setProcessingIds(new Set());
+        return;
+      }
+
+      const active = new Set<string>();
+      for (const report of reports) {
+        if (report.userId !== user.id) continue;
+        active.add(report.id);
+      }
+      setProcessingIds(active);
 
       for (const report of reports) {
         if (report.userId !== user.id) continue;
@@ -42,6 +57,7 @@ export function OfflineQueueProcessor() {
           );
         }
       }
+      setProcessingIds(new Set());
     };
 
     try {
@@ -53,6 +69,7 @@ export function OfflineQueueProcessor() {
     } catch (err) {
       console.error("Offline queue processing error:", err);
     } finally {
+      setProcessingIds(new Set());
       processingRef.current = false;
     }
   }, []);
