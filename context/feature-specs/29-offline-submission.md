@@ -18,7 +18,7 @@
 
 ### Design Decisions
 
-- **IndexedDB over localStorage** — photos can be up to 5 MB each (1–3 per report);
+- **IndexedDB over localStorage** — photos can be up to 10 MB each (1–3 per report);
   localStorage (~5 MB) cannot hold them, and base64 conversion blocks the main thread.
   IndexedDB handles binary blobs natively. Hand-rolled wrapper (`lib/offline-queue.ts`) —
   no `idb` dependency.

@@ -19,8 +19,8 @@ interface PhotoUploadProps {
   initialUrls?: string[];
 }
 
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_PHOTOS = 3;
 
 export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
@@ -129,15 +129,6 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
       const newPhotos: PhotoItem[] = [];
 
       for (const file of Array.from(files)) {
-        if (!ACCEPTED_TYPES.includes(file.type)) {
-          setGlobalError("Only JPEG, PNG, and WebP files are accepted");
-          continue;
-        }
-        if (file.size > MAX_FILE_SIZE) {
-          setGlobalError("Each photo must be under 5 MB");
-          continue;
-        }
-
         const id = crypto.randomUUID();
         const localUrl = URL.createObjectURL(file);
 
@@ -146,7 +137,16 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
           continue;
         }
 
-        newPhotos.push({ id, localUrl, uploading: true, offlinePending: false });
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+          setGlobalError("Only JPEG, PNG, WebP, and HEIC files are accepted");
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          setGlobalError("Each photo must be under 10 MB");
+          continue;
+        }
+
+        newPhotos.push({ id, file, localUrl, uploading: true, offlinePending: false });
         uploadToCloudinary(file)
           .then((url) => {
             setPhotos((prev) =>
@@ -267,8 +267,8 @@ export function PhotoUpload({ onChange, initialUrls }: PhotoUploadProps) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        {photos.length} of {MAX_PHOTOS} photos &middot; JPEG, PNG, or WebP
-        &middot; max 5 MB each
+        {photos.length} of {MAX_PHOTOS} photos &middot; JPEG, PNG, WebP, or HEIC
+        &middot; max 10 MB each
       </p>
 
       <input

@@ -40,7 +40,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Verify email address by clicking a link sent to the inbox; email verification is required before submitting reports.
 - Log in and log out securely.
 - Reset a forgotten password via an emailed reset link.
-- Submit a road incident report with a required title, description, category, barangay (selected from a dropdown), between one and three photos (each max 5 MB), and a pinned map location that must fall within Taytay's municipal boundary.
+- Submit a road incident report with a required title, description, category, barangay (selected from a dropdown), between one and three photos (each up to 10 MB), and a pinned map location that must fall within Taytay's municipal boundary.
 - Use the device's GPS to automatically center the map on the current location.
 - Add, preview, and individually remove photos before submitting (minimum 1, maximum 3).
 - See nearby existing APPROVED/RESOLVED reports as severity-colored chip markers on the map when pinning a location — tap a chip to view report summary and navigate to full details.
@@ -64,7 +64,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 ### In Scope
 
 - User registration, email verification, login, and password reset via Supabase Auth, with Google OAuth login.
-- Road incident report submission with a minimum of 1 and a maximum of 3 photos (each max 5 MB per file) and a required map pin.
+- Report road incident submission with a minimum of 1 and a maximum of 3 photos (each up to 10 MB; JPEG/PNG/WebP/HEIC) and a required map pin. Offline, type/size validation is skipped so any captured image is retained locally and uploaded on reconnect.
 - Five predefined report categories: Pothole, Flooded Road, Road Accident, Road Rage Incident, Other Road Hazard.
 - Admin moderation queue with approve, reject (with reason), and resolve actions.
 - Report status lifecycle: `PENDING → APPROVED → RESOLVED` and `PENDING → REJECTED`.

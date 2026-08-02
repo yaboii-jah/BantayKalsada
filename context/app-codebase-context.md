@@ -401,7 +401,9 @@ Submit Form (report-form.tsx, client)
 PhotoUpload (photo-upload.tsx, client)
   → isOffline state from navigator.onLine + online/offline events
   → files added offline: kept as { file, localUrl, offlinePending: true } —
-       no Cloudinary attempt, "Saved locally" chip, reported via onChange(urls, pendingFiles)
+       no Cloudinary attempt, "Saved locally" chip, reported via onChange(urls, pendingFiles);
+       type/size checks are SKIPPED offline so any camera capture retains;
+       online path validates (JPEG/PNG/WebP/HEIC, ≤10 MB)
   → reconnect while form open: auto-uploads pending files, flips to Cloudinary URLs
 
 lib/offline-queue.ts (client-only, IndexedDB "bantay-kalsada-offline")
@@ -428,7 +430,7 @@ OfflineReportsPanel (/my-reports, client)
   → Retry → submitQueuedReport + router.refresh(); Discard → removeQueuedReport
 ```
 
-**Key decisions:** IndexedDB over localStorage (photo blobs up to 5 MB each; base64 would blow the quota and block the main thread). Server Action is the only write path — no duplicated validation. Drafts are user-scoped so a different login on a shared device can't submit someone else's draft. No offline redirect (RSC navigation is unreliable offline). No SW `sync` event in MVP — the queue drains on load/online/visibility, so the tab must be open to auto-submit.
+**Key decisions:** IndexedDB over localStorage (photo blobs up to 10 MB each; base64 would blow the quota and block the main thread). Server Action is the only write path — no duplicated validation. Drafts are user-scoped so a different login on a shared device can't submit someone else's draft. No offline redirect (RSC navigation is unreliable offline). No SW `sync` event in MVP — the queue drains on load/online/visibility, so the tab must be open to auto-submit.
 
 ---
 
