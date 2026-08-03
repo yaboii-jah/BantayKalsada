@@ -6,8 +6,13 @@ import {
   getQueuedReports,
   removeQueuedReport,
   updateQueuedReport,
+  MAX_AUTORETRY_ATTEMPTS,
+  getNextRetryTime,
 } from "@/lib/offline-queue";
-import { submitQueuedReport } from "@/lib/offline-submit";
+import {
+  submitQueuedReport,
+  isTransientError,
+} from "@/lib/offline-submit";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setProcessingIds } from "@/lib/offline-processing";
 
@@ -43,17 +48,41 @@ export function OfflineQueueProcessor() {
       for (const report of reports) {
         if (report.userId !== user.id) continue;
 
+        const attemptCount = report.attemptCount ?? 0;
+        if (attemptCount >= MAX_AUTORETRY_ATTEMPTS) continue;
+
+        if (Date.now() < getNextRetryTime(attemptCount, report.lastAttemptAt)) {
+          continue;
+        }
+
         const result = await submitQueuedReport(report);
         if (result.ok) {
           await removeQueuedReport(report.id);
           toast.success(
             `Offline report "${report.title}" was submitted successfully!`,
           );
-        } else {
-          await updateQueuedReport(report.id, { lastError: result.error });
+          continue;
+        }
+
+        const nextAttemptCount = attemptCount + 1;
+        await updateQueuedReport(report.id, {
+          lastError: result.error,
+          attemptCount: nextAttemptCount,
+          lastAttemptAt: new Date().toISOString(),
+        });
+
+        if (!isTransientError(result.error)) {
           toast.error(
             `Couldn't submit "${report.title}": ${result.error}`,
-            { duration: 6000 },
+            { duration: 30000 },
+          );
+          continue;
+        }
+
+        if (nextAttemptCount >= MAX_AUTORETRY_ATTEMPTS) {
+          toast.error(
+            `Couldn't submit "${report.title}" after ${MAX_AUTORETRY_ATTEMPTS} attempts — retry manually in your saved reports when you have time.`,
+            { duration: 30000 },
           );
         }
       }

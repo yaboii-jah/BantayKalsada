@@ -3,6 +3,12 @@ import { submitReport } from "@/app/actions";
 import type { QueuedReport } from "@/lib/offline-queue";
 import type { CreateReportInput } from "@/lib/validations/report";
 
+const NETWORK_ERROR_RE = /fetch|network|load failed|timeout|offline/i;
+
+export function isTransientError(message: string): boolean {
+  return NETWORK_ERROR_RE.test(message);
+}
+
 export async function submitQueuedReport(
   report: QueuedReport,
 ): Promise<{ ok: true } | { ok: false; error: string }> {

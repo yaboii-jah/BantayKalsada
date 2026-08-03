@@ -794,3 +794,27 @@ and simpler (no cache table, no grid tuning).
 - [x] **Toggle layout fix** — HeatToggle and TrafficToggle now sit side by side in a
   `flex-row` container; removed `absolute right-4 top-4 z-[1000]` from HeatToggle's
   className (was preventing it from participating in flex layout).
+
+### Bug Fixes (post-build polish)
+
+- [x] **Admin approve spinner stuck** — `components/admin/action-buttons.tsx` drove the
+  Approve button with `useTransition`'s `isPending`, which stayed `true` when the
+  `router.refresh()`+`router.push()` round trip inside the async transition never
+  settled, leaving the button spinning until a hard reload. Replaced `useTransition`
+  with a local `isSubmitting` boolean state set around the awaited action, matching the
+  already-working Reject/Resolve buttons (`ResolveButton`, `RejectButton`). Spin state now
+  clears deterministically as soon as the action resolves.
+- [x] **Offline-submit error toast duration** — `toast.error` for failed offline reports
+  auto-dismissed after 6s. Bumped `duration` to `30000` in both `offline-queue-processor.tsx`
+  and `offline-reports-panel.tsx` so the submit-failure message stays readable.
+- [x] **Offline auto-retry bounding** — the queue previously retried every queued report on
+  every trigger (mount, `online`, `visibilitychange`) with no cap, cooldown, or toast dedup,
+  so a persistent failure re-spammed errors. Now: `QueuedReport` gains `attemptCount` and
+  `lastAttemptAt` (persisted in IndexedDB); max 3 auto-attempts with a fixed 2-minute cooldown;
+  only transient/network errors auto-retry (rate-limit, boundary, auth, validation,
+  Cloudinary stops immediately via `isTransientError`); failed background attempts are silent
+  until exhausted, then one toast + a persistent "Retry manually" banner on the offline panel.
+  Manual Retry keeps counting attempts (no reset) and the banner/allow-row disappears on submit
+  or discard. Files: `lib/offline-queue.ts`, `lib/offline-submit.ts`,
+  `components/offline/offline-queue-processor.tsx`, `components/offline/offline-reports-panel.tsx`.
+- [x] `npx tsc --noEmit` passes with zero errors.

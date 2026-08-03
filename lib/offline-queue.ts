@@ -15,6 +15,19 @@ export interface QueuedReport {
   photoUrls: string[];
   photoFiles: File[];
   lastError?: string;
+  attemptCount?: number;
+  lastAttemptAt?: string;
+}
+
+export const MAX_AUTORETRY_ATTEMPTS = 3;
+export const AUTORETRY_COOLDOWN_MS = 2 * 60 * 1000;
+
+export function getNextRetryTime(
+  attemptCount?: number,
+  lastAttemptAt?: string,
+): number {
+  if (!attemptCount || !lastAttemptAt) return 0;
+  return new Date(lastAttemptAt).getTime() + AUTORETRY_COOLDOWN_MS;
 }
 
 const DB_NAME = "bantay-kalsada-offline";
@@ -91,7 +104,7 @@ export async function getQueuedReportsForUser(userId: string): Promise<QueuedRep
 
 export async function updateQueuedReport(
   id: string,
-  patch: Partial<Pick<QueuedReport, "lastError">>,
+  patch: Partial<Pick<QueuedReport, "lastError" | "attemptCount" | "lastAttemptAt">>,
 ): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {

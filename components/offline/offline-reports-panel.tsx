@@ -9,6 +9,7 @@ import {
   getQueuedReportsForUser,
   removeQueuedReport,
   updateQueuedReport,
+  MAX_AUTORETRY_ATTEMPTS,
   type QueuedReport,
 } from "@/lib/offline-queue";
 import { submitQueuedReport } from "@/lib/offline-submit";
@@ -76,10 +77,14 @@ export function OfflineReportsPanel() {
         );
         router.refresh();
       } else {
-        await updateQueuedReport(report.id, { lastError: result.error });
+        await updateQueuedReport(report.id, {
+          lastError: result.error,
+          attemptCount: (report.attemptCount ?? 0) + 1,
+          lastAttemptAt: new Date().toISOString(),
+        });
         toast.error(
           `Couldn't submit "${report.title}": ${result.error}`,
-          { duration: 6000 },
+          { duration: 30000 },
         );
       }
       setRetryingId(null);
@@ -140,6 +145,14 @@ export function OfflineReportsPanel() {
                     Uploading…
                   </p>
                 )}
+                {!processingIds.has(report.id) &&
+                  (report.attemptCount ?? 0) > 0 && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {(report.attemptCount ?? 0) >= MAX_AUTORETRY_ATTEMPTS
+                        ? `${MAX_AUTORETRY_ATTEMPTS} of ${MAX_AUTORETRY_ATTEMPTS} attempts used`
+                        : `${report.attemptCount} of ${MAX_AUTORETRY_ATTEMPTS} attempts used`}
+                    </p>
+                  )}
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <Button
@@ -181,6 +194,16 @@ export function OfflineReportsPanel() {
               <p className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 {report.lastError}
+              </p>
+            )}
+            {(report.attemptCount ?? 0) >= MAX_AUTORETRY_ATTEMPTS && (
+              <p className="mt-2 flex items-start gap-1.5 rounded-md bg-status-rejected/10 px-2 py-1.5 text-xs text-status-rejected">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  Couldn&apos;t submit automatically after {MAX_AUTORETRY_ATTEMPTS}{" "}
+                  attempts. Tap Retry above to submit manually when you have
+                  time.
+                </span>
               </p>
             )}
           </li>

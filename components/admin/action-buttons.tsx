@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -40,19 +40,21 @@ export function ActionButtons({
   onResolve,
 }: ActionButtonsProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleApprove = () => {
-    startTransition(async () => {
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    try {
       const result = await onApprove(reportId);
       if (result.success) {
         toast.success("Report approved");
-        router.push("/admin/pending");
         router.refresh();
       } else {
         toast.error(result.error ?? "Failed to approve report");
       }
-    });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (status === "APPROVED") {
@@ -60,7 +62,7 @@ export function ActionButtons({
       <ResolveButton
         reportId={reportId}
         onResolve={onResolve}
-        disabled={isPending}
+        disabled={isSubmitting}
       />
     );
   }
@@ -73,10 +75,10 @@ export function ActionButtons({
     <div className="flex gap-3">
       <Button
         onClick={handleApprove}
-        disabled={isPending}
+        disabled={isSubmitting}
         size="lg"
       >
-        {isPending ? (
+        {isSubmitting ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <CheckCircle className="mr-2 h-4 w-4" />
@@ -86,7 +88,7 @@ export function ActionButtons({
       <RejectButton
         reportId={reportId}
         onReject={onReject}
-        disabled={isPending}
+        disabled={isSubmitting}
       />
     </div>
   );
@@ -118,7 +120,6 @@ function ResolveButton({
     if (result.success) {
       toast.success("Report marked as resolved");
       setOpen(false);
-      router.push("/admin/approved");
       router.refresh();
     } else {
       toast.error(result.error ?? "Failed to resolve report");
@@ -217,7 +218,6 @@ function RejectButton({
     if (result.success) {
       toast.success("Report rejected");
       setOpen(false);
-      router.push("/admin/pending");
       router.refresh();
     } else {
       toast.error(result.error ?? "Failed to reject report");
