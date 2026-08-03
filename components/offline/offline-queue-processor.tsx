@@ -9,10 +9,7 @@ import {
   MAX_AUTORETRY_ATTEMPTS,
   getNextRetryTime,
 } from "@/lib/offline-queue";
-import {
-  submitQueuedReport,
-  isTransientError,
-} from "@/lib/offline-submit";
+import { submitQueuedReport } from "@/lib/offline-submit";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setProcessingIds } from "@/lib/offline-processing";
 
@@ -71,14 +68,6 @@ export function OfflineQueueProcessor() {
           lastAttemptAt: new Date().toISOString(),
         });
 
-        if (!isTransientError(result.error)) {
-          toast.error(
-            `Couldn't submit "${report.title}": ${result.error}`,
-            { duration: 30000 },
-          );
-          continue;
-        }
-
         if (nextAttemptCount >= MAX_AUTORETRY_ATTEMPTS) {
           toast.error(
             `Couldn't submit "${report.title}" after ${MAX_AUTORETRY_ATTEMPTS} attempts — retry manually in your saved reports when you have time.`,
@@ -115,9 +104,13 @@ export function OfflineQueueProcessor() {
 
     window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibility);
+
+    const timer = setInterval(() => void processQueue(), 60_000);
+
     return () => {
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(timer);
     };
   }, [processQueue]);
 

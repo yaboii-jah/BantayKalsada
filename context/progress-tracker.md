@@ -811,10 +811,12 @@ and simpler (no cache table, no grid tuning).
   every trigger (mount, `online`, `visibilitychange`) with no cap, cooldown, or toast dedup,
   so a persistent failure re-spammed errors. Now: `QueuedReport` gains `attemptCount` and
   `lastAttemptAt` (persisted in IndexedDB); max 3 auto-attempts with a fixed 2-minute cooldown;
-  only transient/network errors auto-retry (rate-limit, boundary, auth, validation,
-  Cloudinary stops immediately via `isTransientError`); failed background attempts are silent
-  until exhausted, then one toast + a persistent "Retry manually" banner on the offline panel.
+  all error types (rate-limit, boundary, auth, validation, network) auto-retry silently up to
+  3 times, then a single toast + a persistent "Retry manually" banner on the offline panel.
+  A 60s background timer in `OfflineQueueProcessor` drives attempts 2–3 even without
+  navigation/tab-switch/online events (the Web Lock + `processingRef` guard prevents overlap).
   Manual Retry keeps counting attempts (no reset) and the banner/allow-row disappears on submit
-  or discard. Files: `lib/offline-queue.ts`, `lib/offline-submit.ts`,
-  `components/offline/offline-queue-processor.tsx`, `components/offline/offline-reports-panel.tsx`.
+  or discard. `isTransientError` removed (no longer special-cased). Files: `lib/offline-queue.ts`,
+  `lib/offline-submit.ts`, `components/offline/offline-queue-processor.tsx`,
+  `components/offline/offline-reports-panel.tsx`.
 - [x] `npx tsc --noEmit` passes with zero errors.
