@@ -14,6 +14,7 @@ import {
 } from "@/lib/offline-queue";
 import { submitQueuedReport } from "@/lib/offline-submit";
 import { subscribeProcessing } from "@/lib/offline-processing";
+import { subscribeQueueChanged } from "@/lib/offline-queue-events";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { formatReportDate } from "@/lib/date-utils";
@@ -53,6 +54,7 @@ export function OfflineReportsPanel() {
 
   useEffect(() => {
     const unsub = subscribeProcessing((ids) => setProcessingIds(ids));
+    const unsubQueue = subscribeQueueChanged(() => void refresh());
     const handleOnline = () => void refresh();
     const handleVisibility = () => {
       if (document.visibilityState === "visible") void refresh();
@@ -61,6 +63,7 @@ export function OfflineReportsPanel() {
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       unsub();
+      unsubQueue();
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };

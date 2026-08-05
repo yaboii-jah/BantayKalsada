@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   getQueuedReports,
@@ -12,8 +13,10 @@ import {
 import { submitQueuedReport } from "@/lib/offline-submit";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setProcessingIds } from "@/lib/offline-processing";
+import { emitQueueChanged } from "@/lib/offline-queue-events";
 
 export function OfflineQueueProcessor() {
+  const router = useRouter();
   const processingRef = useRef(false);
 
   const processQueue = useCallback(async () => {
@@ -42,6 +45,7 @@ export function OfflineQueueProcessor() {
       }
       setProcessingIds(active);
 
+      let submittedAny = false;
       for (const report of reports) {
         if (report.userId !== user.id) continue;
 
@@ -55,6 +59,8 @@ export function OfflineQueueProcessor() {
         const result = await submitQueuedReport(report);
         if (result.ok) {
           await removeQueuedReport(report.id);
+          emitQueueChanged();
+          submittedAny = true;
           toast.success(
             `Offline report "${report.title}" was submitted successfully!`,
           );
@@ -75,6 +81,9 @@ export function OfflineQueueProcessor() {
           );
         }
       }
+      if (submittedAny) {
+        router.refresh();
+      }
       setProcessingIds(new Set());
     };
 
@@ -90,7 +99,7 @@ export function OfflineQueueProcessor() {
       setProcessingIds(new Set());
       processingRef.current = false;
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     void processQueue();

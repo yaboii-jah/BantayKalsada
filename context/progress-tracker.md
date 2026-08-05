@@ -819,4 +819,16 @@ and simpler (no cache table, no grid tuning).
   or discard. `isTransientError` removed (no longer special-cased). Files: `lib/offline-queue.ts`,
   `lib/offline-submit.ts`, `components/offline/offline-queue-processor.tsx`,
   `components/offline/offline-reports-panel.tsx`.
+- [x] **Auto-submit doesn't update the page** — after `OfflineQueueProcessor` auto-submits a
+  queued report (on `online`/timer), `/my-reports` didn't show it until a manual reload:
+  `MyReportsContent` is a server component that fetches once at page load and nothing
+  re-rendered it after the background submit. Now the processor tracks `submittedAny` and calls
+  `router.refresh()` after the loop (safe on any citizen page; doesn't reset client state), so
+  the submitted list reflects the new report immediately. The saved-reports panel also stayed
+  stale when the 60s timer (not an `online` event) did the submit — added
+  `lib/offline-queue-events.ts` (`emitQueueChanged` / `subscribeQueueChanged`); the processor
+  emits after `removeQueuedReport` and the panel re-reads IndexedDB on that event. Manual Retry
+  already worked because `handleRetry` calls `router.refresh()`. Files:
+  `lib/offline-queue-events.ts`, `components/offline/offline-queue-processor.tsx`,
+  `components/offline/offline-reports-panel.tsx`.
 - [x] `npx tsc --noEmit` passes with zero errors.
