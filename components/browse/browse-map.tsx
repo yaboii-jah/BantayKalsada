@@ -265,16 +265,16 @@ function MapContent({
           key={report.id}
           position={[report.latitude, report.longitude]}
         >
-          <Popup>
+          <Popup maxWidth={240} minWidth={200}>
             <div className="browse-popup flex flex-col gap-2 text-sm">
               {report.photo_urls[0] && (
                 <img
                   src={report.photo_urls[0]}
                   alt={report.title}
-                  className="aspect-[4/3] w-48 rounded object-cover"
+                  className="aspect-[4/3] w-full max-w-48 rounded object-cover"
                 />
               )}
-              <p className="max-w-48 truncate font-semibold text-foreground">
+              <p className="max-w-full truncate font-semibold text-foreground">
                 {report.title}
               </p>
               <div className="flex flex-wrap gap-1">

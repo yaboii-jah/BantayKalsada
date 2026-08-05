@@ -229,7 +229,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10 sm:w-96">
+        <div className="fixed inset-x-4 top-16 z-50 mt-2 rounded-lg bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96">
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
             <span className="text-sm font-semibold">Notifications</span>
             {notifications && notifications.length > 0 && (

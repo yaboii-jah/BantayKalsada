@@ -172,6 +172,7 @@ export function PublicNav() {
           </SheetTrigger>
           <SheetContent
             side="right"
+            overlayClassName="inset-x-0 top-16 bottom-0"
             className="data-[side=right]:w-40 bg-gradient-to-b from-popover via-popover to-muted/40 px-4 pb-6"
           >
             <SheetTitle className="sr-only">Menu</SheetTitle>

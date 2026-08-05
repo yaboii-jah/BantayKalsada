@@ -920,3 +920,23 @@ and simpler (no cache table, no grid tuning).
   (each `flex-1` on mobile, `sm:flex-none sm:justify-start` on desktop), bordered rounded pills
   with the existing accent active state. File: `components/browse/filter-bar.tsx`.
 - [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
+
+### Mobile Overlay / Popup QA (Aug 6)
+
+- [x] **Notifications popover overflows the left on mobile** — the popover was
+  `absolute right-0 w-80` (320px) anchored to the bell, but the bell now sits next to the
+  hamburger (not rightmost), so on ~360px screens the panel spilled past the left edge. Now
+  `fixed inset-x-4 top-16` on mobile (viewport-constrained, 1rem margins, below the 64px
+  sticky header); desktop keeps the anchored `sm:absolute sm:right-0 sm:top-full sm:w-96`
+  dropdown. File: `components/notification-bell.tsx`.
+- [x] **Map marker popup cards too big on mobile** — Leaflet's default `maxWidth` is 300px
+  (~338px with padding). Added `maxWidth={240} minWidth={200}` to `<Popup>`; the photo is now
+  `w-full max-w-48` and the title `max-w-full` so content scales with the capped popup.
+  File: `components/browse/browse-map.tsx`.
+- [x] **Header disappears when hamburger opens after scrolling** — the sticky header is
+  `z-[1100]` but `SheetOverlay`/`SheetContent` are `z-[1200]`, so the full-viewport blur/dim
+  overlay painted on top of the header. `SheetContent` now accepts an `overlayClassName` prop
+  (forwarded to `SheetOverlay`); `public-nav.tsx` passes `inset-x-0 top-16 bottom-0` so the
+  overlay starts below the 64px header and the header stays visible.
+  Files: `components/ui/sheet.tsx`, `components/public-nav.tsx`.
+- [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
