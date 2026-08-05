@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Database } from "@/types/database.types";
 import { ReportStatusBadge } from "@/components/reports/report-status-badge";
+import { LocationLabel } from "@/components/reports/location-label";
 import { cn } from "@/lib/utils";
 import { getDisplayUrl } from "@/lib/cloudinary-url";
 import { formatReportDate } from "@/lib/date-utils";
@@ -77,11 +78,12 @@ export function ReportCard({
         <h3 className="line-clamp-2 text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
           {report.title}
         </h3>
-        {report.location_label && (
-          <p className="mt-auto text-xs text-muted-foreground">
-            {report.location_label}
-          </p>
-        )}
+        <LocationLabel
+          label={report.location_label}
+          latitude={report.latitude}
+          longitude={report.longitude}
+          className="mt-auto text-xs text-muted-foreground"
+        />
         {report.barangay && (
           <p className="text-xs text-muted-foreground">
             Barangay {barangayLabels[report.barangay] ?? report.barangay}

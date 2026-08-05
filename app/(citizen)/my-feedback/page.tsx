@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FeedbackCard } from "@/components/reports/feedback-card";
 import { PaginationBar } from "@/components/browse/pagination-bar";
 import { ReportsGridSkeleton } from "@/components/reports/reports-grid-skeleton";
+import { BackButton } from "@/components/back-button";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -168,6 +169,7 @@ export default async function MyFeedbackPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <BackButton fallbackHref="/browse" />
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">My Feedback</h1>
         <p className="mt-1 text-sm text-muted-foreground">

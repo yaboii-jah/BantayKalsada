@@ -831,4 +831,56 @@ and simpler (no cache table, no grid tuning).
   already worked because `handleRetry` calls `router.refresh()`. Files:
   `lib/offline-queue-events.ts`, `components/offline/offline-queue-processor.tsx`,
   `components/offline/offline-reports-panel.tsx`.
-- [x] `npx tsc --noEmit` passes with zero errors.
+
+### QA Pass (Aug 6) — Issues & Suggestions Round
+
+- [x] **View toggle disappears on mobile** — not hidden, just scrolled off-screen inside the
+  `overflow-x-auto` filter strip and dimmed by the mobile-only right-edge fade. Pulled the
+  grid/map toggle out of the strip into its own always-visible row (`flex flex-col gap-2
+  sm:flex-row`), leaving only the filters scrollable; fade now hugs the strip's right edge.
+  File: `components/browse/filter-bar.tsx`.
+- [x] **Offline report shows barangay only (no full address)** — `location_label` is captured
+  only by a client-side Nominatim reverse-geocode at pin-drop time, which silently no-ops
+  offline. Fix is two-layered: (1) submit-time — extracted `reverseGeocode` into
+  `lib/geocode.ts` and `lib/offline-submit.ts` now geocodes `lat/lng` when the queued report
+  lacks a label before building the payload; (2) display fallback — new client component
+  `components/reports/location-label.tsx` renders the stored label or lazy-geocodes on mount,
+  used in `report-card.tsx` and `app/(citizen)/my-reports/[id]/page.tsx` (keeps server
+  components light).
+- [x] **No skeleton/error states for /account** — account was the only `(citizen)` route
+  missing them. Added `app/(citizen)/account/loading.tsx` + `error.tsx` mirroring siblings.
+- [x] **Back buttons on list pages** — new `components/back-button.tsx` (`router.back()` with
+  a `/browse` fallback for deep links) added to `my-reports`, `my-feedback`, and `feedback`.
+  Detail pages already had back links.
+- [x] **Rate-limit: don't re-attempt, resume after limit** — `submitReport` now returns
+  `retryAfter` (exact reset = oldest in-window submission + 24h) via a new optional
+  `ActionResponse.retryAfter`. `QueuedReport` gains `rateLimitedUntil`. The processor skips
+  rate-limited reports until the deadline and, on a rate-limit result, stores
+  `rateLimitedUntil` with **no** attempt increment, no toast, no banner (fixes the "doubled
+  error"); manual `handleRetry` in the panel does the same and shows a "waiting for daily
+  submission limit to reset…" hint. Report auto-submits right after a slot frees.
+- [x] **Offline failure → in-app notification** — new migration
+  `20250806000001_add_offline_submit_failed_notification.sql` adds enum value
+  `OFFLINE_SUBMIT_FAILED` + nullable `offline_queue_id text` to `notifications` (applied via
+  `supabase db query --linked`, matching repo pattern; types regenerated). New server actions
+  `createOfflineSubmitFailedNotification` / `deleteOfflineSubmitNotification` in
+  `app/actions.ts`. Processor creates the notification when an attempt reaches
+  `MAX_AUTORETRY_ATTEMPTS` (fires once) and deletes it on successful submit; panel deletes it
+  on manual-retry success and discard. Bell gains the icon/href/color, refetches its list on
+  Realtime events (so the item appears and disappears live), and is now also mounted in the
+  mobile sheet (`public-nav.tsx`).
+- [x] **Hamburger panel width + background** — `w-64` → `w-56` with a themed
+  `bg-gradient-to-b from-popover via-popover to-muted/40` and the notification bell added
+  inside the sheet.
+- [x] **Map: all markers at all zooms** — removed `MarkerClusterGroup` and the bounds-based
+  `visibleReports` viewport filter from `components/browse/browse-map.tsx`; every matching
+  report renders as an individual `<Marker>` at any zoom. Kept `fitBounds`/`Reset`; the
+  "Showing X of Y in this area" banner now shows the total filtered count. (Perf tradeoff with
+  many reports accepted per user decision.)
+- [x] **Offline reports expand toggle** — `offline-reports-panel.tsx` is collapsed by default
+  with a chevron toggle that expands the list; still `null` when empty.
+- [ ] **Push "not configured" (ops)** — root-caused: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is inlined
+  at build time and VAPID keys are gitignored; the deployed host built without them. Fix is
+  env: add `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` on the host and
+  redeploy. Local build verified to contain the key.
+- [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.

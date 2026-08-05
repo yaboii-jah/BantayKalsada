@@ -11,6 +11,10 @@ import {
   getNextRetryTime,
 } from "@/lib/offline-queue";
 import { submitQueuedReport } from "@/lib/offline-submit";
+import {
+  createOfflineSubmitFailedNotification,
+  deleteOfflineSubmitNotification,
+} from "@/app/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setProcessingIds } from "@/lib/offline-processing";
 import { emitQueueChanged } from "@/lib/offline-queue-events";
@@ -49,6 +53,13 @@ export function OfflineQueueProcessor() {
       for (const report of reports) {
         if (report.userId !== user.id) continue;
 
+        if (
+          report.rateLimitedUntil &&
+          Date.now() < new Date(report.rateLimitedUntil).getTime()
+        ) {
+          continue;
+        }
+
         const attemptCount = report.attemptCount ?? 0;
         if (attemptCount >= MAX_AUTORETRY_ATTEMPTS) continue;
 
@@ -59,11 +70,21 @@ export function OfflineQueueProcessor() {
         const result = await submitQueuedReport(report);
         if (result.ok) {
           await removeQueuedReport(report.id);
+          void deleteOfflineSubmitNotification(report.id);
           emitQueueChanged();
           submittedAny = true;
           toast.success(
             `Offline report "${report.title}" was submitted successfully!`,
           );
+          continue;
+        }
+
+        if (result.rateLimited && result.retryAfter) {
+          await updateQueuedReport(report.id, {
+            lastError: result.error,
+            rateLimitedUntil: result.retryAfter,
+          });
+          emitQueueChanged();
           continue;
         }
 
@@ -75,10 +96,7 @@ export function OfflineQueueProcessor() {
         });
 
         if (nextAttemptCount >= MAX_AUTORETRY_ATTEMPTS) {
-          toast.error(
-            `Couldn't submit "${report.title}" after ${MAX_AUTORETRY_ATTEMPTS} attempts — retry manually in your saved reports when you have time.`,
-            { duration: 30000 },
-          );
+          void createOfflineSubmitFailedNotification(report.id, report.title);
         }
       }
       if (submittedAny) {

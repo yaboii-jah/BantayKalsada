@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import { LocateFixed } from "lucide-react";
 import { NearbyReportsLayer } from "./nearby-reports-layer";
 import { TaytayBoundary } from "./taytay-boundary";
+import { reverseGeocode } from "@/lib/geocode";
 
 const defaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -21,22 +22,6 @@ const defaultIcon = L.icon({
 interface LocationPickerProps {
   value: { lat: number; lng: number; label?: string } | null;
   onChange: (location: { lat: number; lng: number; label?: string }) => void;
-}
-
-async function reverseGeocode(
-  lat: number,
-  lng: number,
-): Promise<{ displayName?: string }> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=fil`,
-      { headers: { "User-Agent": "BantayKalsada/1.0" } },
-    );
-    const data = await res.json();
-    return { displayName: data.display_name as string | undefined };
-  } catch {
-    return {};
-  }
 }
 
 function LocationMarker({

@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
+import { LocationLabel } from "@/components/reports/location-label";
 import { formatReportDate } from "@/lib/date-utils";
 import { MapPin, Calendar, XCircle, ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
@@ -108,12 +109,13 @@ export default async function MyReportDetailPage({
       )}
 
       <div className="mb-8 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-        {report.location_label && (
-          <span className="flex items-center gap-1.5">
-            <MapPin className="size-4" />
-            {report.location_label}
-          </span>
-        )}
+        <LocationLabel
+          label={report.location_label}
+          latitude={report.latitude}
+          longitude={report.longitude}
+          className="flex items-center gap-1.5"
+          icon={<MapPin className="size-4" />}
+        />
         <span className="flex items-center gap-1.5">
           <Calendar className="size-4" />
           {formatReportDate(report.submitted_at)}

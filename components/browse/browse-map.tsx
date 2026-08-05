@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { useEffect, useState, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import MarkerClusterGroup from "react-leaflet-cluster";
 import Link from "next/link";
 import { Car, Flame, Layers, Check } from "lucide-react";
 import { TaytayBoundary } from "@/components/maps/taytay-boundary";
@@ -218,19 +217,9 @@ function MapContent({
   onBaseMapChange: (value: BaseMapType) => void;
 }) {
   const map = useMap();
-  const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const [showHeat, setShowHeat] = useState(true);
   const [showTraffic, setShowTraffic] = useState(false);
   const fittedRef = useRef(false);
-
-  useMapEvents({
-    moveend() {
-      setBounds(map.getBounds());
-    },
-    zoomend() {
-      setBounds(map.getBounds());
-    },
-  });
 
   useEffect(() => {
     if (fittedRef.current) return;
@@ -249,13 +238,6 @@ function MapContent({
       map.fitBounds(L.latLngBounds(target), { padding: [48, 48] });
     }
   }, [map, reports, heatPoints]);
-
-  const visibleReports = useMemo(() => {
-    if (!bounds || reports.length === 0) return reports;
-    return reports.filter((r) => bounds.contains([r.latitude, r.longitude]));
-  }, [bounds, reports]);
-
-  const isFiltered = visibleReports.length < reports.length;
 
   function handleReset() {
     const points = reports.length > 0 ? reports : heatPoints;
@@ -278,47 +260,45 @@ function MapContent({
         <TrafficToggle showTraffic={showTraffic} onToggle={() => setShowTraffic((v) => !v)} />
       </div>
 
-      <MarkerClusterGroup chunkedLoading>
-        {visibleReports.map((report) => (
-          <Marker
-            key={report.id}
-            position={[report.latitude, report.longitude]}
-          >
-            <Popup>
-              <div className="browse-popup flex flex-col gap-2 text-sm">
-                {report.photo_urls[0] && (
-                  <img
-                    src={report.photo_urls[0]}
-                    alt={report.title}
-                    className="aspect-[4/3] w-48 rounded object-cover"
-                  />
-                )}
-                <p className="max-w-48 truncate font-semibold text-foreground">
-                  {report.title}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    {categoryLabels[report.category] ?? report.category}
-                  </span>
-                  <span
-                    className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                      statusColors[report.status] ?? "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {report.status}
-                  </span>
-                </div>
-                <Link
-                  href={`/reports/${report.id}`}
-                  className="text-xs font-medium text-primary hover:text-primary/80"
+      {reports.map((report) => (
+        <Marker
+          key={report.id}
+          position={[report.latitude, report.longitude]}
+        >
+          <Popup>
+            <div className="browse-popup flex flex-col gap-2 text-sm">
+              {report.photo_urls[0] && (
+                <img
+                  src={report.photo_urls[0]}
+                  alt={report.title}
+                  className="aspect-[4/3] w-48 rounded object-cover"
+                />
+              )}
+              <p className="max-w-48 truncate font-semibold text-foreground">
+                {report.title}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {categoryLabels[report.category] ?? report.category}
+                </span>
+                <span
+                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                    statusColors[report.status] ?? "bg-muted text-muted-foreground"
+                  }`}
                 >
-                  View details →
-                </Link>
+                  {report.status}
+                </span>
               </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MarkerClusterGroup>
+              <Link
+                href={`/reports/${report.id}`}
+                className="text-xs font-medium text-primary hover:text-primary/80"
+              >
+                View details →
+              </Link>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
 
       {showHeat && <HeatLayer points={heatPoints} max={3} />}
       {showTraffic && <TrafficLayer />}
@@ -326,33 +306,19 @@ function MapContent({
 
       <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
         <div className="flex items-center gap-3 rounded-lg bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow backdrop-blur-sm">
-          {visibleReports.length > 0 ? (
-            <>
-              <span>
-                Showing {visibleReports.length} of {reports.length}{" "}
-                {reports.length === 1 ? "report" : "reports"} in this area
-              </span>
-              {isFiltered && (
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="font-medium text-primary hover:text-primary/80"
-                >
-                  Reset
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <span>No reports in this area</span>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="font-medium text-primary hover:text-primary/80"
-              >
-                Reset
-              </button>
-            </>
+          <span>
+            {reports.length > 0
+              ? `${reports.length} ${reports.length === 1 ? "report" : "reports"}`
+              : "No reports to show"}
+          </span>
+          {reports.length > 0 && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="font-medium text-primary hover:text-primary/80"
+            >
+              Reset
+            </button>
           )}
         </div>
       </div>

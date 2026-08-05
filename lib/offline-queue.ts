@@ -17,6 +17,7 @@ export interface QueuedReport {
   lastError?: string;
   attemptCount?: number;
   lastAttemptAt?: string;
+  rateLimitedUntil?: string;
 }
 
 export const MAX_AUTORETRY_ATTEMPTS = 3;
@@ -104,7 +105,7 @@ export async function getQueuedReportsForUser(userId: string): Promise<QueuedRep
 
 export async function updateQueuedReport(
   id: string,
-  patch: Partial<Pick<QueuedReport, "lastError" | "attemptCount" | "lastAttemptAt">>,
+  patch: Partial<Pick<QueuedReport, "lastError" | "attemptCount" | "lastAttemptAt" | "rateLimitedUntil">>,
 ): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {

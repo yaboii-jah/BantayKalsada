@@ -15,6 +15,7 @@ import {
   Loader2,
   X,
   Flag,
+  AlertTriangle,
 } from "lucide-react";
 import {
   markNotificationAsRead,
@@ -43,6 +44,7 @@ const NOTIFICATION_ICONS: Record<
   FEEDBACK_CLOSED: Check,
   FEEDBACK_NOTE_ADDED: MessageSquare,
   REPORT_FLAGGED: Flag,
+  OFFLINE_SUBMIT_FAILED: AlertTriangle,
 };
 
 function getNotificationHref(notification: Notification): string {
@@ -54,6 +56,9 @@ function getNotificationHref(notification: Notification): string {
   }
   if (notification.type.startsWith("FEEDBACK_") && notification.feedback_id) {
     return `/my-feedback/${notification.feedback_id}`;
+  }
+  if (notification.type === "OFFLINE_SUBMIT_FAILED") {
+    return `/my-reports`;
   }
   return `/my-reports/${notification.report_id}`;
 }
@@ -108,14 +113,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           filter: `user_id=eq.${userId}`,
         },
         () => {
-          supabase
-            .from("notifications")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .eq("is_read", false)
-            .then(({ count }) => {
-              setUnreadCount(count ?? 0);
-            });
+          void fetchNotifications();
         },
       )
       .subscribe();
@@ -293,6 +291,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                               ? "text-status-resolved"
                               : notification.type === "FEEDBACK_NOTE_ADDED"
                                 ? "text-status-approved"
+                              : notification.type === "OFFLINE_SUBMIT_FAILED"
+                                ? "text-status-rejected"
                                 : "text-primary"
                         }`}
                       />

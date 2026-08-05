@@ -6,6 +6,7 @@ import { MyReportsFilter } from "@/components/reports/my-reports-filter";
 import { OfflineReportsPanel } from "@/components/offline/offline-reports-panel";
 import { PaginationBar } from "@/components/browse/pagination-bar";
 import { ReportsGridSkeleton } from "@/components/reports/reports-grid-skeleton";
+import { BackButton } from "@/components/back-button";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -143,6 +144,7 @@ export default async function MyReportsPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <BackButton fallbackHref="/browse" />
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-foreground">My Reports</h1>
         <p className="mt-1 text-sm text-muted-foreground">

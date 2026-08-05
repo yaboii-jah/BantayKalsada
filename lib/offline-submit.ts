@@ -2,15 +2,29 @@ import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { submitReport } from "@/app/actions";
 import type { QueuedReport } from "@/lib/offline-queue";
 import type { CreateReportInput } from "@/lib/validations/report";
+import { reverseGeocode } from "@/lib/geocode";
+
+export type SubmitQueuedReportResult =
+  | { ok: true }
+  | { ok: false; error: string; rateLimited?: boolean; retryAfter?: string };
 
 export async function submitQueuedReport(
   report: QueuedReport,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<SubmitQueuedReportResult> {
   try {
     const uploadedUrls: string[] = [];
     for (const file of report.photoFiles) {
       const url = await uploadToCloudinary(file);
       uploadedUrls.push(url);
+    }
+
+    let locationLabel = report.location_label;
+    if (!locationLabel) {
+      const { displayName } = await reverseGeocode(
+        report.latitude,
+        report.longitude,
+      );
+      locationLabel = displayName;
     }
 
     const payload: CreateReportInput = {
@@ -22,12 +36,20 @@ export async function submitQueuedReport(
       photo_urls: [...report.photoUrls, ...uploadedUrls],
       latitude: report.latitude,
       longitude: report.longitude,
-      location_label: report.location_label,
+      location_label: locationLabel,
     };
 
     const result = await submitReport(null, payload);
     if (result.success) {
       return { ok: true };
+    }
+    if (result.retryAfter) {
+      return {
+        ok: false,
+        error: result.error ?? "Failed to submit report",
+        rateLimited: true,
+        retryAfter: result.retryAfter,
+      };
     }
     return { ok: false, error: result.error ?? "Failed to submit report" };
   } catch (err) {

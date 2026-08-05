@@ -169,8 +169,14 @@ export function PublicNav() {
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-64 px-4 pb-6">
+          <SheetContent
+            side="right"
+            className="w-56 bg-gradient-to-b from-popover via-popover to-muted/40 px-4 pb-6"
+          >
             <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
+              {!loading && user && (
+                <NotificationBell userId={user.id} />
+              )}
               {navLinks}
               {!loading && !user && (
                 <>

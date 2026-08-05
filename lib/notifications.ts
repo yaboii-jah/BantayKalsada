@@ -4,7 +4,8 @@ export type ReportNotificationType = "REPORT_APPROVED" | "REPORT_REJECTED" | "RE
 export type CommentNotificationType = "COMMENT_ADDED";
 export type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED";
 export type FlagNotificationType = "REPORT_FLAGGED";
-export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType | FlagNotificationType;
+export type OfflineNotificationType = "OFFLINE_SUBMIT_FAILED";
+export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType | FlagNotificationType | OfflineNotificationType;
 
 export function getMessageForType(type: NotificationType, title: string): string {
   switch (type) {
@@ -24,6 +25,8 @@ export function getMessageForType(type: NotificationType, title: string): string
       return `An admin has added a note to your feedback "${title}".`;
     case "REPORT_FLAGGED":
       return `Report "${title}" was flagged by a citizen for admin review.`;
+    case "OFFLINE_SUBMIT_FAILED":
+      return `Couldn't submit your saved offline report "${title}" after several attempts. Open it in My Reports to retry.`;
   }
 }
 
@@ -65,6 +68,8 @@ export function getSubjectForType(type: NotificationType): string {
       return "Admin Note Added to Your Feedback — Bantay Kalsada";
     case "REPORT_FLAGGED":
       return "Report Flagged for Review — Bantay Kalsada";
+    case "OFFLINE_SUBMIT_FAILED":
+      return "Offline Report Not Submitted — Bantay Kalsada";
   }
 }
 
@@ -72,6 +77,7 @@ export interface CreateNotificationParams {
   userId: string;
   reportId?: string;
   feedbackId?: string;
+  offlineQueueId?: string;
   type: NotificationType;
   message: string;
 }
@@ -85,6 +91,7 @@ export async function createNotification(
     user_id: params.userId,
     report_id: params.reportId ?? null,
     feedback_id: params.feedbackId ?? null,
+    offline_queue_id: params.offlineQueueId ?? null,
     type: params.type,
     message: params.message,
   });

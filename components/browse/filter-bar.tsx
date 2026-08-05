@@ -70,53 +70,9 @@ export function FilterBar({ view }: { view: string }) {
   }
 
   return (
-    <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
-      <div ref={scrollRef} className="flex items-center gap-2 overflow-x-auto sm:flex-wrap">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            defaultValue={currentQ}
-            placeholder="Search by keyword..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const value = (e.target as HTMLInputElement).value.trim();
-                router.push(buildHref("q", value));
-              }
-            }}
-            className={`h-8 w-48 rounded-lg border border-input bg-transparent pl-8 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${currentQ ? "pr-8" : "pr-2.5"}`}
-          />
-          {currentQ && (
-            <button
-              type="button"
-              onClick={() => router.push(buildHref("q", ""))}
-              className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:text-foreground"
-              aria-label="Clear search"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-        <SlidersHorizontal className="size-4 text-muted-foreground" />
-        <InlineSelect
-          value={currentCategory}
-          options={categories}
-          onSelect={(value) => router.push(buildHref("category", value))}
-          className="h-8 px-2.5 py-2 w-44"
-        />
-        <InlineSelect
-          value={currentStatus}
-          options={statuses}
-          onSelect={(value) => router.push(buildHref("status", value))}
-          className="h-8 px-2.5 py-2 w-40"
-        />
-        <InlineSelect
-          value={currentBarangay}
-          options={barangays}
-          onSelect={(value) => router.push(buildHref("barangay", value))}
-          className="h-8 px-2.5 py-2 w-44"
-        />
-        <div className="flex overflow-hidden rounded-lg border border-input">
+    <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex shrink-0 overflow-hidden rounded-lg border border-input">
           <button
             type="button"
             onClick={() => router.push(buildHref("view", "grid"))}
@@ -142,10 +98,58 @@ export function FilterBar({ view }: { view: string }) {
             <Map className="size-4" />
           </button>
         </div>
+        <div className="relative min-w-0 flex-1">
+          <div ref={scrollRef} className="flex items-center gap-2 overflow-x-auto sm:flex-wrap">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                defaultValue={currentQ}
+                placeholder="Search by keyword..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const value = (e.target as HTMLInputElement).value.trim();
+                    router.push(buildHref("q", value));
+                  }
+                }}
+                className={`h-8 w-48 rounded-lg border border-input bg-transparent pl-8 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${currentQ ? "pr-8" : "pr-2.5"}`}
+              />
+              {currentQ && (
+                <button
+                  type="button"
+                  onClick={() => router.push(buildHref("q", ""))}
+                  className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+            <SlidersHorizontal className="size-4 text-muted-foreground" />
+            <InlineSelect
+              value={currentCategory}
+              options={categories}
+              onSelect={(value) => router.push(buildHref("category", value))}
+              className="h-8 px-2.5 py-2 w-44"
+            />
+            <InlineSelect
+              value={currentStatus}
+              options={statuses}
+              onSelect={(value) => router.push(buildHref("status", value))}
+              className="h-8 px-2.5 py-2 w-40"
+            />
+            <InlineSelect
+              value={currentBarangay}
+              options={barangays}
+              onSelect={(value) => router.push(buildHref("barangay", value))}
+              className="h-8 px-2.5 py-2 w-44"
+            />
+          </div>
+          {showRightFade && (
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-background via-background/80 to-transparent sm:hidden" />
+          )}
+        </div>
       </div>
-      {showRightFade && (
-        <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-background via-background/80 to-transparent sm:hidden" />
-      )}
     </div>
   );
 }

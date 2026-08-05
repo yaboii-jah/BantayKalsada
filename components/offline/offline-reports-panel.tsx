@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CloudOff, RefreshCw, Trash2, AlertTriangle, Loader2, Pencil } from "lucide-react";
+import { CloudOff, RefreshCw, Trash2, AlertTriangle, Loader2, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 import {
   getQueuedReportsForUser,
   removeQueuedReport,
@@ -15,6 +15,7 @@ import {
 import { submitQueuedReport } from "@/lib/offline-submit";
 import { subscribeProcessing } from "@/lib/offline-processing";
 import { subscribeQueueChanged } from "@/lib/offline-queue-events";
+import { deleteOfflineSubmitNotification } from "@/app/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { formatReportDate } from "@/lib/date-utils";
@@ -24,6 +25,7 @@ export function OfflineReportsPanel() {
   const [reports, setReports] = useState<QueuedReport[]>([]);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState(true);
 
   const refresh = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -75,10 +77,20 @@ export function OfflineReportsPanel() {
       const result = await submitQueuedReport(report);
       if (result.ok) {
         await removeQueuedReport(report.id);
+        void deleteOfflineSubmitNotification(report.id);
         toast.success(
           `Offline report "${report.title}" was submitted successfully!`,
         );
         router.refresh();
+      } else if (result.rateLimited && result.retryAfter) {
+        await updateQueuedReport(report.id, {
+          lastError: result.error,
+          rateLimitedUntil: result.retryAfter,
+        });
+        toast.info(
+          `You've reached the daily report limit. "${report.title}" will submit automatically when a slot frees up.`,
+          { duration: 10000 },
+        );
       } else {
         await updateQueuedReport(report.id, {
           lastError: result.error,
@@ -99,6 +111,7 @@ export function OfflineReportsPanel() {
   const handleDiscard = useCallback(
     async (id: string) => {
       await removeQueuedReport(id);
+      void deleteOfflineSubmitNotification(id);
       toast("Offline report removed.");
       await refresh();
     },
@@ -109,15 +122,28 @@ export function OfflineReportsPanel() {
 
   return (
     <div className="mb-8 rounded-lg border border-primary/20 bg-card p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <CloudOff className="size-4 text-primary" />
+      <button
+        type="button"
+        onClick={() => setCollapsed((c) => !c)}
+        className="flex w-full items-center gap-2 text-left"
+      >
+        <CloudOff className="size-4 shrink-0 text-primary" />
         <h2 className="text-sm font-semibold text-foreground">
           Saved offline reports
         </h2>
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
           {reports.length} waiting
         </span>
-      </div>
+        <span className="ml-auto">
+          {collapsed ? (
+            <ChevronDown className="size-4 text-muted-foreground" />
+          ) : (
+            <ChevronUp className="size-4 text-muted-foreground" />
+          )}
+        </span>
+      </button>
+      {!collapsed && (
+        <>
       <p className="mb-4 text-xs text-muted-foreground">
         These reports were saved on this device while you were offline. They
         are submitted automatically when you&apos;re back online — you can also
@@ -125,7 +151,11 @@ export function OfflineReportsPanel() {
       </p>
 
       <ul className="space-y-3">
-        {reports.map((report) => (
+        {reports.map((report) => {
+          const isRateLimited =
+            !!report.rateLimitedUntil &&
+            Date.now() < new Date(report.rateLimitedUntil).getTime();
+          return (
           <li
             key={report.id}
             className="rounded-md border border-border p-3"
@@ -148,6 +178,7 @@ export function OfflineReportsPanel() {
                 </p>
               )}
               {!processingIds.has(report.id) &&
+                !isRateLimited &&
                 (report.attemptCount ?? 0) > 0 && (
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {(report.attemptCount ?? 0) >= MAX_AUTORETRY_ATTEMPTS
@@ -155,6 +186,11 @@ export function OfflineReportsPanel() {
                       : `${report.attemptCount} of ${MAX_AUTORETRY_ATTEMPTS} attempts used`}
                   </p>
                 )}
+              {isRateLimited && (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Waiting for the daily submission limit to reset…
+                </p>
+              )}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               <Button
@@ -191,25 +227,29 @@ export function OfflineReportsPanel() {
                 Discard
               </Button>
             </div>
-            {report.lastError && (
+            {report.lastError && !isRateLimited && (
               <p className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 {report.lastError}
               </p>
             )}
-            {(report.attemptCount ?? 0) >= MAX_AUTORETRY_ATTEMPTS && (
-              <p className="mt-2 flex items-start gap-1.5 rounded-md bg-status-rejected/10 px-2 py-1.5 text-xs text-status-rejected">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                <span>
-                  Couldn&apos;t submit automatically after {MAX_AUTORETRY_ATTEMPTS}{" "}
-                  attempts. Tap Retry above to submit manually when you have
-                  time.
-                </span>
-              </p>
-            )}
+            {!isRateLimited &&
+              (report.attemptCount ?? 0) >= MAX_AUTORETRY_ATTEMPTS && (
+                <p className="mt-2 flex items-start gap-1.5 rounded-md bg-status-rejected/10 px-2 py-1.5 text-xs text-status-rejected">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    Couldn&apos;t submit automatically after {MAX_AUTORETRY_ATTEMPTS}{" "}
+                    attempts. Tap Retry above to submit manually when you have
+                    time.
+                  </span>
+                </p>
+              )}
           </li>
-        ))}
+          );
+        })}
       </ul>
+        </>
+      )}
     </div>
   );
 }

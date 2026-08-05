@@ -16,6 +16,7 @@ export interface ActionResponse {
   success: boolean;
   data?: { id: string };
   error?: string;
+  retryAfter?: string;
 }
 
 export async function markNotificationAsRead(
@@ -123,6 +124,56 @@ export async function clearAllNotifications(): Promise<{
   }
 }
 
+export async function createOfflineSubmitFailedNotification(
+  offlineQueueId: string,
+  title: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    await createNotification({
+      userId: user.id,
+      offlineQueueId,
+      type: "OFFLINE_SUBMIT_FAILED",
+      message: getMessageForType("OFFLINE_SUBMIT_FAILED", title),
+    });
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function deleteOfflineSubmitNotification(
+  offlineQueueId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("offline_queue_id", offlineQueueId);
+
+    if (error) {
+      return { success: false, error: "Failed to delete notification" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
 export async function submitReport(
   _prevState: ActionResponse | null,
   formData: CreateReportInput,
@@ -151,9 +202,24 @@ export async function submitReport(
     }
 
     if (count !== null && count >= 5) {
+      const { data: oldestInWindow } = await supabase
+        .from("reports")
+        .select("submitted_at")
+        .eq("submitted_by_id", user.id)
+        .gte("submitted_at", twentyFourHoursAgo)
+        .order("submitted_at", { ascending: true })
+        .limit(1)
+        .single();
+      const retryAfter = oldestInWindow?.submitted_at
+        ? new Date(
+            new Date(oldestInWindow.submitted_at).getTime() +
+              24 * 60 * 60 * 1000,
+          ).toISOString()
+        : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       return {
         success: false,
         error: "You have reached the maximum of 5 reports in 24 hours. Please try again later.",
+        retryAfter,
       };
     }
 
