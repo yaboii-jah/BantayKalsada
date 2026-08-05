@@ -935,8 +935,12 @@ and simpler (no cache table, no grid tuning).
   File: `components/browse/browse-map.tsx`.
 - [x] **Header disappears when hamburger opens after scrolling** — the sticky header is
   `z-[1100]` but `SheetOverlay`/`SheetContent` are `z-[1200]`, so the full-viewport blur/dim
-  overlay painted on top of the header. `SheetContent` now accepts an `overlayClassName` prop
-  (forwarded to `SheetOverlay`); `public-nav.tsx` passes `inset-x-0 top-16 bottom-0` so the
-  overlay starts below the 64px header and the header stays visible.
-  Files: `components/ui/sheet.tsx`, `components/public-nav.tsx`.
+  overlay painted on top of the header. First attempt added an `overlayClassName` prop to
+  `SheetContent` (`public-nav.tsx` passes `inset-x-0 top-16 bottom-0`), but it FAILED: the base
+  `SheetOverlay` class still hardcoded `inset-0`, and `tailwind-merge` does not treat `inset-0`
+  as conflicting with `top-16` (both classes survive; `inset-0`'s `top:0` wins). Fixed by
+  removing `inset-0` from `SheetOverlay`'s base and defaulting to it in `SheetContent`
+  (`overlayClassName ?? "inset-0"`), so the override is applied with no leftover `inset-0` and
+  the overlay genuinely starts below the 64px header. Files: `components/ui/sheet.tsx`,
+  `components/public-nav.tsx`.
 - [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
