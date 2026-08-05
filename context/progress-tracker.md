@@ -899,3 +899,24 @@ and simpler (no cache table, no grid tuning).
   `SheetContent` never included them; added sr-only `SheetTitle` ("Menu") and
   `SheetDescription` inside the mobile sheet. File: `components/public-nav.tsx`.
 - [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
+
+### Mobile Nav / View Toggle Polish (Aug 6)
+
+- [x] **Notification bell beside theme toggle on mobile** — moved the bell out of the mobile sheet
+  into the top bar, next to `<ThemeToggle />` (`sm:hidden` row). The desktop nav bell remains
+  desktop-only (CSS-hidden but mounted on mobile; harmless duplicate subscription thanks to the
+  per-instance `useId` channel name). File: `components/public-nav.tsx`.
+- [x] **Hamburger panel still too wide — root cause** — `sheet.tsx`'s base width is the
+  `data-[side=right]:w-3/4` variant, and the plain `w-56` override has no modifier, so
+  `tailwind-merge` keeps both and the `data-side="right"` variant (higher CSS specificity)
+  wins — the panel was ~75% viewport all along. Fixed with `data-[side=right]:w-40` (160px)
+  so the same-variant class now overrides the base. File: `components/public-nav.tsx`.
+- [x] **Solid sign-out buttons** — the destructive Button variant is `bg-destructive/10`
+  (translucent) and the desktop dropdown item was red-text-on-transparent. Both sign-out
+  controls are now solid red with white text (incl. explicit `dark:` overrides).
+  Files: `components/public-nav.tsx`.
+- [x] **View toggle layout + labels** — replaced the two icon-only `size-8` buttons with a
+  full-width row of labeled `List` (LayoutGrid) / `Map` buttons, `justify-between` with `gap-3`
+  (each `flex-1` on mobile, `sm:flex-none sm:justify-start` on desktop), bordered rounded pills
+  with the existing accent active state. File: `components/browse/filter-bar.tsx`.
+- [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.

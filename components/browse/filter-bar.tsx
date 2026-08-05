@@ -72,30 +72,32 @@ export function FilterBar({ view }: { view: string }) {
   return (
     <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="flex shrink-0 overflow-hidden rounded-lg border border-input">
+        <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start sm:gap-2">
           <button
             type="button"
             onClick={() => router.push(buildHref("view", "grid"))}
-            className={`flex size-8 items-center justify-center transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors sm:flex-none ${
               view === "grid"
-                ? "bg-accent text-foreground"
-                : "bg-transparent text-muted-foreground hover:bg-accent/50"
+                ? "border-input bg-accent text-foreground"
+                : "border-input text-muted-foreground hover:bg-accent/50"
             }`}
-            aria-label="Grid view"
+            aria-label="List view"
           >
             <LayoutGrid className="size-4" />
+            List
           </button>
           <button
             type="button"
             onClick={() => router.push(buildHref("view", "map"))}
-            className={`flex size-8 items-center justify-center transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors sm:flex-none ${
               view === "map"
-                ? "bg-accent text-foreground"
-                : "bg-transparent text-muted-foreground hover:bg-accent/50"
+                ? "border-input bg-accent text-foreground"
+                : "border-input text-muted-foreground hover:bg-accent/50"
             }`}
             aria-label="Map view"
           >
             <Map className="size-4" />
+            Map
           </button>
         </div>
         <div className="relative min-w-0 flex-1">

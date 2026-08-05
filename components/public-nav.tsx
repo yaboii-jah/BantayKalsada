@@ -136,7 +136,7 @@ export function PublicNav() {
                       <button
                         type="button"
                         onClick={handleSignOut}
-                        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-sm text-destructive outline-hidden select-none hover:bg-destructive/10"
+                        className="flex w-full items-center gap-2 rounded-md bg-destructive px-1.5 py-1 text-sm text-white outline-hidden select-none hover:bg-destructive/85"
                       >
                         <LogOut className="size-4" />
                         Sign out
@@ -163,6 +163,7 @@ export function PublicNav() {
 
         <div className="flex items-center gap-1 sm:hidden">
           <ThemeToggle />
+          {!loading && user && <NotificationBell userId={user.id} />}
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -171,16 +172,13 @@ export function PublicNav() {
           </SheetTrigger>
           <SheetContent
             side="right"
-            className="w-56 bg-gradient-to-b from-popover via-popover to-muted/40 px-4 pb-6"
+            className="data-[side=right]:w-40 bg-gradient-to-b from-popover via-popover to-muted/40 px-4 pb-6"
           >
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <SheetDescription className="sr-only">
               Main navigation and account links
             </SheetDescription>
             <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
-              {!loading && user && (
-                <NotificationBell userId={user.id} />
-              )}
               {navLinks}
               {!loading && !user && (
                 <>
@@ -232,7 +230,7 @@ export function PublicNav() {
                       <div className="flex-1" />
                       <Button
                     variant="destructive"
-                    className="w-full"
+                    className="w-full bg-destructive text-white hover:bg-destructive/85 dark:bg-destructive dark:hover:bg-destructive/85"
                     onClick={() => {
                       handleSignOut();
                       setSheetOpen(false);
