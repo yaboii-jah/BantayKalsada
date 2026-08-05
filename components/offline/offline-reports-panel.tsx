@@ -127,68 +127,66 @@ export function OfflineReportsPanel() {
             key={report.id}
             className="rounded-md border border-border p-3"
           >
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {report.title}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {report.title}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Queued {formatReportDate(report.queuedAt)} &middot;{" "}
+                {report.photoUrls.length + report.photoFiles.length} photo
+                {report.photoUrls.length + report.photoFiles.length !== 1
+                  ? "s"
+                  : ""}
+              </p>
+              {processingIds.has(report.id) && (
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-primary">
+                  <Loader2 className="size-3 animate-spin" />
+                  Uploading…
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Queued {formatReportDate(report.queuedAt)} &middot;{" "}
-                  {report.photoUrls.length + report.photoFiles.length} photo
-                  {report.photoUrls.length + report.photoFiles.length !== 1
-                    ? "s"
-                    : ""}
-                </p>
-                {processingIds.has(report.id) && (
-                  <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-primary">
-                    <Loader2 className="size-3 animate-spin" />
-                    Uploading…
+              )}
+              {!processingIds.has(report.id) &&
+                (report.attemptCount ?? 0) > 0 && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {(report.attemptCount ?? 0) >= MAX_AUTORETRY_ATTEMPTS
+                      ? `${MAX_AUTORETRY_ATTEMPTS} of ${MAX_AUTORETRY_ATTEMPTS} attempts used`
+                      : `${report.attemptCount} of ${MAX_AUTORETRY_ATTEMPTS} attempts used`}
                   </p>
                 )}
-                {!processingIds.has(report.id) &&
-                  (report.attemptCount ?? 0) > 0 && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {(report.attemptCount ?? 0) >= MAX_AUTORETRY_ATTEMPTS
-                        ? `${MAX_AUTORETRY_ATTEMPTS} of ${MAX_AUTORETRY_ATTEMPTS} attempts used`
-                        : `${report.attemptCount} of ${MAX_AUTORETRY_ATTEMPTS} attempts used`}
-                    </p>
-                  )}
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={processingIds.has(report.id)}
-                  asChild
-                >
-                  <Link href={`/offline-edit/${report.id}`}>
-                    <Pencil className="mr-1.5 size-3.5" />
-                    Edit
-                  </Link>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={retryingId === report.id || processingIds.has(report.id)}
-                  onClick={() => handleRetry(report)}
-                >
-                  {retryingId === report.id || processingIds.has(report.id) ? (
-                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-1.5 size-3.5" />
-                  )}
-                  Retry
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={processingIds.has(report.id)}
-                  onClick={() => handleDiscard(report.id)}
-                >
-                  <Trash2 className="mr-1.5 size-3.5" />
-                  Discard
-                </Button>
-              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={processingIds.has(report.id)}
+                asChild
+              >
+                <Link href={`/offline-edit/${report.id}`}>
+                  <Pencil className="mr-1.5 size-3.5" />
+                  Edit
+                </Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={retryingId === report.id || processingIds.has(report.id)}
+                onClick={() => handleRetry(report)}
+              >
+                {retryingId === report.id || processingIds.has(report.id) ? (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-1.5 size-3.5" />
+                )}
+                Retry
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={processingIds.has(report.id)}
+                onClick={() => handleDiscard(report.id)}
+              >
+                <Trash2 className="mr-1.5 size-3.5" />
+                Discard
+              </Button>
             </div>
             {report.lastError && (
               <p className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
