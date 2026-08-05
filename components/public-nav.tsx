@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Map, Menu, LogOut, FileText, MessageSquare } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
@@ -173,6 +173,10 @@ export function PublicNav() {
             side="right"
             className="w-56 bg-gradient-to-b from-popover via-popover to-muted/40 px-4 pb-6"
           >
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <SheetDescription className="sr-only">
+              Main navigation and account links
+            </SheetDescription>
             <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
               {!loading && user && (
                 <NotificationBell userId={user.id} />

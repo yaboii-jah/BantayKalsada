@@ -884,3 +884,18 @@ and simpler (no cache table, no grid tuning).
   env: add `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` on the host and
   redeploy. Local build verified to contain the key.
 - [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
+
+### Mobile Hamburger Console Fixes (Aug 6)
+
+- [x] **`cannot add postgres_changes callbacks for realtime:notifications-realtime after
+  subscribe()` on mobile hamburger toggle** — root cause: `createBrowserClient` returns a
+  module-level singleton and `RealtimeClient.channel(topic)` dedupes by topic name, so the
+  sheet `NotificationBell` (added in the QA pass) received the desktop bell's already-subscribed
+  channel and its `.on("postgres_changes", …)` threw. Fixed by giving each bell instance a
+  unique channel name derived from `useId()`
+  (`notifications-realtime-<instanceId>`), so the two mounted bells no longer collide.
+  File: `components/notification-bell.tsx`.
+- [x] **Radix `DialogContent` requires a `DialogTitle` / `Description` warnings** on sheet open —
+  `SheetContent` never included them; added sr-only `SheetTitle` ("Menu") and
+  `SheetDescription` inside the mobile sheet. File: `components/public-nav.tsx`.
+- [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.

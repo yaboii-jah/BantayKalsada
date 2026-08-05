@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useTransition, useCallback } from "react";
+import { useEffect, useState, useRef, useTransition, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -65,6 +65,8 @@ function getNotificationHref(notification: Notification): string {
 
 export function NotificationBell({ userId }: NotificationBellProps) {
   const router = useRouter();
+  const instanceId = useId();
+  const channelName = `notifications-realtime-${instanceId.replace(/[:]/g, "")}`;
   const menuRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -103,7 +105,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       });
 
     const channel = supabase
-      .channel("notifications-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -121,7 +123,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, fetchNotifications]);
+  }, [userId, fetchNotifications, channelName]);
 
   const handleToggle = useCallback(() => {
     if (!open && !fetchedRef.current) {
