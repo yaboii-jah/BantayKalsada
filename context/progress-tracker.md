@@ -933,14 +933,26 @@ and simpler (no cache table, no grid tuning).
   (~338px with padding). Added `maxWidth={240} minWidth={200}` to `<Popup>`; the photo is now
   `w-full max-w-48` and the title `max-w-full` so content scales with the capped popup.
   File: `components/browse/browse-map.tsx`.
-- [x] **Header disappears when hamburger opens after scrolling** — the sticky header is
-  `z-[1100]` but `SheetOverlay`/`SheetContent` are `z-[1200]`, so the full-viewport blur/dim
-  overlay painted on top of the header. First attempt added an `overlayClassName` prop to
-  `SheetContent` (`public-nav.tsx` passes `inset-x-0 top-16 bottom-0`), but it FAILED: the base
-  `SheetOverlay` class still hardcoded `inset-0`, and `tailwind-merge` does not treat `inset-0`
-  as conflicting with `top-16` (both classes survive; `inset-0`'s `top:0` wins). Fixed by
-  removing `inset-0` from `SheetOverlay`'s base and defaulting to it in `SheetContent`
-  (`overlayClassName ?? "inset-0"`), so the override is applied with no leftover `inset-0` and
-  the overlay genuinely starts below the 64px header. Files: `components/ui/sheet.tsx`,
+- [x] **Header disappears when hamburger opens after scrolling** — two separate causes, both
+  fixed. (1) Overlay stacking: the sticky header is `z-[1100]` but `SheetOverlay`/`SheetContent`
+  are `z-[1200]`, so the full-viewport blur/dim overlay painted on top of the header. First
+  attempt added an `overlayClassName` prop to `SheetContent` (`public-nav.tsx` passes
+  `inset-x-0 top-16 bottom-0`), but it FAILED: the base `SheetOverlay` class still hardcoded
+  `inset-0`, and `tailwind-merge` does not treat `inset-0` as conflicting with `top-16` (both
+  classes survive; `inset-0`'s `top:0` wins). Fixed by removing `inset-0` from `SheetOverlay`'s
+  base and defaulting to it in `SheetContent` (`overlayClassName ?? "inset-0"`), so the override
+  is applied with no leftover `inset-0` and the overlay genuinely starts below the 64px header.
+  (2) Scroll lock: the real reason the header still vanished was that Radix Dialog's modal
+  overlay wraps itself in `react-remove-scroll`, whose `RemoveScrollBar` injects
+  `body[data-scroll-locked] { overflow: hidden !important }` while the sheet is open — with the
+  body non-scrollable, `position: sticky` no longer re-sticks, so a header scrolled out of view
+  stayed out of view. Fixed by toggling the header to `fixed inset-x-0 top-0` while `sheetOpen`
+  is true (`public-nav.tsx` already owns that state) and back to `sticky top-0` on close; the
+  body is scroll-locked anyway, so there is no scrolling conflict, and the overlay now starts
+  below the 64px header so it floats undimmed. Files: `components/ui/sheet.tsx`,
   `components/public-nav.tsx`.
+- [x] **Latent admin-sidebar case (noted, not fixed)** — `components/admin/admin-sidebar.tsx`
+  is the only other sticky element and admin dialogs (`components/admin/bulk-action-bar.tsx`,
+  `components/admin/action-buttons.tsx`) trigger the same scroll lock, so the same bug is
+  possible on admin pages. Deferred per scope decision.
 - [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
