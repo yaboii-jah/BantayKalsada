@@ -338,7 +338,7 @@ export function BrowseMap({
 
   if (reports.length === 0 && heatPoints.length === 0) {
     return (
-      <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-muted lg:aspect-[3/2]">
+      <div className="flex h-[60vh] min-h-80 w-full items-center justify-center rounded-lg bg-muted lg:h-[70vh]">
         <p className="text-sm text-muted-foreground">No reports to show on map</p>
       </div>
     );
@@ -354,7 +354,7 @@ export function BrowseMap({
       center={center}
       zoom={12}
       maxZoom={19}
-      className="aspect-[4/3] w-full rounded-lg lg:aspect-[3/2]"
+      className="h-[60vh] min-h-80 w-full rounded-lg lg:h-[70vh]"
       scrollWheelZoom={true}
     >
       <TileLayer key={baseMap} url={option.url} attribution={option.attribution} maxZoom={option.maxZoom} />

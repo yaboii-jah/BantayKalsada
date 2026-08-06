@@ -7,7 +7,7 @@ const BrowseMapInner = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-muted lg:aspect-[3/2]">
+      <div className="flex h-[60vh] min-h-80 w-full items-center justify-center rounded-lg bg-muted lg:h-[70vh]">
         <p className="text-sm text-muted-foreground">Loading map…</p>
       </div>
     ),

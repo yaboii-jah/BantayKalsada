@@ -23,7 +23,7 @@ export function ReportsGridSkeleton({ count = 12 }: { count?: number }) {
 
 export function MapSkeleton() {
   return (
-    <div className="flex h-[500px] w-full items-center justify-center rounded-lg border border-border bg-muted">
+    <div className="flex h-[60vh] min-h-80 w-full items-center justify-center rounded-lg border border-border bg-muted lg:h-[70vh]">
       <div className="flex flex-col items-center gap-2 text-muted-foreground">
         <div className="size-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
         <p className="text-sm">Loading map…</p>

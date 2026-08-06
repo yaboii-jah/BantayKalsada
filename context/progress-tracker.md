@@ -958,4 +958,11 @@ and simpler (no cache table, no grid tuning).
   is the only other sticky element and admin dialogs (`components/admin/bulk-action-bar.tsx`,
   `components/admin/action-buttons.tsx`) trigger the same scroll lock, so the same bug is
   possible on admin pages. Deferred per scope decision.
+- [x] **Browse map too short** — the map height was aspect-ratio based
+  (`aspect-[4/3] lg:aspect-[3/2]` ≈ 268px mobile / 853px desktop) in three spots plus a
+  mismatched `h-[500px]` `MapSkeleton`. Switched all four to viewport height
+  `h-[60vh] min-h-80 w-full lg:h-[70vh]` (mobile ~60% of screen with a 320px floor, desktop
+  ~70%) so loaded / empty / loading-fallback / Suspense skeleton all render the same height.
+  Files: `components/browse/browse-map.tsx`, `components/browse/browse-map-wrapper.tsx`,
+  `components/reports/reports-grid-skeleton.tsx`.
 - [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
