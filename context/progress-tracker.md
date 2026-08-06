@@ -949,8 +949,11 @@ and simpler (no cache table, no grid tuning).
   stayed out of view. Fixed by toggling the header to `fixed inset-x-0 top-0` while `sheetOpen`
   is true (`public-nav.tsx` already owns that state) and back to `sticky top-0` on close; the
   body is scroll-locked anyway, so there is no scrolling conflict, and the overlay now starts
-  below the 64px header so it floats undimmed. Files: `components/ui/sheet.tsx`,
-  `components/public-nav.tsx`.
+  below the 64px header so it floats undimmed. Follow-up: because `fixed` takes the header out
+  of document flow, opening the sheet pushed `<main>` up by the header's 65px (64px `h-16` bar +
+  1px `border-b`). Fixed by rendering `{sheetOpen && <div aria-hidden className="h-[65px]" />}`
+  as a fragment sibling after the header, reserving that space only while the header is fixed.
+  Files: `components/ui/sheet.tsx`, `components/public-nav.tsx`.
 - [x] **Latent admin-sidebar case (noted, not fixed)** — `components/admin/admin-sidebar.tsx`
   is the only other sticky element and admin dialogs (`components/admin/bulk-action-bar.tsx`,
   `components/admin/action-buttons.tsx`) trigger the same scroll lock, so the same bug is
