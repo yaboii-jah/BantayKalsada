@@ -19,6 +19,8 @@ The database owns all structured application data. It does not store binary cont
 | Citizen flags on reports | `report_flags` table |
 | Upload sign request log | `upload_sign_log` table |
 | Municipality boundary polygons (Taytay, Rizal) | `municipality_boundaries` table |
+| Browser push subscription endpoints | `push_subscriptions` table |
+| Public REST API request log (rate limiting) | `api_request_log` table |
 | Report photos | Cloudinary —  only the URL strings are stored in the database |
 
 ---
@@ -60,7 +62,9 @@ CREATE TYPE notification_type AS ENUM (
   'REPORT_RESOLVED',
   'REPORT_FLAGGED',
   'FEEDBACK_ACKNOWLEDGED',
-  'FEEDBACK_CLOSED'
+  'FEEDBACK_CLOSED',
+  'FEEDBACK_NOTE_ADDED',
+  'OFFLINE_SUBMIT_FAILED'
 );
 
 CREATE TYPE report_flag_type AS ENUM (
@@ -153,6 +157,8 @@ CREATE TABLE reports (
   submitted_at      timestamptz     NOT NULL DEFAULT now(),
   reviewed_at       timestamptz     NULL,
   resolved_at       timestamptz     NULL,
+  resolution_notes  text            NULL,
+  resolved_image_urls text[]        NOT NULL DEFAULT '{}',
 
   CONSTRAINT title_length
     CHECK (char_length(title) >= 5 AND char_length(title) <= 100),
@@ -201,6 +207,8 @@ CREATE TABLE reports (
 | `submitted_at` | `timestamptz` | No | `now()` | When the report was first created. |
 | `reviewed_at` | `timestamptz` | Yes | `null` | When the admin approved or rejected. Set server-side at the time of the action. |
 | `resolved_at` | `timestamptz` | Yes | `null` | When the admin marked the report as resolved. Set server-side at the time of the action. |
+| `resolution_notes` | `text` | Yes | `null` | Optional admin-written summary of how the issue was addressed. Set by the `resolveReport` Server Action. Only populated when the report is `RESOLVED`. |
+| `resolved_image_urls` | `text[]` | No | `'{}'` | Optional Cloudinary CDN URLs (0–3) of "after resolution" photos. Set by the `resolveReport` Server Action. Rendered in a separate "After Resolution" gallery on detail pages. |
 
 ---
 
@@ -320,20 +328,63 @@ CREATE INDEX idx_muni_boundary ON municipality_boundaries USING GIST (boundary);
 | `zoom_level` | `integer` | No | `14` | Default map zoom level for the municipality. |
 | `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
 
+### `push_subscriptions`
+
+Stores browser Web Push subscription endpoints so the server can deliver push notifications to the citizen's devices. One or more rows per user (multiple devices).
+
+```sql
+CREATE TABLE push_subscriptions (
+  id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  subscription jsonb       NOT NULL,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `user_id` | `uuid` | No | — | FK to `auth.users.id`. Cascade deletes when the auth user is deleted. |
+| `subscription` | `jsonb` | No | — | The full `PushSubscriptionJSON` object (endpoint, keys, expirationTime) serialized as JSON. Saved by the `savePushSubscription` Server Action; parsed and re-serialized at the Server Action boundary. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
+
+The only server-side write path is the `savePushSubscription` Server Action (RLS-scoped to the current user). Expired subscriptions (HTTP 410/404 from the push service) are cleaned up automatically by `sendPushNotification()` in `lib/push.ts`.
+
+### `api_request_log`
+
+Stores SHA-256 hashes of client IPs (plus pepper) and timestamps for sliding-window rate limiting of the public REST API (`/api/reports`). RLS is enabled with **no policies** — the table is only reachable through the service-role client in `lib/api-rate-limit.ts`, never via PostgREST. Only hashed IPs are stored, never raw IPs.
+
+```sql
+CREATE TABLE api_request_log (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  ip_hash     text        NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `ip_hash` | `text` | No | — | SHA-256 hash of the client IP with a server-side pepper (`API_RATE_LIMIT_SECRET`). Never the raw IP. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. Used for the 120/hr + 1,000/day sliding-window rate checks. |
+
+> **Service-role deviation:** This table has no user association and zero RLS policies, so rate-limit bookkeeping uses the service-role client — a documented exception to "service role = admin only". See `feature-specs/28-public-rest-api.md`.
+
 ### `notifications`
 
-Stores in-app notification records created when a report's status changes or when feedback is acknowledged/closed. One row per status change event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
+Stores in-app notification records created when a report's status changes, when feedback is acknowledged/closed, when a citizen flags a report, or when an offline report submission permanently fails. One row per event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
 
 ```sql
 CREATE TABLE notifications (
-  id          uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     uuid              NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  report_id   uuid              NULL REFERENCES reports(id) ON DELETE CASCADE,
-  feedback_id uuid              NULL REFERENCES feedback(id) ON DELETE CASCADE,
-  type        notification_type NOT NULL,
-  message     text              NOT NULL,
-  is_read     boolean           NOT NULL DEFAULT false,
-  created_at  timestamptz       NOT NULL DEFAULT now()
+  id               uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          uuid              NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  report_id        uuid              NULL REFERENCES reports(id) ON DELETE CASCADE,
+  feedback_id      uuid              NULL REFERENCES feedback(id) ON DELETE CASCADE,
+  offline_queue_id text              NULL,
+  type             notification_type NOT NULL,
+  message          text              NOT NULL,
+  is_read          boolean           NOT NULL DEFAULT false,
+  created_at       timestamptz       NOT NULL DEFAULT now()
 );
 ```
 
@@ -343,6 +394,7 @@ CREATE TABLE notifications (
 | `user_id` | `uuid` | No | — | FK to `auth.users.id`. The citizen being notified. |
 | `report_id` | `uuid` | Yes | — | FK to `reports.id`. Null for feedback notifications. |
 | `feedback_id` | `uuid` | Yes | — | FK to `feedback.id`. Null for report notifications. |
+| `offline_queue_id` | `text` | Yes | — | Correlates an `OFFLINE_SUBMIT_FAILED` notification with its client-side IndexedDB draft id. No FK — the offline queue lives only on the device. Null for all other notification types. |
 | `type` | `notification_type` | No | — | The event type. Determines the message template. |
 | `message` | `text` | No | — | Human-readable notification text generated server-side at creation time. |
 | `is_read` | `boolean` | No | `false` | Flipped to `true` when the citizen views the notification. |
@@ -400,7 +452,8 @@ auth.users (Supabase-managed)
   ├── report_flags.user_id      (one-to-many, cascade delete)
   ├── upload_sign_log.user_id   (one-to-many, cascade delete)
   ├── feedback.user_id          (one-to-many, cascade delete)
-  └── notifications.user_id     (one-to-many, cascade delete)
+  ├── notifications.user_id     (one-to-many, cascade delete)
+  └── push_subscriptions.user_id (one-to-many, cascade delete)
 
 reports
   ├── report_comments.report_id (one-to-many, cascade delete)
@@ -409,6 +462,12 @@ reports
 
 report_comments
   └── report_comments.parent_id (one-to-many, cascade delete)
+
+push_subscriptions
+  — (no child references)
+
+api_request_log
+  — (no child references; no FK to auth.users — rows keyed by IP hash)
 
 upload_sign_log
   — (no child references)
@@ -472,6 +531,12 @@ CREATE INDEX idx_upload_sign_log_user_created ON upload_sign_log(user_id, create
 
 -- municipality_boundaries: spatial index for ST_Within boundary checks
 CREATE INDEX idx_muni_boundary ON municipality_boundaries USING GIST (boundary);
+
+-- push_subscriptions: citizen fetching their own subscriptions
+CREATE INDEX idx_push_sub_user_id ON push_subscriptions(user_id);
+
+-- api_request_log: sliding-window rate-limit counts per IP hash
+CREATE INDEX idx_api_request_log_ip_created ON api_request_log(ip_hash, created_at);
 ```
 
 ---
@@ -669,6 +734,8 @@ ALTER TABLE feedback           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_comments    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_flags       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE upload_sign_log    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_request_log    ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
@@ -874,6 +941,38 @@ Note: The `upload_sign_log` table is used exclusively for rate limiting the `/ap
 
 ---
 
+### `push_subscriptions` RLS
+
+```sql
+-- Users can read their own push subscriptions
+CREATE POLICY "Users can read own push subscriptions"
+  ON push_subscriptions FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Users can register their own push subscriptions
+CREATE POLICY "Users can insert own push subscriptions"
+  ON push_subscriptions FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can remove their own push subscriptions
+CREATE POLICY "Users can delete own push subscriptions"
+  ON push_subscriptions FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
+```
+
+Note: Subscriptions are written by the `savePushSubscription` Server Action using the anon-key server client, governed by the INSERT policy. Expired subscriptions (HTTP 410/404) are cleaned up by `sendPushNotification()` in `lib/push.ts` using the service-role client (bypasses RLS). There is no UPDATE policy — subscriptions are never modified in place.
+
+---
+
+### `api_request_log` RLS
+
+RLS is enabled with **no policies**. The anon and authenticated roles cannot read or mutate rate-limit rows via PostgREST. The table is only reachable through the service-role client in `lib/api-rate-limit.ts`, which performs both inserts and sliding-window count queries for the public REST API. Only SHA-256 hashes of client IPs (plus a server-side pepper) are stored — never raw IPs.
+
+---
+
 ## Business Validation Rules
 
 These rules are enforced at two levels: database constraints (defined above) and Zod schemas (in `lib/validations/`). Both layers must agree. If a constraint exists in the database, the corresponding Zod rule must exist too — and vice versa.
@@ -911,6 +1010,10 @@ These rules are enforced at two levels: database constraints (defined above) and
 | Report flag ownership | Only the flagger can create/toggle their own flag | RLS policies on `report_flags` + Server Action (`flagReport` checks `auth.uid()` = `user_id`) |
 | Report flag target status | Only `APPROVED`/`RESOLVED` reports can be flagged | Server Action (`flagReport` status check) |
 | Upload sign request rate | Max 30 signature requests per user per 1-hour window | API route handler (`GET /api/uploads/sign` — count query on `upload_sign_log` before generating signature) |
+| `reports.resolution_notes` | Optional, max 2000 chars, only set on resolution | Server Action (`resolveReport` — Zod `resolveReportSchema`) |
+| `reports.resolved_image_urls` | Optional, 1–3 URLs, only set on resolution | Server Action (`resolveReport` — Zod `resolveReportSchema`) |
+| Push subscription ownership | Users can only read/insert/delete their own subscriptions | RLS policies on `push_subscriptions` + Server Action (`savePushSubscription` checks `auth.uid()` = `user_id`) |
+| Offline failure notification correlation | `OFFLINE_SUBMIT_FAILED` notifications carry an `offline_queue_id` linking to the local IndexedDB draft | Server Action (`createOfflineSubmitFailedNotification` sets `offline_queue_id`; `deleteOfflineSubmitNotification` deletes by `user_id` + `offline_queue_id`) |
 
 ---
 

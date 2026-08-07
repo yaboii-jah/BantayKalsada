@@ -30,6 +30,35 @@ change.
 
 ## Completed
 
+### Static Content Pages: About / Privacy / Terms / Guidelines / Disclaimer
+
+- [x] `components/public-footer.tsx` — shared footer extracted from the inline footers in
+  `(public)/layout.tsx` and `(citizen)/layout.tsx`; links to Browse, About, Guidelines, Privacy,
+  Terms, Disclaimer + copyright. Both layouts now render `<PublicFooter />` (dedup, single source).
+- [x] `components/public/content-page.tsx` — `ContentPage` (title/intro container),
+  `ContentSection` (bg-card rounded section cards), `ContentList` (bulleted list helper);
+  tokens only, no inline hex.
+- [x] `app/(public)/about/page.tsx` — mission, how-it-works, scope (Taytay only, 48h moderation),
+  moderation, contact (mailto + /feedback link). `Metadata` exported.
+- [x] `app/(public)/privacy/page.tsx` — RA 10173-aligned: collected data, purposes, public vs
+  private fields, service providers (Vercel, Supabase, Cloudinary, Brevo, PhilSMS, OSM/Nominatim/
+  TomTom, Google), retention, rights, cookies (none), children (13+), changes. `Metadata` exported.
+- [x] `app/(public)/terms/page.tsx` — eligibility (13+, guardian for <18), account, acceptable use,
+  submission rules, moderation, disclaimers, liability, termination, changes, governing law
+  (Philippines). `Metadata` exported.
+- [x] `app/(public)/guidelines/page.tsx` — what to report (5 categories verbatim from
+  `reportCategoryEnum`), good-report checklist (title/description/severity/barangay/pin),
+  photo rules (1–3, own photos, no faces), respectful comments, flagging (ALREADY_FIXED /
+  WRONG_LOCATION), enforcement. `Metadata` exported.
+- [x] `app/(public)/disclaimer/page.tsx` — citizen-supplied/unverified info, not an official
+  service, NOT for emergencies (911 / PNP 122), use at own risk, no liability, moderation !=
+  verification. `Metadata` exported.
+- [x] `app/(auth)/register/page.tsx` — added "By creating an account, you agree to the Terms of
+  Service and Privacy Policy" line with links to both new pages.
+- [x] All 5 pages render as `○ (Static)` prerendered routes; `npm run build` passes with zero errors.
+- [x] Context updated — `app-codebase-context.md` (route-group table + File Organization),
+  `ui-context.md` (content-page/Ft2 footer conventions), this tracker.
+
 ### Offline Submission (Mobile & Notifications v2.2)
 
 - [x] `lib/cloudinary-upload.ts` — `uploadToCloudinary(file)` extracted from `photo-upload.tsx`; shared by the photo widget and the queue processor
@@ -716,6 +745,9 @@ change.
 
 ## Doc Alignment & Fixes (post-Taytay testing)
 
+- **`data-model.md` synced to schema** — added the schema pieces that existed in `supabase/migrations/` but were never documented: `resolution_notes` + `resolved_image_urls` on `reports` (`20250719000001`), `push_subscriptions` table + its RLS/index/relationship/validation rows (`20250727000001`), `api_request_log` table + RLS (no policies, service-role-only) (`20250801000001`), `FEEDBACK_NOTE_ADDED` and `OFFLINE_SUBMIT_FAILED` in `notification_type`, and `offline_queue_id` on `notifications` (`20250710000001`, `20250806000001`). Updated "What Lives in the Database", Relationships, Indexes, RLS, and Business Validation Rules sections.
+- **`app-codebase-context.md` synced** — route-group table now lists `/account`, `/offline-edit/[draftId]`, `/my-reports/[id]/edit`, and admin `/flags`; notifications producer table now includes `flagReport` → `REPORT_FLAGGED` and `createOfflineSubmitFailedNotification` → `OFFLINE_SUBMIT_FAILED` with link targets; File Organization Reference refreshed for the full current tree (offline libs/components, SMS/push, REST API, traffic tiles, healthz, back-button, theme-toggle, share/flag/location-label components); intro line updated to cover the newer feature set.
+
 - **Report card tag overflow fix** — `components/reports/report-card.tsx`: added `flex-wrap` to the category/severity/status/date row so tags wrap instead of being clipped by the card's `overflow-hidden` on narrow cards (mobile / 5-column grid). One-word change, build verified.
 - **Search behavior confirmed intentional** — ILIKE keyword search matching both `title` and `description` (not title only) is by design per `feature-specs/09-search-design.md`. No change made.
 - **Spec `22-municipality-scope.md` reconciled with implementation** — The spec still read as a pre-implementation plan and described behavior that was never built. Corrected: (1) barangay is **manually selected** via `InlineSelect`, not Nominatim auto-detected — reverse geocode only sets `location_label`; (2) boundary enforced by `trg_reports_location_boundary` trigger using inline `ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geometry` (not `NEW.location`, which is NULL in BEFORE INSERT on PG17), not a CHECK constraint; (3) `barangay` column stays nullable (no backfill/NOT NULL); (4) default map center is `14.5587, 121.1360` (was documented as `14.5692, 121.1326`); (5) Files Created table fixed to real migration filenames incl. `20250713000009_add_reports_rls_policies.sql`, plus `taytay-boundary.tsx` and `inline-select.tsx`; (6) Implementation Status + checklists flipped to complete, auto-detect marked "not implemented"; (7) admin queue barangay **filter** was never built (column + analytics chart only).
@@ -879,10 +911,12 @@ and simpler (no cache table, no grid tuning).
   many reports accepted per user decision.)
 - [x] **Offline reports expand toggle** — `offline-reports-panel.tsx` is collapsed by default
   with a chevron toggle that expands the list; still `null` when empty.
-- [ ] **Push "not configured" (ops)** — root-caused: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is inlined
-  at build time and VAPID keys are gitignored; the deployed host built without them. Fix is
+- [x] **Push "not configured" (ops)** — root-caused: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is inlined
+  at build time and VAPID keys are gitignored; the deployed host built without them. Fix was
   env: add `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` on the host and
   redeploy. Local build verified to contain the key.
+- [x] **Push verified in production** — VAPID keys configured on the Vercel deploy host, rebuilt,
+  and push functionality tested end to end. No further code changes needed.
 - [x] `npx tsc --noEmit` and `npm run build` pass with zero errors.
 
 ### Mobile Hamburger Console Fixes (Aug 6)

@@ -1,6 +1,6 @@
 # Bantay Kalsada — Codebase Context
 
-This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete v1 implementation including Google OAuth, in-app notifications, keyword search, map view with bounding box filter, admin analytics, app feedback system, admin notes on feedback, report severity tagging, comments on reports, share report via link/social, PWA support, bulk admin actions, Suspense-boundary loading for filter navigation, and dark mode.
+This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete implementation including Google OAuth, in-app notifications, keyword search, map view with heatmap/traffic/base-layer toggles, admin analytics, app feedback system, admin notes on feedback, report severity tagging, comments on reports, citizen report flagging, share report via link/social, PWA support, bulk admin actions, SMS + push notifications, offline report submission/editing, offline map preloading, the public REST API, CSV export, Suspense-boundary loading for filter navigation, dark mode, and static content pages (About / Privacy / Terms / Guidelines / Disclaimer).
 
 ---
 
@@ -10,10 +10,10 @@ The app uses Next.js App Router **route groups** to enforce access tiers. Each g
 
 | Group | Routes | Access | Layout |
 |-------|--------|--------|--------|
-| `(public)` | `/`, `/browse`, `/reports/[id]` | Anyone — no auth needed | Shared nav + footer (Ft2 inline) |
+| `(public)` | `/`, `/browse`, `/reports/[id]`, `/about`, `/privacy`, `/terms`, `/guidelines`, `/disclaimer` | Anyone — no auth needed | Shared nav + footer (Ft2 inline; footer via shared `PublicFooter`) |
 | `(auth)` | `/login`, `/register`, `/reset-password` | Unauthenticated only | Centered card on gradient bg |
-| `(citizen)` | `/submit`, `/my-reports`, `/my-reports/[id]`, `/feedback`, `/my-feedback`, `/my-feedback/[id]` | Auth + verified email | Same nav/footer as public |
-| `admin/` | `/admin/*` (dashboard, queues, review, feedback inbox, notes) | Auth + `role: ADMIN` | Sidebar + content canvas |
+| `(citizen)` | `/submit`, `/my-reports`, `/my-reports/[id]`, `/my-reports/[id]/edit`, `/offline-edit/[draftId]`, `/feedback`, `/my-feedback`, `/my-feedback/[id]`, `/account` | Auth + verified email | Same nav/footer as public |
+| `admin/` | `/admin/*` (dashboard, queues, review, feedback inbox, notes, flags queue) | Auth + `role: ADMIN` | Sidebar + content canvas |
 
 ---
 
@@ -38,7 +38,7 @@ The proxy creates a Supabase server client directly from the request cookies to 
 Every protected route group has a layout that independently verifies auth server-side:
 
 - `app/admin/layout.tsx` — calls `supabase.auth.getUser()` + queries `profiles.role === 'ADMIN'`. Redirects non-admins to `/browse`.
-- `app/(citizen)/layout.tsx` — the citizen group layout (shares PublicNav + footer). Auth check is inherited from the proxy, but the layout enforces the route group boundary.
+- `app/(citizen)/layout.tsx` — the citizen group layout (shares PublicNav + PublicFooter). Auth check is inherited from the proxy, but the layout enforces the route group boundary.
 
 ### 3. Server Action-level (Mutation-level — final guard)
 
@@ -270,11 +270,15 @@ The `notifications` table is populated by multiple Server Actions:
 | `closeFeedback` | `app/admin/actions.ts` | `FEEDBACK_CLOSED` | Feedback submitter |
 | `updateFeedbackNote` | `app/admin/actions.ts` | `FEEDBACK_NOTE_ADDED` | Feedback submitter (null→value only) |
 | `addComment` | `app/actions.ts` | `COMMENT_ADDED` | Report owner (if commenter ≠ owner) |
+| `flagReport` | `app/actions.ts` | `REPORT_FLAGGED` | All admins (on each flag INSERT) |
+| `createOfflineSubmitFailedNotification` | `app/actions.ts` | `OFFLINE_SUBMIT_FAILED` | Draft owner (on 3rd failed auto-attempt) |
 
 Link targets per type:
 - `REPORT_*` → `/my-reports/[report_id]`
 - `FEEDBACK_*` → `/my-feedback/[feedback_id]`
 - `COMMENT_ADDED` → `/reports/[report_id]` (public detail page)
+- `REPORT_FLAGGED` → `/admin/reports/[report_id]` (admin review page)
+- `OFFLINE_SUBMIT_FAILED` → `/my-reports` (retry via the saved-offline-reports panel)
 
 **Delete fix:** `deleteNotification` and `clearAllNotifications` previously used `createAdminClient()` (service role) because no DELETE RLS policy existed. A `"Citizens can delete own notifications"` DELETE policy was added, and both functions now use the anon-key server client — matching the read/update pattern and removing unnecessary privilege elevation.
 
@@ -453,35 +457,60 @@ Offline Report Editing + Offline Map (v2.3)
 
 ```
 app/                     — Next.js App Router pages, layouts, loading states, error boundaries
-  actions.ts             — citizen & public Server Actions (submitReport, submitFeedback, addComment, editComment, deleteComment, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications)
+  actions.ts             — citizen & public Server Actions (submitReport, updateReport, submitFeedback, addComment, editComment, deleteComment, flagReport, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications, savePushSubscription, updateProfileSettings, sendTestSms, createOfflineSubmitFailedNotification, deleteOfflineSubmitNotification)
   (auth)/                — login, register, reset-password
   auth/callback/         — OAuth callback (exchanges Google code for session)
-  (citizen)/             — submit, my-reports
-  (public)/              — landing, browse, reports/[id]
-  admin/                 — dashboard, queues, review, admin Server Actions
+  (citizen)/             — submit, my-reports (+/[id], +/[id]/edit), offline-edit/[draftId], feedback, my-feedback (+/[id]), account
+  (public)/              — landing, browse, reports/[id], static content pages (about, privacy, terms, guidelines, disclaimer)
+  admin/                 — dashboard, queues, review, feedback inbox (+/[id]), flags, admin Server Actions (actions.ts)
   api/uploads/sign       — Cloudinary signed upload preset
   api/admin/export       — admin-only CSV report export (GET, ?status= filter)
+  api/reports            — public read-only REST API list endpoint
+  api/reports/[id]       — public read-only REST API single endpoint
+  api/sms/diagnose       — admin-only PhilSMS diagnostic endpoint
+  api/traffic/tiles/[z]/[x]/[y] — TomTom raster flow tile proxy (server-side key)
+  api/healthz            — lightweight 204 connectivity probe (offline detection)
   verify-email/          — email verification prompt
+  sw.ts                  — service worker entry (precache + runtime caching + push)
 
 components/
-  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts
+  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor
   auth/                  — auth card, branding panel, Google sign-in button
-  browse/                — filter bar, pagination bar, photo gallery, browse map (clustered, bounding box filter)
-  maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer (all client-side, dynamic import)
-  reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section, comment-form, comment-list, comment-item
+  browse/                — filter bar, pagination bar, photo gallery, browse map (all markers, heatmap, traffic + base-layer toggles)
+  maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer, traffic-layer, taytay-boundary (all client-side, dynamic import)
+  offline/               — offline-queue-processor, offline-reports-panel, offline-upload-banner, taytay-tiles-preloader
+  reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section/form/list/item, flag-report-buttons, share-button, location-label
+  public/                — public-footer.tsx (shared Ft2 footer), content-page.tsx (ContentPage/ContentSection/ContentList presentational helpers for static pages)
+  notification-bell.tsx  — in-app notification dropdown (Realtime live unread badge)
+  push-subscription-manager.tsx — PushSubscriptionManager / requestPushSubscription / unsubscribeFromPush
+  install-prompt.tsx     — PWA install banner
+  theme-toggle.tsx       — light/dark toggle
+  back-button.tsx        — router.back() with fallback
   ui/                    — Shadcn/ui primitives (DO NOT EDIT)
 
 lib/
   supabase/              — client factories (server, client, middleware, service-role)
+  offline-queue.ts       — IndexedDB queue wrapper (add/get/update/remove/overwrite queued reports)
+  offline-submit.ts      — submitQueuedReport (uploads pending photos → replays submitReport)
+  offline-processing.ts  — module-level processing-id store shared by processor/panel/banner
+  offline-queue-events.ts— queue-changed event emitter (processor ↔ panel)
+  use-online.ts          — useOnline() hook (navigator.onLine + /api/healthz probe)
+  taytay-boundary.ts     — TAYTAY_POLYGON + isPointInTaytay ray-casting helper (client-safe)
+  geocode.ts             — Nominatim reverse-geocode helper (offline submit label fallback)
+  cloudinary-upload.ts   — uploadToCloudinary(file) shared by photo widget + queue processor
+  api-reports.ts         — public REST API service layer (serialize/fetch)
+  api-rate-limit.ts      — SHA-256 IP hashing + sliding-window rate limiting (api_request_log)
   csv.ts                 — CSV generation utility (BOM-prefixed UTF-8, field escaping)
   validations/           — Zod schemas + inferred types
   cloudinary.ts          — Cloudinary config + signing
   cloudinary-url.ts      — CDN URL rewriting (res → res-3 for Asia/Pacific)
-  heatmap.ts             — severity weighting + external heat source seam (getExternalHeatPoints)
+  heatmap.ts             — severity weighting
   email.ts               — Brevo client
-  notifications.ts       — notification creation helpers (all types including FEEDBACK_*, COMMENT_ADDED)
-  admin-notifications.tsx— report + feedback lookup + email dispatch orchestration
+  notifications.ts       — notification creation helpers (all types incl. FEEDBACK_*, COMMENT_ADDED, REPORT_FLAGGED, OFFLINE_SUBMIT_FAILED)
+  admin-notifications.tsx— report + feedback lookup + email/SMS/push dispatch orchestration
   admin-feedback-notifications.tsx — feedback-specific notification dispatcher (acknowledge, close, note)
+  sms.ts                 — PhilSMS client (sendSMS, normalizePhoneNumber, 3-attempt retry, sendTestSms)
+  push.ts                — Web Push server (sendPushNotification, VAPID config, expired-sub cleanup)
   date-utils.ts          — fil-PH date formatting
   mock-data.ts           — 36 development mock reports
 

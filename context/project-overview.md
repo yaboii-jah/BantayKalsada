@@ -151,4 +151,3 @@ Free tiers are a proof-of-concept runway, not a province-scale foundation. Befor
 - Multi-municipality deployment, region-scoped admin roles, and government-system integration are currently **Out of Scope** (see Scope section). Each becomes In Scope only via an explicit scope decision when its phase starts.
 
 
-## Future Plan
