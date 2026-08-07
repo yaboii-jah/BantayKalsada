@@ -56,6 +56,7 @@ change.
 - [x] `app/(auth)/register/page.tsx` — added "By creating an account, you agree to the Terms of
   Service and Privacy Policy" line with links to both new pages.
 - [x] All 5 pages render as `○ (Static)` prerendered routes; `npm run build` passes with zero errors.
+- [x] `components/public/content-page-skeleton.tsx` — shared `ContentPageSkeleton({ sections })` mirroring the ContentPage/ContentSection layout with `Skeleton` primitives; used by per-page `loading.tsx` files: `about` (5), `privacy` (10), `terms` (10), `guidelines` (6), `disclaimer` (6). Navigation-boundary loading states for the static pages.
 - [x] Context updated — `app-codebase-context.md` (route-group table + File Organization),
   `ui-context.md` (content-page/Ft2 footer conventions), this tracker.
 

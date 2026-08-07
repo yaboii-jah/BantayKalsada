@@ -480,7 +480,7 @@ components/
   maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer, traffic-layer, taytay-boundary (all client-side, dynamic import)
   offline/               — offline-queue-processor, offline-reports-panel, offline-upload-banner, taytay-tiles-preloader
   reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section/form/list/item, flag-report-buttons, share-button, location-label
-  public/                — public-footer.tsx (shared Ft2 footer), content-page.tsx (ContentPage/ContentSection/ContentList presentational helpers for static pages)
+  public/                — public-footer.tsx (shared Ft2 footer), content-page.tsx (ContentPage/ContentSection/ContentList presentational helpers for static pages), content-page-skeleton.tsx (shared navigation loading state used by each static page's loading.tsx)
   notification-bell.tsx  — in-app notification dropdown (Realtime live unread badge)
   push-subscription-manager.tsx — PushSubscriptionManager / requestPushSubscription / unsubscribeFromPush
   install-prompt.tsx     — PWA install banner
