@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,8 +17,25 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Bantay Kalsada",
   description: "Report road hazards and help keep your community safe.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Bantay Kalsada",
+    description: "Report road hazards and help keep your community safe.",
+    type: "website",
+    siteName: "Bantay Kalsada",
+    locale: "en",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bantay Kalsada",
+    description: "Report road hazards and help keep your community safe.",
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [

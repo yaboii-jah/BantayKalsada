@@ -30,6 +30,20 @@ change.
 
 ## Completed
 
+### Social/SEO Polish (Tier 2)
+
+- [x] `lib/site.ts` — `SITE_URL` constant (`process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"`), single source for metadata URLs
+- [x] `lib/og-image.tsx` — shared `BrandCard` JSX + `OG_IMAGE_SIZE` (1200×630) for the default social card; token-based inline styles (brand blue gradient, wordmark, tagline)
+- [x] `app/opengraph-image.tsx` + `app/twitter-image.tsx` — `ImageResponse` default cards (statically optimized, cached); applies to all routes unless overridden
+- [x] `app/layout.tsx` — root `metadata` now has `metadataBase: new URL(SITE_URL)`, `alternates.canonical: "/"`, default `openGraph` (website, siteName, locale en) + `twitter` `summary_large_image`
+- [x] `app/(public)/page.tsx` — `export const metadata` (title/description/OG/twitter, canonical `/`) + `<JsonLd>` with `Organization` + `WebSite` graph
+- [x] `components/public/json-ld.tsx` — tiny `<script type="application/ld+json">` renderer
+- [x] `app/(public)/browse/page.tsx` — `export const metadata` (canonical `/browse`)
+- [x] `app/sitemap.ts` — `MetadataRoute.Sitemap` for `/`, `/browse`, `/about`, `/guidelines`, `/privacy`, `/terms`, `/disclaimer` (public pages only, static/cached)
+- [x] `app/robots.ts` — `MetadataRoute.Robots` disallowing `/admin/`, `/api/`, `/my-reports`, `/my-feedback`, `/feedback`, `/offline-edit`, `/account`, `/verify-email`, `/auth/`, `/login`, `/register`, `/reset-password`; sitemap link
+- [x] `proxy.ts` — matcher now excludes `sitemap.xml`, `robots.txt`, `opengraph-image`, `twitter-image` (per metadata docs guidance for cached special Route Handlers)
+- [x] `npx tsc --noEmit` + `npm run build` pass with zero errors
+
 ### Static Content Pages: About / Privacy / Terms / Guidelines / Disclaimer
 
 - [x] `components/public-footer.tsx` — shared footer extracted from the inline footers in

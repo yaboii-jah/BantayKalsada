@@ -1,10 +1,58 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Map, ShieldCheck, Camera, MessageSquare } from "lucide-react";
+import { JsonLd } from "@/components/public/json-ld";
+
+export const metadata: Metadata = {
+  title: "Bantay Kalsada — Report road hazards in Taytay, Rizal",
+  description:
+    "Report potholes, flooded roads, accidents, and other hazards in Taytay, Rizal. Bantay Kalsada lets you document road issues so everyone stays informed.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Bantay Kalsada — Report road hazards in Taytay, Rizal",
+    description:
+      "Report potholes, flooded roads, accidents, and other hazards in Taytay, Rizal.",
+    type: "website",
+    url: "/",
+  },
+  twitter: {
+    title: "Bantay Kalsada — Report road hazards in Taytay, Rizal",
+    description:
+      "Report potholes, flooded roads, accidents, and other hazards in Taytay, Rizal.",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/#organization`,
+      name: "Bantay Kalsada",
+      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}`,
+      logo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/icon-512x512.png`,
+      description:
+        "Bantay Kalsada lets you document potholes, flooded roads, accidents, and other hazards so everyone in Taytay stays informed.",
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/#website`,
+      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}`,
+      name: "Bantay Kalsada",
+      publisher: {
+        "@id": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/#organization`,
+      },
+    },
+  ],
+};
 
 export default function Home() {
   return (
     <>
+      <JsonLd data={jsonLd} />
         <section className="my-12 flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center px-4 text-center">
         <div className="mx-auto max-w-2xl">
             <div className="mb-8 inline-flex size-20 items-center justify-center rounded-3xl bg-primary/10">

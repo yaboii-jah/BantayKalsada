@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReportCard } from "@/components/reports/report-card";
 import { FilterBar } from "@/components/browse/filter-bar";
@@ -12,6 +13,27 @@ import { Button } from "@/components/ui/button";
 import type { Database } from "@/types/database.types";
 
 const PAGE_SIZE = 12;
+
+export const metadata: Metadata = {
+  title: "Browse road hazard reports — Bantay Kalsada",
+  description:
+    "Browse verified road hazard reports submitted by the community in Taytay, Rizal. Filter by category, status, barangay, or search.",
+  alternates: {
+    canonical: "/browse",
+  },
+  openGraph: {
+    title: "Browse road hazard reports — Bantay Kalsada",
+    description:
+      "Browse verified road hazard reports submitted by the community in Taytay, Rizal.",
+    type: "website",
+    url: "/browse",
+  },
+  twitter: {
+    title: "Browse road hazard reports — Bantay Kalsada",
+    description:
+      "Browse verified road hazard reports submitted by the community in Taytay, Rizal.",
+  },
+};
 
 async function BrowseReports({
   categoryFilter,

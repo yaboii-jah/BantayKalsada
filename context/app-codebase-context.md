@@ -458,6 +458,11 @@ Offline Report Editing + Offline Map (v2.3)
 ```
 app/                     — Next.js App Router pages, layouts, loading states, error boundaries
   actions.ts             — citizen & public Server Actions (submitReport, updateReport, submitFeedback, addComment, editComment, deleteComment, flagReport, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications, savePushSubscription, updateProfileSettings, sendTestSms, createOfflineSubmitFailedNotification, deleteOfflineSubmitNotification)
+  layout.tsx             — root metadata: metadataBase (lib/site SITE_URL), canonical "/", default openGraph + twitter summary_large_image, manifest, icons
+  opengraph-image.tsx    — default OG card (ImageResponse via lib/og-image BrandCard); overridden per-route by report detail
+  twitter-image.tsx      — default Twitter card (same BrandCard)
+  sitemap.ts             — MetadataRoute.Sitemap (public pages only: /, /browse, /about, /guidelines, /privacy, /terms, /disclaimer)
+  robots.ts              — MetadataRoute.Robots (disallows admin/api/citizen/auth routes, sitemap link)
   (auth)/                — login, register, reset-password
   auth/callback/         — OAuth callback (exchanges Google code for session)
   (citizen)/             — submit, my-reports (+/[id], +/[id]/edit), offline-edit/[draftId], feedback, my-feedback (+/[id]), account
@@ -480,7 +485,7 @@ components/
   maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer, traffic-layer, taytay-boundary (all client-side, dynamic import)
   offline/               — offline-queue-processor, offline-reports-panel, offline-upload-banner, taytay-tiles-preloader
   reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section/form/list/item, flag-report-buttons, share-button, location-label
-  public/                — public-footer.tsx (shared Ft2 footer), content-page.tsx (ContentPage/ContentSection/ContentList presentational helpers for static pages), content-page-skeleton.tsx (shared navigation loading state used by each static page's loading.tsx)
+  public/                — public-footer.tsx (shared Ft2 footer), content-page.tsx (ContentPage/ContentSection/ContentList presentational helpers for static pages), content-page-skeleton.tsx (shared navigation loading state used by each static page's loading.tsx), json-ld.tsx (application/ld+json script renderer)
   notification-bell.tsx  — in-app notification dropdown (Realtime live unread badge)
   push-subscription-manager.tsx — PushSubscriptionManager / requestPushSubscription / unsubscribeFromPush
   install-prompt.tsx     — PWA install banner
@@ -490,6 +495,8 @@ components/
 
 lib/
   supabase/              — client factories (server, client, middleware, service-role)
+  site.ts                — SITE_URL constant (NEXT_PUBLIC_SITE_URL || https://bantay-kalsada.vercel.app)
+  og-image.tsx           — BrandCard JSX + OG_IMAGE_SIZE (1200×630) for default opengraph/twitter images
   offline-queue.ts       — IndexedDB queue wrapper (add/get/update/remove/overwrite queued reports)
   offline-submit.ts      — submitQueuedReport (uploads pending photos → replays submitReport)
   offline-processing.ts  — module-level processing-id store shared by processor/panel/banner
