@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Map, ShieldCheck, Camera, MessageSquare } from "lucide-react";
 import { JsonLd } from "@/components/public/json-ld";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Bantay Kalsada — Report road hazards in Taytay, Rizal",
@@ -30,20 +31,20 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/#organization`,
+      "@id": `${SITE_URL}/#organization`,
       name: "Bantay Kalsada",
-      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}`,
-      logo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/icon-512x512.png`,
+      url: `${SITE_URL}`,
+      logo: `${SITE_URL}/icon-512x512.png`,
       description:
         "Bantay Kalsada lets you document potholes, flooded roads, accidents, and other hazards so everyone in Taytay stays informed.",
     },
     {
       "@type": "WebSite",
-      "@id": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/#website`,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}`,
+      "@id": `${SITE_URL}/#website`,
+      url: `${SITE_URL}`,
       name: "Bantay Kalsada",
       publisher: {
-        "@id": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://bantay-kalsada.vercel.app"}/#organization`,
+        "@id": `${SITE_URL}/#organization`,
       },
     },
   ],

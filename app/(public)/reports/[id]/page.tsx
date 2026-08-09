@@ -62,7 +62,7 @@ export async function generateMetadata({
   if (!report) return {};
 
   const headersList = await headers();
-  const host = headersList.get("host") ?? "bantay-kalsada.vercel.app";
+  const host = headersList.get("host") ?? "bantay-kalsada-sooty.vercel.app";
   const protocol = headersList.get("x-forwarded-proto") ?? "https";
   const url = `${protocol}://${host}/reports/${id}`;
 
