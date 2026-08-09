@@ -4,9 +4,13 @@ import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { AdminReportActions } from "./admin-report-actions";
+import { ReportTimeline } from "@/components/reports/report-timeline";
+import { DuplicateManager } from "@/components/admin/duplicate-manager";
+import { DuplicateBanner } from "@/components/reports/duplicate-banner";
 import { formatReportDate } from "@/lib/date-utils";
-import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck, Flag } from "lucide-react";
+import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck, Flag, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const flagLabels: Record<string, string> = {
   ALREADY_FIXED: "Already fixed",
@@ -32,6 +36,7 @@ const categoryLabels: Record<string, string> = {
   FLOODED_ROAD: "Flooded Road",
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage",
+  BROKEN_TRAFFIC_SIGN: "Broken Traffic Sign",
   OTHER: "Other",
 };
 
@@ -94,6 +99,12 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-4xl">
+      {report.duplicate_of_id && (
+        <DuplicateBanner
+          duplicateOfId={report.duplicate_of_id}
+          href={`/admin/reports/${report.duplicate_of_id}`}
+        />
+      )}
       <div className="mb-6">
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -274,10 +285,41 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
         </div>
       )}
 
+      <div className="mb-6">
+        <ReportTimeline
+          reportId={report.id}
+          submittedAt={report.submitted_at}
+          submittedById={report.submitted_by_id}
+          status={report.status}
+          reviewedAt={report.reviewed_at}
+          reviewedById={report.reviewed_by_id}
+          resolvedAt={report.resolved_at}
+          rejectionReason={report.rejection_reason}
+          resolutionNotes={report.resolution_notes}
+        />
+      </div>
+
       <AdminReportActions
         reportId={report.id}
         status={report.status}
       />
+
+      <div className="mt-4">
+        <DuplicateManager
+          reportId={report.id}
+          duplicateOfId={report.duplicate_of_id}
+        />
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <Link
+          href={`/admin/reports/${report.id}/edit`}
+          className="inline-flex items-center gap-2 rounded-lg border border-input px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+        >
+          <Pencil className="size-4" />
+          Edit report
+        </Link>
+      </div>
     </div>
   );
 }

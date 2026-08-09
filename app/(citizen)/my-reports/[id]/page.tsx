@@ -4,6 +4,8 @@ import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { LocationLabel } from "@/components/reports/location-label";
+import { ReportTimeline } from "@/components/reports/report-timeline";
+import { DuplicateBanner } from "@/components/reports/duplicate-banner";
 import { formatReportDate } from "@/lib/date-utils";
 import { MapPin, Calendar, XCircle, ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +29,7 @@ const categoryLabels: Record<string, string> = {
   FLOODED_ROAD: "Flooded Road",
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage",
+  BROKEN_TRAFFIC_SIGN: "Broken Traffic Sign",
   OTHER: "Other",
 };
 
@@ -72,6 +75,13 @@ export default async function MyReportDetailPage({
           </Link>
         )}
       </div>
+
+      {report.duplicate_of_id && (
+        <DuplicateBanner
+          duplicateOfId={report.duplicate_of_id}
+          href={`/my-reports/${report.duplicate_of_id}`}
+        />
+      )}
 
       <div className="mb-8">
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -163,6 +173,18 @@ export default async function MyReportDetailPage({
           locationLabel={report.location_label}
         />
       </div>
+
+      <ReportTimeline
+        reportId={report.id}
+        submittedAt={report.submitted_at}
+        submittedById={report.submitted_by_id}
+        status={report.status}
+        reviewedAt={report.reviewed_at}
+        reviewedById={report.reviewed_by_id}
+        resolvedAt={report.resolved_at}
+        rejectionReason={report.rejection_reason}
+        resolutionNotes={report.resolution_notes}
+      />
     </div>
   );
 }

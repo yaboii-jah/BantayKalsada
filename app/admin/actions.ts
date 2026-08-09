@@ -6,6 +6,8 @@ import {
   approveReportSchema,
   rejectReportSchema,
   resolveReportSchema,
+  createReportSchema,
+  type CreateReportInput,
 } from "@/lib/validations/report";
 import {
   bulkActionSchema,
@@ -24,6 +26,8 @@ import {
   fetchFeedbackWithSubmitter,
   sendFeedbackNotifications,
 } from "@/lib/admin-feedback-notifications";
+import { logReportActivity } from "@/lib/report-activity";
+import { createNotification, getMessageForType } from "@/lib/notifications";
 
 export interface AdminActionResponse {
   success: boolean;
@@ -101,6 +105,12 @@ export async function approveReport(
       return { success: false, error: "Failed to approve report" };
     }
 
+    await logReportActivity({
+      reportId: parsed.data.reportId,
+      actorId: auth.user.id,
+      action: "APPROVED",
+    });
+
     if (reportData.submitter) {
       const notifResult = await sendReportNotifications(
         parsed.data.reportId,
@@ -161,6 +171,13 @@ export async function rejectReport(
     if (updateError) {
       return { success: false, error: "Failed to reject report" };
     }
+
+    await logReportActivity({
+      reportId: parsed.data.reportId,
+      actorId: auth.user.id,
+      action: "REJECTED",
+      detail: { reason: parsed.data.rejectionReason },
+    });
 
     if (reportData.submitter) {
       const notifResult = await sendReportNotifications(
@@ -229,6 +246,13 @@ export async function resolveReport(
       return { success: false, error: "Failed to resolve report" };
     }
 
+    await logReportActivity({
+      reportId: parsed.data.reportId,
+      actorId: auth.user.id,
+      action: "RESOLVED",
+      detail: { notes: parsed.data.resolutionNotes ?? null },
+    });
+
     if (reportData.submitter) {
       const notifResult = await sendReportNotifications(
         parsed.data.reportId,
@@ -242,6 +266,407 @@ export async function resolveReport(
         console.error("SMS warning:", notifResult.smsError);
       }
     }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function editReport(
+  reportId: string,
+  formData: CreateReportInput,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { data: existing, error: fetchError } = await adminClient
+      .from("reports")
+      .select(
+        "status, submitted_by_id, title, description, category, barangay, severity, photo_urls, latitude, longitude, location_label",
+      )
+      .eq("id", reportId)
+      .single();
+
+    if (fetchError || !existing) {
+      return { success: false, error: "Report not found" };
+    }
+
+    const parsed = createReportSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
+    const latChanged = existing.latitude !== parsed.data.latitude;
+    const lngChanged = existing.longitude !== parsed.data.longitude;
+    if (latChanged || lngChanged) {
+      const { data: withinBoundary } = await adminClient.rpc(
+        "is_within_boundary",
+        {
+          lat: parsed.data.latitude,
+          lng: parsed.data.longitude,
+          municipality_name: "Taytay",
+        },
+      );
+      if (!withinBoundary) {
+        return {
+          success: false,
+          error:
+            "Reports are accepted for Taytay, Rizal only. Please pin a location within Taytay.",
+        };
+      }
+    }
+
+    const { error: updateError } = await adminClient
+      .from("reports")
+      .update({
+        title: parsed.data.title,
+        description: parsed.data.description,
+        category: parsed.data.category,
+        barangay: parsed.data.barangay,
+        severity: parsed.data.severity,
+        photo_urls: parsed.data.photo_urls,
+        latitude: parsed.data.latitude,
+        longitude: parsed.data.longitude,
+        location_label: parsed.data.location_label ?? null,
+      })
+      .eq("id", reportId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to update report" };
+    }
+
+    const changedFields: Record<string, unknown> = {};
+    const fields: (keyof CreateReportInput)[] = [
+      "title",
+      "description",
+      "category",
+      "barangay",
+      "severity",
+      "photo_urls",
+      "latitude",
+      "longitude",
+      "location_label",
+    ];
+    for (const field of fields) {
+      const before = existing[field];
+      const after = parsed.data[field] ?? null;
+      if (JSON.stringify(before) !== JSON.stringify(after)) {
+        changedFields[field] = { before, after };
+      }
+    }
+
+    await logReportActivity({
+      reportId,
+      actorId: auth.user.id,
+      action: "EDITED",
+      detail: { changedFields },
+    });
+
+    if (existing.submitted_by_id) {
+      await createNotification({
+        userId: existing.submitted_by_id,
+        reportId,
+        type: "REPORT_EDITED",
+        message: getMessageForType("REPORT_EDITED", parsed.data.title),
+      });
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export interface DuplicateCandidate {
+  id: string;
+  title: string;
+  status: string;
+  submitted_at: string;
+  distance_m?: number | null;
+}
+
+export async function findDuplicateCandidates(
+  reportId: string,
+  query?: string,
+): Promise<{ success: boolean; candidates?: DuplicateCandidate[]; error?: string }> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { data: report } = await adminClient
+      .from("reports")
+      .select("id, latitude, longitude, duplicate_of_id")
+      .eq("id", reportId)
+      .single();
+
+    if (!report) {
+      return { success: false, error: "Report not found" };
+    }
+
+    const { data: nearby } = await adminClient.rpc("get_nearby_reports", {
+      lat: report.latitude,
+      lng: report.longitude,
+      max_distance_m: 1500,
+    });
+
+    const nearbyMap = new Map<string, number>();
+    for (const row of nearby ?? []) {
+      if (row.id !== reportId) {
+        nearbyMap.set(row.id, row.distance_m);
+      }
+    }
+
+    const titleQuery = query?.trim();
+    let titleMatches: { id: string }[] = [];
+    if (titleQuery && titleQuery.length >= 3) {
+      const { data } = await adminClient
+        .from("reports")
+        .select("id")
+        .ilike("title", `%${titleQuery}%`);
+      titleMatches = data ?? [];
+    }
+
+    const candidateIds = [
+      ...new Set([...nearbyMap.keys(), ...titleMatches.map((m) => m.id)]),
+    ];
+
+    if (candidateIds.length === 0) {
+      return { success: true, candidates: [] };
+    }
+
+    const { data: candidates } = await adminClient
+      .from("reports")
+      .select("id, title, status, submitted_at, duplicate_of_id")
+      .in("id", candidateIds);
+
+    const result: DuplicateCandidate[] = (candidates ?? [])
+      .filter((c) => c.id !== reportId && !c.duplicate_of_id)
+      .map((c) => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        submitted_at: c.submitted_at,
+        distance_m: nearbyMap.get(c.id) ?? null,
+      }))
+      .sort((a, b) => {
+        if (a.distance_m != null && b.distance_m != null) {
+          return a.distance_m - b.distance_m;
+        }
+        return a.distance_m != null ? -1 : b.distance_m != null ? 1 : 0;
+      });
+
+    return { success: true, candidates: result };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function linkDuplicate(
+  duplicateId: string,
+  canonicalId: string,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    if (duplicateId === canonicalId) {
+      return { success: false, error: "A report cannot be its own duplicate" };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { data: canonical } = await adminClient
+      .from("reports")
+      .select("id, duplicate_of_id")
+      .eq("id", canonicalId)
+      .single();
+
+    if (!canonical) {
+      return { success: false, error: "Canonical report not found" };
+    }
+
+    if (canonical.duplicate_of_id) {
+      return {
+        success: false,
+        error: "The target report is itself a duplicate and cannot be the canonical report",
+      };
+    }
+
+    const { error: updateError } = await adminClient
+      .from("reports")
+      .update({ duplicate_of_id: canonicalId })
+      .eq("id", duplicateId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to link duplicate" };
+    }
+
+    await logReportActivity({
+      reportId: duplicateId,
+      actorId: auth.user.id,
+      action: "DUPLICATE_LINKED",
+      detail: { canonicalId },
+    });
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function unlinkDuplicate(
+  duplicateId: string,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { data: existing } = await adminClient
+      .from("reports")
+      .select("duplicate_of_id")
+      .eq("id", duplicateId)
+      .single();
+
+    if (!existing?.duplicate_of_id) {
+      return { success: false, error: "Report is not linked as a duplicate" };
+    }
+
+    const { error: updateError } = await adminClient
+      .from("reports")
+      .update({ duplicate_of_id: null })
+      .eq("id", duplicateId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to unlink duplicate" };
+    }
+
+    await logReportActivity({
+      reportId: duplicateId,
+      actorId: auth.user.id,
+      action: "DUPLICATE_LINKED",
+      detail: { canonicalId: null, unlinked: true },
+    });
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function mergeReports(
+  duplicateId: string,
+  canonicalId: string,
+): Promise<AdminActionResponse> {
+  try {
+    const auth = await verifyAdmin();
+    if (auth.error || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+
+    if (duplicateId === canonicalId) {
+      return { success: false, error: "A report cannot be merged into itself" };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { data: canonical } = await adminClient
+      .from("reports")
+      .select("id, title, duplicate_of_id, photo_urls")
+      .eq("id", canonicalId)
+      .single();
+
+    if (!canonical) {
+      return { success: false, error: "Canonical report not found" };
+    }
+
+    if (canonical.duplicate_of_id) {
+      return {
+        success: false,
+        error: "The target report is itself a duplicate and cannot be the canonical report",
+      };
+    }
+
+    const { data: duplicate } = await adminClient
+      .from("reports")
+      .select("id, photo_urls")
+      .eq("id", duplicateId)
+      .single();
+
+    if (!duplicate) {
+      return { success: false, error: "Duplicate report not found" };
+    }
+
+    const { error: commentsError } = await adminClient
+      .from("report_comments")
+      .update({ report_id: canonicalId })
+      .eq("report_id", duplicateId);
+
+    if (commentsError) {
+      return { success: false, error: "Failed to move comments" };
+    }
+
+    const { error: flagsError } = await adminClient
+      .from("report_flags")
+      .update({ report_id: canonicalId })
+      .eq("report_id", duplicateId);
+
+    if (flagsError) {
+      return { success: false, error: "Failed to move flags" };
+    }
+
+    const mergedPhotos = [
+      ...new Set([...canonical.photo_urls, ...duplicate.photo_urls]),
+    ].slice(0, 3);
+
+    const { error: photoError } = await adminClient
+      .from("reports")
+      .update({ photo_urls: mergedPhotos })
+      .eq("id", canonicalId);
+
+    if (photoError) {
+      return { success: false, error: "Failed to merge photos" };
+    }
+
+    const { error: retireError } = await adminClient
+      .from("reports")
+      .update({ duplicate_of_id: canonicalId })
+      .eq("id", duplicateId);
+
+    if (retireError) {
+      return { success: false, error: "Failed to retire duplicate report" };
+    }
+
+    await logReportActivity({
+      reportId: duplicateId,
+      actorId: auth.user.id,
+      action: "MERGED",
+      detail: { canonicalId },
+    });
+    await logReportActivity({
+      reportId: canonicalId,
+      actorId: auth.user.id,
+      action: "MERGED",
+      detail: { duplicateId },
+    });
 
     return { success: true };
   } catch {
@@ -454,6 +879,12 @@ export async function bulkApproveReports(
 
       approved++;
 
+      await logReportActivity({
+        reportId: id,
+        actorId: auth.user.id,
+        action: "APPROVED",
+      });
+
       if (reportData.submitter) {
         const notifResult = await sendReportNotifications(
           id,
@@ -527,6 +958,13 @@ export async function bulkRejectReports(
 
       rejected++;
 
+      await logReportActivity({
+        reportId: id,
+        actorId: auth.user.id,
+        action: "REJECTED",
+        detail: { reason: parsed.data.rejectionReason },
+      });
+
       if (reportData.submitter) {
         const notifResult = await sendReportNotifications(
           id,
@@ -595,6 +1033,12 @@ export async function bulkResolveReports(
 
       resolved++;
 
+      await logReportActivity({
+        reportId: id,
+        actorId: auth.user.id,
+        action: "RESOLVED",
+      });
+
       if (reportData.submitter) {
         const notifResult = await sendReportNotifications(
           id,
@@ -623,17 +1067,34 @@ export async function removeComment(
 ): Promise<AdminActionResponse> {
   try {
     const auth = await verifyAdmin();
-    if (auth.error) {
+    if (auth.error || !auth.user) {
       return { success: false, error: auth.error };
     }
 
-    const { error } = await createAdminClient()
+    const adminClient = createAdminClient();
+
+    const { data: comment } = await adminClient
+      .from("report_comments")
+      .select("report_id")
+      .eq("id", commentId)
+      .single();
+
+    const { error } = await adminClient
       .from("report_comments")
       .update({ status: "REMOVED", updated_at: new Date().toISOString() })
       .eq("id", commentId);
 
     if (error) {
       return { success: false, error: "Failed to remove comment" };
+    }
+
+    if (comment?.report_id) {
+      await logReportActivity({
+        reportId: comment.report_id,
+        actorId: auth.user.id,
+        action: "COMMENT_REMOVED",
+        detail: { commentId },
+      });
     }
 
     return { success: true };

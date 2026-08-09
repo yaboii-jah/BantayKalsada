@@ -144,6 +144,7 @@ export function generateMockReports(count = 36): ReportRow[] {
       submitted_at: submittedAt,
       reviewed_at: submittedAt,
       resolved_at: status === "RESOLVED" ? randomDate(15) : null,
+      duplicate_of_id: null,
     });
   }
 

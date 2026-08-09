@@ -11,6 +11,7 @@ import {
 import { normalizePhoneNumber, sendSMS } from "@/lib/sms";
 import { sendPushNotification } from "@/lib/push";
 import { createNotification, getMessageForType } from "@/lib/notifications";
+import { logReportActivity } from "@/lib/report-activity";
 
 export interface ActionResponse {
   success: boolean;
@@ -265,6 +266,12 @@ export async function submitReport(
       return { success: false, error: "Failed to submit report. Please try again." };
     }
 
+    await logReportActivity({
+      reportId: report.id,
+      actorId: user.id,
+      action: "SUBMITTED",
+    });
+
     return { success: true, data: { id: report.id } };
   } catch {
     return { success: false, error: "An unexpected error occurred. Please try again." };
@@ -285,7 +292,7 @@ export async function updateReport(
 
     const { data: existing, error: fetchError } = await supabase
       .from("reports")
-      .select("status, submitted_by_id, latitude, longitude")
+      .select("status, submitted_by_id, latitude, longitude, title, description, category, barangay, severity, photo_urls, location_label")
       .eq("id", reportId)
       .single();
 
@@ -343,6 +350,33 @@ export async function updateReport(
     if (updateError) {
       return { success: false, error: "Failed to update report. Please try again." };
     }
+
+    const changedFields: Record<string, unknown> = {};
+    const fields: (keyof CreateReportInput)[] = [
+      "title",
+      "description",
+      "category",
+      "barangay",
+      "severity",
+      "photo_urls",
+      "latitude",
+      "longitude",
+      "location_label",
+    ];
+    for (const field of fields) {
+      const before = existing[field];
+      const after = parsed.data[field] ?? null;
+      if (JSON.stringify(before) !== JSON.stringify(after)) {
+        changedFields[field] = { before, after };
+      }
+    }
+
+    await logReportActivity({
+      reportId,
+      actorId: user.id,
+      action: "EDITED",
+      detail: { changedFields },
+    });
 
     return { success: true };
   } catch {

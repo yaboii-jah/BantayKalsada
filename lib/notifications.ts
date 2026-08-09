@@ -5,7 +5,8 @@ export type CommentNotificationType = "COMMENT_ADDED";
 export type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED";
 export type FlagNotificationType = "REPORT_FLAGGED";
 export type OfflineNotificationType = "OFFLINE_SUBMIT_FAILED";
-export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType | FlagNotificationType | OfflineNotificationType;
+export type EditedNotificationType = "REPORT_EDITED";
+export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType | FlagNotificationType | OfflineNotificationType | EditedNotificationType;
 
 export function getMessageForType(type: NotificationType, title: string): string {
   switch (type) {
@@ -17,6 +18,8 @@ export function getMessageForType(type: NotificationType, title: string): string
       return `Your report "${title}" has been rejected.`;
     case "REPORT_RESOLVED":
       return `Your report "${title}" has been marked as resolved.`;
+    case "REPORT_EDITED":
+      return `An administrator updated the details of your report "${title}".`;
     case "FEEDBACK_ACKNOWLEDGED":
       return `Your feedback "${title}" has been reviewed and acknowledged.`;
     case "FEEDBACK_CLOSED":
@@ -60,6 +63,8 @@ export function getSubjectForType(type: NotificationType): string {
       return "Report Rejected — Bantay Kalsada";
     case "REPORT_RESOLVED":
       return "Report Resolved — Bantay Kalsada";
+    case "REPORT_EDITED":
+      return "Report Updated by Admin — Bantay Kalsada";
     case "FEEDBACK_ACKNOWLEDGED":
       return "Feedback Acknowledged — Bantay Kalsada";
     case "FEEDBACK_CLOSED":

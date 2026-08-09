@@ -16,6 +16,7 @@ import {
   X,
   Flag,
   AlertTriangle,
+  PenLine,
 } from "lucide-react";
 import {
   markNotificationAsRead,
@@ -45,6 +46,7 @@ const NOTIFICATION_ICONS: Record<
   FEEDBACK_NOTE_ADDED: MessageSquare,
   REPORT_FLAGGED: Flag,
   OFFLINE_SUBMIT_FAILED: AlertTriangle,
+  REPORT_EDITED: PenLine,
 };
 
 function getNotificationHref(notification: Notification): string {

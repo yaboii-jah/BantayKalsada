@@ -1,6 +1,6 @@
 # Bantay Kalsada — Codebase Context
 
-This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete implementation including Google OAuth, in-app notifications, keyword search, map view with heatmap/traffic/base-layer toggles, admin analytics, app feedback system, admin notes on feedback, report severity tagging, comments on reports, citizen report flagging, share report via link/social, PWA support, bulk admin actions, SMS + push notifications, offline report submission/editing, offline map preloading, the public REST API, CSV export, Suspense-boundary loading for filter navigation, dark mode, and static content pages (About / Privacy / Terms / Guidelines / Disclaimer).
+This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete implementation including Google OAuth, in-app notifications, keyword search, map view with heatmap/traffic/base-layer toggles, admin analytics, app feedback system, admin notes on feedback, report severity tagging, comments on reports, citizen report flagging, share report via link/social, PWA support, bulk admin actions, SMS + push notifications, offline report submission/editing, offline map preloading, the public REST API, CSV export, Suspense-boundary loading for filter navigation, dark mode, static content pages (About / Privacy / Terms / Guidelines / Disclaimer), and Tier 3 admin trust features (admin report editing, activity log/audit trail, report lifecycle timeline, and duplicate-report linking/merge).
 
 ---
 
@@ -13,7 +13,7 @@ The app uses Next.js App Router **route groups** to enforce access tiers. Each g
 | `(public)` | `/`, `/browse`, `/reports/[id]`, `/about`, `/privacy`, `/terms`, `/guidelines`, `/disclaimer` | Anyone — no auth needed | Shared nav + footer (Ft2 inline; footer via shared `PublicFooter`) |
 | `(auth)` | `/login`, `/register`, `/reset-password` | Unauthenticated only | Centered card on gradient bg |
 | `(citizen)` | `/submit`, `/my-reports`, `/my-reports/[id]`, `/my-reports/[id]/edit`, `/offline-edit/[draftId]`, `/feedback`, `/my-feedback`, `/my-feedback/[id]`, `/account` | Auth + verified email | Same nav/footer as public |
-| `admin/` | `/admin/*` (dashboard, queues, review, feedback inbox, notes, flags queue) | Auth + `role: ADMIN` | Sidebar + content canvas |
+| `admin/` | `/admin/*` (dashboard, queues, review, edit, feedback inbox, notes, flags queue) | Auth + `role: ADMIN` | Sidebar + content canvas |
 
 ---
 
@@ -272,9 +272,11 @@ The `notifications` table is populated by multiple Server Actions:
 | `addComment` | `app/actions.ts` | `COMMENT_ADDED` | Report owner (if commenter ≠ owner) |
 | `flagReport` | `app/actions.ts` | `REPORT_FLAGGED` | All admins (on each flag INSERT) |
 | `createOfflineSubmitFailedNotification` | `app/actions.ts` | `OFFLINE_SUBMIT_FAILED` | Draft owner (on 3rd failed auto-attempt) |
+| `editReport` | `app/admin/actions.ts` | `REPORT_EDITED` | Report submitter (in-app only) |
 
 Link targets per type:
 - `REPORT_*` → `/my-reports/[report_id]`
+- `REPORT_EDITED` → `/my-reports/[report_id]` (same default target)
 - `FEEDBACK_*` → `/my-feedback/[feedback_id]`
 - `COMMENT_ADDED` → `/reports/[report_id]` (public detail page)
 - `REPORT_FLAGGED` → `/admin/reports/[report_id]` (admin review page)
@@ -457,7 +459,7 @@ Offline Report Editing + Offline Map (v2.3)
 
 ```
 app/                     — Next.js App Router pages, layouts, loading states, error boundaries
-  actions.ts             — citizen & public Server Actions (submitReport, updateReport, submitFeedback, addComment, editComment, deleteComment, flagReport, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications, savePushSubscription, updateProfileSettings, sendTestSms, createOfflineSubmitFailedNotification, deleteOfflineSubmitNotification)
+  actions.ts             — citizen & public Server Actions (submitReport, updateReport, submitFeedback, addComment, editComment, deleteComment, flagReport, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications, savePushSubscription, updateProfileSettings, sendTestSms, createOfflineSubmitFailedNotification, deleteOfflineSubmitNotification; also logs SUBMITTED/EDITED audit rows via lib/report-activity.ts)
   layout.tsx             — root metadata: metadataBase (lib/site SITE_URL), canonical "/", default openGraph + twitter summary_large_image, manifest, icons
   opengraph-image.tsx    — default OG card (ImageResponse via lib/og-image BrandCard); overridden per-route by report detail
   twitter-image.tsx      — default Twitter card (same BrandCard)
@@ -467,7 +469,7 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   auth/callback/         — OAuth callback (exchanges Google code for session)
   (citizen)/             — submit, my-reports (+/[id], +/[id]/edit), offline-edit/[draftId], feedback, my-feedback (+/[id]), account
   (public)/              — landing, browse, reports/[id], static content pages (about, privacy, terms, guidelines, disclaimer)
-  admin/                 — dashboard, queues, review, feedback inbox (+/[id]), flags, admin Server Actions (actions.ts)
+  admin/                 — dashboard, queues, review, edit, feedback inbox (+/[id]), flags, admin Server Actions (actions.ts: approve/reject/resolve/bulk, editReport, linkDuplicate, unlinkDuplicate, mergeReports, findDuplicateCandidates, removeComment)
   api/uploads/sign       — Cloudinary signed upload preset
   api/admin/export       — admin-only CSV report export (GET, ?status= filter)
   api/reports            — public read-only REST API list endpoint
@@ -479,12 +481,12 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   sw.ts                  — service worker entry (precache + runtime caching + push)
 
 components/
-  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor
+  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager
   auth/                  — auth card, branding panel, Google sign-in button
   browse/                — filter bar, pagination bar, photo gallery, browse map (all markers, heatmap, traffic + base-layer toggles)
   maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer, traffic-layer, taytay-boundary (all client-side, dynamic import)
   offline/               — offline-queue-processor, offline-reports-panel, offline-upload-banner, taytay-tiles-preloader
-  reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section/form/list/item, flag-report-buttons, share-button, location-label
+  reports/               — report form, card, status badge, photo upload, my-reports filter, reports-grid-skeleton, comment-section/form/list/item, flag-report-buttons, share-button, location-label, report-timeline, duplicate-banner
   public/                — public-footer.tsx (shared Ft2 footer), content-page.tsx (ContentPage/ContentSection/ContentList presentational helpers for static pages), content-page-skeleton.tsx (shared navigation loading state used by each static page's loading.tsx), json-ld.tsx (application/ld+json script renderer)
   notification-bell.tsx  — in-app notification dropdown (Realtime live unread badge)
   push-subscription-manager.tsx — PushSubscriptionManager / requestPushSubscription / unsubscribeFromPush
@@ -513,7 +515,8 @@ lib/
   cloudinary-url.ts      — CDN URL rewriting (res → res-3 for Asia/Pacific)
   heatmap.ts             — severity weighting
   email.ts               — Brevo client
-  notifications.ts       — notification creation helpers (all types incl. FEEDBACK_*, COMMENT_ADDED, REPORT_FLAGGED, OFFLINE_SUBMIT_FAILED)
+  notifications.ts       — notification creation helpers (all types incl. FEEDBACK_*, COMMENT_ADDED, REPORT_FLAGGED, OFFLINE_SUBMIT_FAILED, REPORT_EDITED)
+  report-activity.ts     — logReportActivity() audit helper (service-role client → report_activity_log)
   admin-notifications.tsx— report + feedback lookup + email/SMS/push dispatch orchestration
   admin-feedback-notifications.tsx — feedback-specific notification dispatcher (acknowledge, close, note)
   sms.ts                 — PhilSMS client (sendSMS, normalizePhoneNumber, 3-attempt retry, sendTestSms)

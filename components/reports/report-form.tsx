@@ -32,6 +32,7 @@ const categoryLabels: Record<CreateReportInput["category"], string> = {
   FLOODED_ROAD: "Flooded Road",
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage Incident",
+  BROKEN_TRAFFIC_SIGN: "Broken Traffic Sign",
   OTHER: "Other Road Hazard",
 };
 

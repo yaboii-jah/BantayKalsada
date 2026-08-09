@@ -20,6 +20,7 @@ change.
 - [x] Comments on Reports — Complete
 - [x] Municipality Scope — Taytay, Rizal
 - [x] Browse Map Heatmap (Phase A) — Markers/Heatmap toggle, severity-weighted density of all Taytay reports
+- [x] Admin Trust Features (Tier 3) — admin report editing, activity log/audit trail, report lifecycle timeline, duplicate-report linking/merge
 
 ## Current Goal
 
@@ -27,8 +28,29 @@ change.
 - Offline report editing + offline map preload (Offline Experience v2.3) — complete and verified.
 - Offline upload UX + reliability (Offline Experience v2.4) — complete and verified.
 - Offline connectivity detection + retained photos (Offline Experience v2.5) — complete and verified.
+- Admin trust features (Tier 3) — complete and verified (see Completed section).
 
 ## Completed
+
+### Admin Trust Features (Tier 3)
+
+- [x] Migration `20260809000001_create_report_activity_log.sql` — `report_activity_action` enum (SUBMITTED, EDITED, APPROVED, REJECTED, RESOLVED, DUPLICATE_LINKED, MERGED, COMMENT_REMOVED) + `report_activity_log(id, report_id FK→reports ON DELETE CASCADE, actor_id FK→auth.users ON DELETE SET NULL, action, detail jsonb, created_at)`; RLS enabled with no policies (service-role only); index `(report_id, created_at)`
+- [x] Migration `20260809000002_add_report_duplicate_of.sql` — `reports.duplicate_of_id uuid NULL REFERENCES reports(id) ON DELETE SET NULL` + index (duplicates retired by pointer, never hard-deleted)
+- [x] Migration `20260809000003_add_report_edited_notification.sql` — `ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'REPORT_EDITED'` (non-transactional)
+- [x] All three migrations applied to remote via `supabase db query --linked`; enum value + types verified; `types/database.types.ts` regenerated via `supabase gen types typescript --linked` (file re-encoded UTF-16 → UTF-8)
+- [x] `lib/report-activity.ts` — `logReportActivity({ reportId, actorId, action, detail? })` via service-role client; `detail` cast to `Json`
+- [x] Audit wiring `app/actions.ts` — `submitReport` → `SUBMITTED`; `updateReport` → `EDITED` with `detail.changedFields` (select extended to all editable fields)
+- [x] Audit wiring `app/admin/actions.ts` — `approveReport`/`rejectReport`/`resolveReport` + bulk variants → `APPROVED`/`REJECTED` (`detail.reason`)/`RESOLVED` (`detail.notes`); `removeComment` → `COMMENT_REMOVED` (now fetches `report_id` first, checks `auth.user`)
+- [x] Admin report editing — `editReport(reportId, CreateReportInput)` Server Action (boundary re-check `is_within_boundary` only when lat/lng changed; logs `EDITED`; in-app `REPORT_EDITED` notification to submitter, no email/SMS); page `app/admin/reports/[id]/edit/page.tsx` + `components/admin/admin-report-edit-form.tsx` (RHF + zod, reuses PhotoUpload/LocationPickerWrapper/InlineSelect); "Edit report" button on admin review page
+- [x] Duplicate management — `linkDuplicate` (guards self-link + canonical-not-itself-duplicate), `unlinkDuplicate` (clears pointer, logs `DUPLICATE_LINKED` w/ `{ canonicalId: null, unlinked: true }`), `mergeReports` (reassigns comments + flags, dedups photos capped at 3, retires duplicate via `duplicate_of_id`, logs `MERGED` on both), `findDuplicateCandidates` (get_nearby_reports 1500 m + title ilike ≥3 chars; excludes self and already-linked); UI `components/admin/duplicate-manager.tsx` on admin review page
+- [x] Lifecycle timeline — `components/reports/report-timeline.tsx` (server component; reads `report_activity_log` via admin client, falls back to report timestamps for legacy reports, actor names from profiles); rendered on admin review page + citizen `my-reports/[id]`
+- [x] Duplicate banner — `components/reports/duplicate-banner.tsx` (props `duplicateOfId`, `href`) on admin, citizen, and public `reports/[id]` detail pages
+- [x] Notifications — `lib/notifications.ts` `EditedNotificationType` ("An administrator updated the details of your report...", subject "Report Updated by Admin — Bantay Kalsada"); `components/notification-bell.tsx` `PenLine` icon + `NOTIFICATION_ICONS` entry (href falls through to default `/my-reports/[report_id]`)
+- [x] Mock data — mock reports include `duplicate_of_id: null`
+- [x] Type fixes surfaced by typed admin client — added `BROKEN_TRAFFIC_SIGN` to `reportCategoryEnum` + all category label maps; admin edit passes `barangay: report.barangay ?? "DOLORES"` (DB nullable vs schema required); timeline `unknown` ReactNode type-guards; `Json` cast in report-activity
+- [x] `npx tsc --noEmit` clean; `npm run build` passes with zero errors (verified clean HEAD via git stash — all errors were from the new work)
+- [x] Feature spec `context/feature-specs/30-admin-trust.md` written
+- [x] Context updated — `project-overview.md` (In Scope), `architecture.md` (boundaries, storage model, invariants 22–26), `data-model.md` (enums, tables, relationships, indexes, RLS, business rules), `app-codebase-context.md`, this tracker
 
 ### Social/SEO Polish (Tier 2)
 

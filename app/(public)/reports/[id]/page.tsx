@@ -14,6 +14,7 @@ import { ArrowLeft } from "lucide-react";
 import { ShareButton } from "@/components/reports/share-button";
 import { CommentSection } from "@/components/reports/comment-section";
 import { FlagReportButtons } from "@/components/reports/flag-report-buttons";
+import { DuplicateBanner } from "@/components/reports/duplicate-banner";
 import { cn } from "@/lib/utils";
 
 const severityLabels: Record<string, string> = {
@@ -33,6 +34,7 @@ const categoryLabels: Record<string, string> = {
   FLOODED_ROAD: "Flooded Road",
   ROAD_ACCIDENT: "Road Accident",
   ROAD_RAGE: "Road Rage",
+  BROKEN_TRAFFIC_SIGN: "Broken Traffic Sign",
   OTHER: "Other",
 };
 
@@ -131,6 +133,13 @@ export default async function ReportDetailPage({
         </Link>
         <ShareButton title={report.title} />
       </div>
+
+      {report.duplicate_of_id && (
+        <DuplicateBanner
+          duplicateOfId={report.duplicate_of_id}
+          href={`/reports/${report.duplicate_of_id}`}
+        />
+      )}
 
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-2 mb-3">

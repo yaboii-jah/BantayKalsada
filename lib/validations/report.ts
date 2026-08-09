@@ -5,6 +5,7 @@ export const reportCategoryEnum = z.enum([
   "FLOODED_ROAD",
   "ROAD_ACCIDENT",
   "ROAD_RAGE",
+  "BROKEN_TRAFFIC_SIGN",
   "OTHER",
 ]);
 

@@ -21,6 +21,7 @@ The database owns all structured application data. It does not store binary cont
 | Municipality boundary polygons (Taytay, Rizal) | `municipality_boundaries` table |
 | Browser push subscription endpoints | `push_subscriptions` table |
 | Public REST API request log (rate limiting) | `api_request_log` table |
+| Report lifecycle audit trail (admin trust) | `report_activity_log` table |
 | Report photos | Cloudinary —  only the URL strings are stored in the database |
 
 ---
@@ -64,7 +65,19 @@ CREATE TYPE notification_type AS ENUM (
   'FEEDBACK_ACKNOWLEDGED',
   'FEEDBACK_CLOSED',
   'FEEDBACK_NOTE_ADDED',
-  'OFFLINE_SUBMIT_FAILED'
+  'OFFLINE_SUBMIT_FAILED',
+  'REPORT_EDITED'
+);
+
+CREATE TYPE report_activity_action AS ENUM (
+  'SUBMITTED',
+  'EDITED',
+  'APPROVED',
+  'REJECTED',
+  'RESOLVED',
+  'DUPLICATE_LINKED',
+  'MERGED',
+  'COMMENT_REMOVED'
 );
 
 CREATE TYPE report_flag_type AS ENUM (
@@ -86,6 +99,8 @@ CREATE TYPE feedback_status AS ENUM ('OPEN', 'ACKNOWLEDGED', 'CLOSED');
 
 CREATE TYPE comment_status AS ENUM ('ACTIVE', 'REMOVED');
 ```
+
+> **Note:** `REPORT_EDITED` was added to `notification_type` via `ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'REPORT_EDITED'` (migration `20260809000003_add_report_edited_notification.sql`), which must run **outside a transaction** — `ALTER TYPE ... ADD VALUE` cannot execute inside one. `report_activity_action` is a new enum created by migration `20260809000001_create_report_activity_log.sql`.
 
 ---
 
@@ -159,6 +174,7 @@ CREATE TABLE reports (
   resolved_at       timestamptz     NULL,
   resolution_notes  text            NULL,
   resolved_image_urls text[]        NOT NULL DEFAULT '{}',
+  duplicate_of_id   uuid            NULL REFERENCES reports(id) ON DELETE SET NULL,
 
   CONSTRAINT title_length
     CHECK (char_length(title) >= 5 AND char_length(title) <= 100),
@@ -209,6 +225,7 @@ CREATE TABLE reports (
 | `resolved_at` | `timestamptz` | Yes | `null` | When the admin marked the report as resolved. Set server-side at the time of the action. |
 | `resolution_notes` | `text` | Yes | `null` | Optional admin-written summary of how the issue was addressed. Set by the `resolveReport` Server Action. Only populated when the report is `RESOLVED`. |
 | `resolved_image_urls` | `text[]` | No | `'{}'` | Optional Cloudinary CDN URLs (0–3) of "after resolution" photos. Set by the `resolveReport` Server Action. Rendered in a separate "After Resolution" gallery on detail pages. |
+| `duplicate_of_id` | `uuid` | Yes | `null` | Self-FK to `reports.id` (`ON DELETE SET NULL`). When set, this report is a duplicate of the referenced canonical report. The duplicate is retired by this pointer (never hard-deleted) — set by `linkDuplicate` and `mergeReports`; cleared by `unlinkDuplicate`. |
 
 ---
 
@@ -370,6 +387,35 @@ CREATE TABLE api_request_log (
 
 > **Service-role deviation:** This table has no user association and zero RLS policies, so rate-limit bookkeeping uses the service-role client — a documented exception to "service role = admin only". See `feature-specs/28-public-rest-api.md`.
 
+### `report_activity_log`
+
+Stores the authoritative audit trail for a report's lifecycle — submission, edits, status transitions, comment removals, duplicate linking, and merges. Append-only via the service-role client. Backs the lifecycle timeline UI on the admin review page and the citizen detail page. RLS is enabled with **no policies** (service-role only), consistent with `api_request_log`.
+
+```sql
+CREATE TABLE report_activity_log (
+  id         uuid                   PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id  uuid                   NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  actor_id   uuid                   NULL REFERENCES auth.users(id) ON DELETE SET NULL,
+  action     report_activity_action NOT NULL,
+  detail     jsonb                  NULL,
+  created_at timestamptz            NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_report_activity_log_report_created
+  ON report_activity_log(report_id, created_at);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `report_id` | `uuid` | No | — | FK to `reports.id`. Cascade deletes when the report is deleted. |
+| `actor_id` | `uuid` | Yes | `null` | FK to `auth.users.id`. The user who performed the action (citizen on submit, admin on moderation/edit). Set NULL when the auth user is deleted. |
+| `action` | `report_activity_action` | No | — | One of `SUBMITTED`, `EDITED`, `APPROVED`, `REJECTED`, `RESOLVED`, `DUPLICATE_LINKED`, `MERGED`, `COMMENT_REMOVED`. |
+| `detail` | `jsonb` | Yes | `null` | Free-form context: `changedFields` (EDITED), `reason` (REJECTED), `notes` (RESOLVED), `canonicalId`/`unlinked` (DUPLICATE_LINKED/MERGED), `commentId` (COMMENT_REMOVED). |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
+
+Written exclusively by `lib/report-activity.ts`'s `logReportActivity()` using the service-role client. Created by migration `20260809000001_create_report_activity_log.sql`.
+
 ### `notifications`
 
 Stores in-app notification records created when a report's status changes, when feedback is acknowledged/closed, when a citizen flags a report, or when an offline report submission permanently fails. One row per event per user. Used for the in-app notification center (bell icon, lazy dropdown, mark-as-read, delete) and provides a record of all status change events.
@@ -453,12 +499,15 @@ auth.users (Supabase-managed)
   ├── upload_sign_log.user_id   (one-to-many, cascade delete)
   ├── feedback.user_id          (one-to-many, cascade delete)
   ├── notifications.user_id     (one-to-many, cascade delete)
-  └── push_subscriptions.user_id (one-to-many, cascade delete)
+  ├── push_subscriptions.user_id (one-to-many, cascade delete)
+  └── report_activity_log.actor_id (one-to-many, set null on delete)
 
 reports
   ├── report_comments.report_id (one-to-many, cascade delete)
   ├── report_flags.report_id   (one-to-many, cascade delete)
-  └── notifications.report_id   (one-to-many, cascade delete)
+  ├── notifications.report_id   (one-to-many, cascade delete)
+  ├── report_activity_log.report_id (one-to-many, cascade delete)
+  └── reports.duplicate_of_id  (many-to-one self, set null on delete)
 
 report_comments
   └── report_comments.parent_id (one-to-many, cascade delete)
@@ -474,6 +523,9 @@ upload_sign_log
 
 feedback
   └── notifications.feedback_id (one-to-many, cascade delete)
+
+report_activity_log
+  — (no child references)
 ```
 
 ---
@@ -498,6 +550,13 @@ CREATE INDEX idx_reports_status_submitted_at ON reports(status, submitted_at DES
 
 -- reports: spatial index for PostGIS ST_DWithin queries (nearby reports on submit)
 CREATE INDEX idx_reports_location ON reports USING GIST (location);
+
+-- reports: duplicate-report lookups (canonical/duplicate joins)
+CREATE INDEX idx_reports_duplicate_of ON reports(duplicate_of_id);
+
+-- report_activity_log: timeline queries for a report, oldest first
+CREATE INDEX idx_report_activity_log_report_created
+  ON report_activity_log(report_id, created_at);
 
 -- notifications: citizen fetching their own notifications
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
@@ -736,6 +795,7 @@ ALTER TABLE report_flags       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE upload_sign_log    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_request_log    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_activity_log ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
@@ -973,6 +1033,12 @@ RLS is enabled with **no policies**. The anon and authenticated roles cannot rea
 
 ---
 
+### `report_activity_log` RLS
+
+RLS is enabled with **no policies**. The anon and authenticated roles cannot read or mutate audit rows via PostgREST. The table is only reachable through the service-role client in `lib/report-activity.ts` (`logReportActivity` for writes; the `ReportTimeline` server component reads via the admin service-role client). Citizens see their own report's timeline through the server-rendered `ReportTimeline` on `/my-reports/[id]`, never by querying the table directly.
+
+---
+
 ## Business Validation Rules
 
 These rules are enforced at two levels: database constraints (defined above) and Zod schemas (in `lib/validations/`). Both layers must agree. If a constraint exists in the database, the corresponding Zod rule must exist too — and vice versa.
@@ -1014,6 +1080,12 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `reports.resolved_image_urls` | Optional, 1–3 URLs, only set on resolution | Server Action (`resolveReport` — Zod `resolveReportSchema`) |
 | Push subscription ownership | Users can only read/insert/delete their own subscriptions | RLS policies on `push_subscriptions` + Server Action (`savePushSubscription` checks `auth.uid()` = `user_id`) |
 | Offline failure notification correlation | `OFFLINE_SUBMIT_FAILED` notifications carry an `offline_queue_id` linking to the local IndexedDB draft | Server Action (`createOfflineSubmitFailedNotification` sets `offline_queue_id`; `deleteOfflineSubmitNotification` deletes by `user_id` + `offline_queue_id`) |
+| `reports.duplicate_of_id` | A report can be a duplicate of at most one canonical report; cannot point to itself; the canonical report must not itself be a duplicate | Server Action (`linkDuplicate`/`mergeReports` guard self-linking and already-linked reports) |
+| Duplicate retirement | Duplicates are retired by setting `duplicate_of_id` — never hard-deleted | Server Action (`linkDuplicate`/`mergeReports` set the pointer; `unlinkDuplicate` clears it) |
+| Merge photos | Merged photo set is deduplicated and capped at 3 | Server Action (`mergeReports` — dedup + slice to `photo_urls_count` bound) |
+| `report_activity_log` | Append-only; every lifecycle event has an audit row | Server Action + `lib/report-activity.ts` (`logReportActivity` via service-role client) |
+| Admin edit boundary | `is_within_boundary` re-checked on edit only when lat/lng change; DB trigger guards every location write | Server Action (`editReport`) + DB trigger (`trg_reports_location_boundary`) |
+| `REPORT_EDITED` notification | In-app only — no email/SMS dispatch | Server Action (`editReport` → `createNotification`) |
 
 ---
 
