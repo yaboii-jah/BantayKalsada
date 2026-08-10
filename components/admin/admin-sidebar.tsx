@@ -46,7 +46,7 @@ export function AdminSidebar({
   };
 
   return (
-    <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-border bg-sidebar">
+    <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-border bg-muted">
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-6 w-6 text-primary" />
@@ -72,7 +72,7 @@ export function AdminSidebar({
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary/10 text-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  : "text-sidebar-foreground hover:bg-muted-foreground/10",
               )}
             >
               <item.icon className="h-5 w-5 shrink-0" />

@@ -48,7 +48,9 @@ export default async function AdminLayout({
         flagsCount={flagsCount}
         adminName={profile.full_name}
       />
-      <main className="flex-1 overflow-y-auto bg-muted p-6">{children}</main>
+      <main className="flex-1 overflow-y-auto bg-background bg-radial-glow p-6">
+        {children}
+      </main>
     </div>
   );
 }

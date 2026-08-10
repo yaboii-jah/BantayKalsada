@@ -133,7 +133,6 @@ export function AdminReportEditForm({
             })
           }
           placeholder="Select a category"
-          className="bg-background dark:bg-background"
         />
         {errors.category && (
           <p className="text-xs text-destructive">{errors.category.message}</p>
@@ -142,11 +141,7 @@ export function AdminReportEditForm({
 
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
-        <Input
-          id="title"
-          className="bg-background dark:bg-background"
-          {...register("title")}
-        />
+        <Input id="title" {...register("title")} />
         {errors.title && (
           <p className="text-xs text-destructive">{errors.title.message}</p>
         )}
@@ -156,7 +151,7 @@ export function AdminReportEditForm({
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
-          className="min-h-[120px] bg-background dark:bg-background"
+          className="min-h-[120px]"
           {...register("description")}
         />
         {errors.description && (
@@ -171,7 +166,7 @@ export function AdminReportEditForm({
             <label
               key={value}
               className={cn(
-                "flex cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors dark:bg-background",
+                "flex cursor-pointer items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm transition-colors",
                 severityCheckStyles[value],
               )}
             >
@@ -198,7 +193,6 @@ export function AdminReportEditForm({
             })
           }
           placeholder="Select barangay"
-          className="bg-background dark:bg-background"
         />
         {errors.barangay && (
           <p className="text-xs text-destructive">{errors.barangay.message}</p>
@@ -211,7 +205,6 @@ export function AdminReportEditForm({
           key={resetKey}
           onChange={(urls) => onPhotosChange(urls)}
           initialUrls={defaultValues.photo_urls}
-          className="bg-background dark:bg-background"
         />
         {errors.photo_urls && (
           <p className="text-xs text-destructive">{errors.photo_urls.message}</p>
