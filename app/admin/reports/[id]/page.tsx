@@ -5,12 +5,10 @@ import { PhotoGallery } from "@/components/browse/photo-gallery";
 import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { AdminReportActions } from "./admin-report-actions";
 import { ReportTimeline } from "@/components/reports/report-timeline";
-import { DuplicateManager } from "@/components/admin/duplicate-manager";
 import { DuplicateBanner } from "@/components/reports/duplicate-banner";
 import { formatReportDate } from "@/lib/date-utils";
-import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck, Flag, Pencil } from "lucide-react";
+import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 
 const flagLabels: Record<string, string> = {
   ALREADY_FIXED: "Already fixed",
@@ -302,24 +300,8 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
       <AdminReportActions
         reportId={report.id}
         status={report.status}
+        duplicateOfId={report.duplicate_of_id}
       />
-
-      <div className="mt-4">
-        <DuplicateManager
-          reportId={report.id}
-          duplicateOfId={report.duplicate_of_id}
-        />
-      </div>
-
-      <div className="mt-6 flex justify-end">
-        <Link
-          href={`/admin/reports/${report.id}/edit`}
-          className="inline-flex items-center gap-2 rounded-lg border border-input px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-        >
-          <Pencil className="size-4" />
-          Edit report
-        </Link>
-      </div>
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatReportDate } from "@/lib/date-utils";
+import { cn } from "@/lib/utils";
 
 const statusLabels: Record<string, string> = {
   PENDING: "Pending",
@@ -42,9 +43,11 @@ const statusStyles: Record<string, string> = {
 export function DuplicateManager({
   reportId,
   duplicateOfId,
+  className,
 }: {
   reportId: string;
   duplicateOfId: string | null;
+  className?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -134,13 +137,13 @@ export function DuplicateManager({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={handleOpen}>
+      <div className={cn(className, "flex items-center gap-2")}>
+        <Button type="button" variant="outline" size="lg" onClick={handleOpen}>
           <Copy className="mr-1 size-4" />
           Duplicate manager
         </Button>
         {duplicateOfId && (
-          <Button type="button" variant="outline" size="sm" onClick={handleUnlink}>
+          <Button type="button" variant="outline" size="lg" onClick={handleUnlink}>
             <Unlink className="mr-1 size-4" />
             Unlink
           </Button>

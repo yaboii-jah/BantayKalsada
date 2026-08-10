@@ -52,6 +52,15 @@ change.
 - [x] Feature spec `context/feature-specs/30-admin-trust.md` written
 - [x] Context updated — `project-overview.md` (In Scope), `architecture.md` (boundaries, storage model, invariants 22–26), `data-model.md` (enums, tables, relationships, indexes, RLS, business rules), `app-codebase-context.md`, this tracker
 
+### Admin Report UI Polish
+
+- [x] **Unified admin action bar** — `app/admin/reports/[id]/admin-report-actions.tsx` now always renders (no longer null for REJECTED/RESOLVED) and owns the whole action bar: DuplicateManager (left, via `className="mr-auto"`), "Edit report" link (`buttonVariants` outline `size="lg"`), and status ActionButtons in one `flex flex-wrap items-center justify-end gap-3 border-t border-border pt-6` container. `components/admin/duplicate-manager.tsx` gained a `className` prop (merged via `cn`) + `size="lg"` triggers; `app/admin/reports/[id]/page.tsx` no longer renders standalone DuplicateManager/Edit blocks, passes `duplicateOfId={report.duplicate_of_id}`.
+- [x] **Edit page matched to /submit** — `app/admin/reports/[id]/edit/page.tsx` flattened to `mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8` with submit-style heading (`mb-2 text-2xl font-bold tracking-tight text-foreground`) + subtitle (`mb-8 text-sm text-muted-foreground`); form renders flat (no card container), back button kept.
+- [x] **Admin loading skeletons** — `app/admin/approved/loading.tsx`, `app/admin/rejected/loading.tsx`, `app/admin/resolved/loading.tsx`, `app/admin/flags/loading.tsx` (title + rows), and `app/admin/reports/[id]/edit/loading.tsx` (flat max-w-2xl skeleton mirroring the form) using the admin convention (raw `animate-pulse rounded-md bg-muted-foreground/10` divs).
+- [x] **Invisible field borders fixed on admin edit page** — root cause: `--input` and `--muted` are the same token in both light (`oklch(0.968 0.003 265)`) and dark (`oklch(0.30 0 0)`) mode, so `border-input` fields vanish on the `bg-muted` admin canvas (visible on /submit because that page is `bg-background`). Fixed per-field in `components/admin/admin-report-edit-form.tsx` by adding `bg-background dark:bg-background` (tailwind-merge dedupes over the base `bg-transparent`/`dark:bg-input/30`) to category + barangay `InlineSelect`, title `Input`, description `Textarea`, and severity radio labels. `components/reports/photo-upload.tsx` gained an optional `className` prop (merged via `cn` onto the Camera/Gallery dropzone buttons) so the dropzone keeps a visible surface on muted canvases; admin form passes `bg-background dark:bg-background`. Backward compatible — other PhotoUpload usages unchanged.
+- [x] `npx tsc --noEmit` clean; `npm run build` passes with zero errors
+
+
 ### Social/SEO Polish (Tier 2)
 
 - [x] `lib/site.ts` — `SITE_URL` constant (`process.env.NEXT_PUBLIC_SITE_URL || "https://bantay-kalsada.vercel.app"`), single source for metadata URLs

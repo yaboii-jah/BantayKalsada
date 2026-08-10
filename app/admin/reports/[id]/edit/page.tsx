@@ -26,7 +26,7 @@ export default async function AdminReportEditPage({
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
       <Link href={`/admin/reports/${id}`}>
         <Button variant="ghost" size="sm" className="mb-6 -ml-2">
           <ArrowLeft className="mr-1 size-4" />
@@ -34,15 +34,13 @@ export default async function AdminReportEditPage({
         </Button>
       </Link>
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          Edit Report
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Update the report details. The submitter will be notified of the
-          change.
-        </p>
-      </div>
+      <h1 className="mb-2 text-2xl font-bold tracking-tight text-foreground">
+        Edit Report
+      </h1>
+      <p className="mb-8 text-sm text-muted-foreground">
+        Update the report details. The submitter will be notified of the
+        change.
+      </p>
 
       <AdminReportEditForm
         reportId={report.id}

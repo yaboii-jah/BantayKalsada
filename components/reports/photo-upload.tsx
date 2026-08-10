@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, X, Loader2, Camera, CloudOff } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { useOnline } from "@/lib/use-online";
+import { cn } from "@/lib/utils";
 
 function isNetworkError(err: Error): boolean {
   if (err instanceof TypeError) return true;
@@ -24,13 +25,19 @@ interface PhotoUploadProps {
   onChange: (urls: string[], pendingFiles: File[]) => void;
   initialUrls?: string[];
   initialFiles?: File[];
+  className?: string;
 }
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_PHOTOS = 3;
 
-export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUploadProps) {
+export function PhotoUpload({
+  onChange,
+  initialUrls,
+  initialFiles,
+  className,
+}: PhotoUploadProps) {
   const [photos, setPhotos] = useState<PhotoItem[]>(() => {
     const fromUrls = (initialUrls ?? []).map((url) => ({
       id: crypto.randomUUID(),
@@ -241,7 +248,10 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
             <button
               type="button"
               onClick={() => cameraInputRef.current?.click()}
-              className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-border bg-input text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              className={cn(
+                "flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-border bg-input text-muted-foreground transition-colors hover:border-primary hover:text-primary",
+                className,
+              )}
               aria-label="Take a picture"
             >
               <Camera className="size-6" />
@@ -250,7 +260,10 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
             <button
               type="button"
               onClick={() => galleryInputRef.current?.click()}
-              className="flex size-24 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-border bg-input text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              className={cn(
+                "flex size-24 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-border bg-input text-muted-foreground transition-colors hover:border-primary hover:text-primary",
+                className,
+              )}
               aria-label="Add photo from gallery"
             >
               <ImagePlus className="size-6" />

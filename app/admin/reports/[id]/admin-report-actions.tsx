@@ -1,6 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { ActionButtons } from "@/components/admin/action-buttons";
+import { DuplicateManager } from "@/components/admin/duplicate-manager";
+import { buttonVariants } from "@/components/ui/button";
 import { approveReport, rejectReport, resolveReport } from "../../actions";
 import type { Database } from "@/types/database.types";
 
@@ -9,16 +13,26 @@ type ReportStatus = Database["public"]["Enums"]["report_status"];
 export function AdminReportActions({
   reportId,
   status,
+  duplicateOfId,
 }: {
   reportId: string;
   status: ReportStatus;
+  duplicateOfId: string | null;
 }) {
-  if (status === "REJECTED" || status === "RESOLVED") {
-    return null;
-  }
-
   return (
-    <div className="flex justify-end border-t border-border pt-6">
+    <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
+      <DuplicateManager
+        reportId={reportId}
+        duplicateOfId={duplicateOfId}
+        className="mr-auto"
+      />
+      <Link
+        href={`/admin/reports/${reportId}/edit`}
+        className={buttonVariants({ variant: "outline", size: "lg" })}
+      >
+        <Pencil className="size-4" />
+        Edit report
+      </Link>
       <ActionButtons
         reportId={reportId}
         status={status}
