@@ -2,7 +2,7 @@
 
 ## Theme
 
-Light mode by default with full dark mode support via `next-themes`. Toggle switches between Light ↔ Dark (2-state); initial default respects `prefers-color-scheme` via `defaultTheme="system"`. The design language is a clean civic public service aesthetic — white page backgrounds, light gray surface layers, high-contrast text, and a trustworthy blue primary accent in light mode; inverted dark slate backgrounds (medium-dark, not near-black) with matching muted surfaces in dark mode. The tone is accessible and neutral: this is a public safety tool used by a broad, non-technical Filipino audience, not a developer tool or consumer entertainment product. Every visual decision should prioritize legibility, information clarity, and trust over decoration.
+Dark-only theme. No theme toggle and no light mode — the `:root` tokens are the dark palette (`color-scheme: dark`) and `<html>` carries the `dark` class so shadcn `dark:` variant utilities resolve. The design language is a clean civic public service aesthetic — medium-dark slate backgrounds (not near-black), matching muted surfaces, high-contrast text, and a trustworthy blue primary accent. The tone is accessible and neutral: this is a public safety tool used by a broad, non-technical Filipino audience, not a developer tool or consumer entertainment product. Every visual decision should prioritize legibility, information clarity, and trust over decoration.
 
 ---
 

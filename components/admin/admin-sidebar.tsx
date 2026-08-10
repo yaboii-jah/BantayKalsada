@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -54,7 +53,6 @@ export function AdminSidebar({
             Bantay Kalsada
           </span>
         </div>
-        <ThemeToggle />
       </div>
 
       <nav className="flex-1 space-y-1 p-3">

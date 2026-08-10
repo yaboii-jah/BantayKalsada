@@ -9,7 +9,6 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Map, Menu, LogOut, FileText, MessageSquare } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
-import { ThemeToggle } from "@/components/theme-toggle";
 import type { User } from "@supabase/supabase-js";
 
 export function PublicNav() {
@@ -117,7 +116,6 @@ export function PublicNav() {
 
         <nav aria-label="Primary" className="hidden items-center gap-6 sm:flex">
           {navLinks}
-          <ThemeToggle />
           {!loading && (
             <>
               {user ? (
@@ -201,7 +199,6 @@ export function PublicNav() {
         </nav>
 
         <div className="flex items-center gap-1 sm:hidden">
-          <ThemeToggle />
           {!loading && user && <NotificationBell userId={user.id} />}
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>

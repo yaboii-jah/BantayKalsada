@@ -491,7 +491,6 @@ components/
   notification-bell.tsx  — in-app notification dropdown (Realtime live unread badge)
   push-subscription-manager.tsx — PushSubscriptionManager / requestPushSubscription / unsubscribeFromPush
   install-prompt.tsx     — PWA install banner
-  theme-toggle.tsx       — light/dark toggle
   back-button.tsx        — router.back() with fallback
   ui/                    — Shadcn/ui primitives (DO NOT EDIT)
 

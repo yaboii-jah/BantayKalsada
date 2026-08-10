@@ -52,45 +52,6 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.13 0 0);
-  --card: oklch(0.984 0.003 250);
-  --card-foreground: oklch(0.13 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0 0);
-  --primary: oklch(0.488 0.243 264);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.968 0.003 265);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.968 0.003 265);
-  --muted-foreground: oklch(0.47 0.04 260);
-  --accent: oklch(0.968 0.003 265);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.928 0.006 265);
-  --input: oklch(0.968 0.003 265);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.554 0.046 260);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.13 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.968 0.003 265);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.928 0.006 265);
-  --sidebar-ring: oklch(0.708 0 0);
-  --status-pending: #d97706;
-  --status-approved: #16a34a;
-  --status-rejected: #dc2626;
-  --status-resolved: #2563eb;
-}
-
-.dark {
   color-scheme: dark;
   --background: oklch(0.21 0 0);
   --foreground: oklch(0.985 0 0);
@@ -115,6 +76,7 @@
   --chart-3: oklch(0.708 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  --radius: 0.5rem;
   --sidebar: oklch(0.21 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.546 0.245 262);
@@ -123,6 +85,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.30 0 0);
   --sidebar-ring: oklch(0.45 0 0);
+  --status-pending: #f59e0b;
+  --status-approved: #22c55e;
+  --status-rejected: #ef4444;
+  --status-resolved: #3b82f6;
 }
 
 @utility bg-radial-glow {
@@ -130,15 +96,6 @@
 }
 
 @utility bg-auth-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.965 0.01 260),
-    oklch(1 0 0),
-    oklch(0.96 0.008 250)
-  );
-}
-
-.dark .bg-auth-gradient {
   background: linear-gradient(
     135deg,
     oklch(0.15 0.02 260),

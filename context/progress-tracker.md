@@ -1067,3 +1067,15 @@ and simpler (no cache table, no grid tuning).
 - [x] **`react-hooks/incompatible-library` (react-hook-form `watch`) resolved** in `report-form.tsx`, `feedback-form.tsx`, `admin-report-edit-form.tsx` — `watch("x")` → `useWatch<FormInput, "x">({ control, name })`, restoring compiler memoization.
 - [x] **`@next/next/no-img-element`** retained with justified disables (custom regional-CDN rewrite via `getDisplayUrl` + blob object-URL previews that `next/image` cannot serve) in `report-card.tsx`, `photo-gallery.tsx`, `photo-upload.tsx`, `browse-map.tsx`.
 - [x] Verified: `npx tsc --noEmit` clean, `npx eslint .` clean (0 problems), `npm run build` passes with zero errors.
+
+### Dark-Only Theme (toggle removed)
+
+- [x] **Dark-only palette** — `app/globals.css`: merged the old `.dark` token block into `:root` (with `color-scheme: dark`) and deleted the `.dark` block; flattened `.dark .bg-auth-gradient` into `bg-auth-gradient` using the dark gradient; status colors brightened for dark contrast (amber/green/red/blue). `@custom-variant dark` retained.
+- [x] **`app/layout.tsx`** — removed `next-themes` `ThemeProvider`; `<html>` now carries `dark` class directly (dark from first paint, no flash); `viewport.themeColor` → `#2b2b2b`.
+- [x] **Toggle removed everywhere** — deleted `components/theme-toggle.tsx`; removed mounts + imports from `components/public-nav.tsx` (desktop + mobile top bar), `components/admin/admin-sidebar.tsx`, `app/(auth)/layout.tsx`.
+- [x] **`components/ui/sonner.tsx`** — `theme="dark"` hardcoded (dropped `useTheme`).
+- [x] **Dependency removed** — `npm uninstall next-themes`.
+- [x] **PWA chrome** — `public/manifest.json` `background_color` + `theme_color` → `#2b2b2b`.
+- [x] Maps/popups intentionally stay light (hardcoded `.browse-popup` / `.leaflet-popup-*` white) per decision — a bright map panel on dark UI is accepted.
+- [x] Context updated — `ui-context.md` Theme section rewritten (dark-only, no toggle), `app-codebase-context.md` file-org dropped `theme-toggle.tsx`, this tracker.
+- [x] Verified: `npx tsc --noEmit` clean, `npx eslint .` clean (0 problems), `npm run build` passes with zero errors.
