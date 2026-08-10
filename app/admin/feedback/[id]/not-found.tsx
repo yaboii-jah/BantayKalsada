@@ -6,7 +6,7 @@ export default function AdminFeedbackNotFound() {
   return (
     <div className="py-16 text-center">
       <MessageSquare className="mx-auto size-12 text-muted-foreground" />
-      <h2 className="mt-4 text-lg font-semibold">Feedback not found</h2>
+      <h1 className="mt-4 text-lg font-semibold">Feedback not found</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         This feedback submission does not exist or has been removed.
       </p>

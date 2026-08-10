@@ -16,9 +16,9 @@ export default function VerifyEmailPage() {
           You need to verify your email address before submitting reports. Check
           your inbox for the verification link we sent after registration.
         </p>
-        <Link href="/browse" className="mt-6">
-          <Button variant="outline">Back to browse</Button>
-        </Link>
+        <Button variant="outline" className="mt-6" asChild>
+          <Link href="/browse">Back to browse</Link>
+        </Button>
       </div>
     </div>
   );

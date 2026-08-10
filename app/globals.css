@@ -63,7 +63,7 @@
   --secondary: oklch(0.968 0.003 265);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.968 0.003 265);
-  --muted-foreground: oklch(0.554 0.046 260);
+  --muted-foreground: oklch(0.47 0.04 260);
   --accent: oklch(0.968 0.003 265);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -175,11 +175,22 @@
 }
 
 .browse-popup .text-muted-foreground {
-  color: oklch(0.554 0.046 260);
+  color: oklch(0.47 0.04 260);
 }
 
 .browse-popup .bg-muted {
   background: oklch(0.968 0.003 265);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 

@@ -16,12 +16,12 @@ export default function ReportNotFound() {
           This report does not exist or has been removed. It may not be publicly
           visible yet.
         </p>
-        <Link href="/browse" className="mt-6">
-          <Button variant="outline">
+        <Button variant="outline" className="mt-6" asChild>
+          <Link href="/browse">
             <ArrowLeft className="mr-2 size-4" />
             Back to browse
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     </div>
   );

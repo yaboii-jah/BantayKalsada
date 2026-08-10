@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
@@ -69,15 +69,21 @@ export function AdminReportEditForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<CreateReportInput>({
     resolver: zodResolver(createReportSchema),
     defaultValues,
   });
 
-  const selectedCategory = watch("category");
-  const selectedBarangay = watch("barangay");
+  const selectedCategory = useWatch<CreateReportInput, "category">({
+    control,
+    name: "category",
+  });
+  const selectedBarangay = useWatch<CreateReportInput, "barangay">({
+    control,
+    name: "barangay",
+  });
 
   const onPhotosChange = useCallback(
     (urls: string[]) => {

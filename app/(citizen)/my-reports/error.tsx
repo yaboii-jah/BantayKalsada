@@ -20,9 +20,9 @@ export default function Error({
       <div className="mb-6 inline-flex size-16 items-center justify-center rounded-2xl bg-destructive/10">
         <AlertTriangle className="size-8 text-destructive" />
       </div>
-      <h2 className="text-lg font-semibold text-foreground">
+      <h1 className="text-lg font-semibold text-foreground">
         Something went wrong
-      </h2>
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Failed to load your reports. Please try again.
       </p>

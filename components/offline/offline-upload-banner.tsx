@@ -14,7 +14,10 @@ export function OfflineUploadBanner() {
   if (count === 0) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex items-center gap-3 border-t border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
+    <div
+      role="status"
+      className="fixed inset-x-0 bottom-0 z-50 flex items-center gap-3 border-t border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur sm:px-6"
+    >
       <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
       <div className="h-2.5 w-16 shrink-0 animate-pulse rounded-full bg-muted-foreground/30" />
       <p className="text-xs font-medium text-foreground">

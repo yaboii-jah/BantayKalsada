@@ -78,7 +78,7 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 - Do not edit files inside `components/ui/` directly. Wrap and extend them in `components/reports/`, `components/admin/`, or the relevant feature folder.
 - Toast notifications for user feedback (report submitted, action successful, error occurred) use the Shadcn/ui `Sonner` toast component.
 - The rejection reason prompt uses the Shadcn/ui `Dialog` component — not a native browser `confirm()`.
-- All form fields use Shadcn/ui `Input` and `Textarea` components wired to `react-hook-form` with Zod resolvers for validation feedback. Custom dropdowns (`InlineSelect`) replace Shadcn/ui `Select` — they render options via `createPortal` to `document.body` to avoid container clipping, use `bg-background text-foreground` for reliable dark mode cascade, and are shared across report-form, feedback-form, and filter-bar.
+- All form fields use Shadcn/ui `Input` and `Textarea` components wired to `react-hook-form` with Zod resolvers for validation feedback. Custom dropdowns (`InlineSelect`) replace Shadcn/ui `Select` — they render options via `createPortal` to `document.body` to avoid container clipping, use `bg-background text-foreground` for reliable dark mode cascade, and are shared across report-form, feedback-form, and filter-bar. `InlineSelect` accepts an optional `id` prop that lands on the trigger button and is linked to its `Label` via `aria-labelledby`, so `Label htmlFor="…"` associates correctly.
 
 ---
 

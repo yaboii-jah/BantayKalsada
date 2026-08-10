@@ -14,7 +14,6 @@ import Link from "next/link";
 import type { Database } from "@/types/database.types";
 
 type FeedbackRow = Database["public"]["Tables"]["feedback"]["Row"];
-type FeedbackType = FeedbackRow["type"];
 type FeedbackStatus = FeedbackRow["status"];
 
 const typeConfig: Record<

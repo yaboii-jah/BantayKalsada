@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
-import { barangayEnum, createReportSchema, flagReportSchema, type CreateReportInput } from "@/lib/validations/report";
+import { createReportSchema, flagReportSchema, type CreateReportInput } from "@/lib/validations/report";
 import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
 import {
   updateProfileSettingsSchema,

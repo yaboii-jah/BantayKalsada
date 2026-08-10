@@ -92,8 +92,15 @@ function BaseMapToggle({
         setOpen(false);
       }
     }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [open]);
 
   const option = BASE_MAP_OPTIONS.find((o) => o.value === baseMap) ?? BASE_MAP_OPTIONS[0];
@@ -103,7 +110,9 @@ function BaseMapToggle({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow transition-colors hover:text-foreground"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Layers className="size-3.5" />
         {option.label}
@@ -268,6 +277,8 @@ function MapContent({
           <Popup maxWidth={240} minWidth={200}>
             <div className="browse-popup flex flex-col gap-2 text-sm">
               {report.photo_urls[0] && (
+                /* next/image can't serve the custom regional-CDN rewrite from getDisplayUrl; keep raw img */
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={report.photo_urls[0]}
                   alt={report.title}

@@ -35,21 +35,17 @@ export function NearbyReportsLayer({ lat, lng }: NearbyReportsLayerProps) {
   const map = useMap();
   const layerRef = useRef<L.LayerGroup | null>(null);
   const [reports, setReports] = useState<NearbyReport[]>([]);
-  const fetchIdRef = useRef(0);
   const supabaseRef = useRef(createSupabaseBrowserClient());
 
   useEffect(() => {
-    if (lat === null || lng === null) {
-      setReports([]);
-      return;
-    }
+    if (lat === null || lng === null) return;
 
-    const currentFetchId = ++fetchIdRef.current;
+    let cancelled = false;
 
     supabaseRef.current
       .rpc("get_nearby_reports", { lat, lng, max_distance_m: 200 })
       .then(({ data, error }) => {
-        if (currentFetchId !== fetchIdRef.current) return;
+        if (cancelled) return;
         if (error) {
           console.error("Failed to fetch nearby reports:", error);
           return;
@@ -58,7 +54,7 @@ export function NearbyReportsLayer({ lat, lng }: NearbyReportsLayerProps) {
       });
 
     return () => {
-      fetchIdRef.current++;
+      cancelled = true;
     };
   }, [lat, lng]);
 
@@ -70,13 +66,14 @@ export function NearbyReportsLayer({ lat, lng }: NearbyReportsLayerProps) {
     const layer = layerRef.current;
     layer.clearLayers();
 
-    for (const report of reports) {
-      const config = severityConfig[report.severity] ?? severityConfig.MINOR;
-      const distance = report.distance_m < 1
-        ? "<1m"
-        : `${Math.round(report.distance_m)}m`;
+    if (lat !== null && lng !== null) {
+      for (const report of reports) {
+        const config = severityConfig[report.severity] ?? severityConfig.MINOR;
+        const distance = report.distance_m < 1
+          ? "<1m"
+          : `${Math.round(report.distance_m)}m`;
 
-      const chipHtml = `
+        const chipHtml = `
         <div style="
           display: inline-flex;
           align-items: center;
@@ -104,21 +101,21 @@ export function NearbyReportsLayer({ lat, lng }: NearbyReportsLayerProps) {
         </div>
       `;
 
-      const marker = L.marker([report.latitude, report.longitude], {
-        icon: L.divIcon({
-          html: chipHtml,
-          className: "",
-          iconAnchor: [40, 14],
-          iconSize: [80, 28],
-        }),
-        interactive: true,
-      });
+        const marker = L.marker([report.latitude, report.longitude], {
+          icon: L.divIcon({
+            html: chipHtml,
+            className: "",
+            iconAnchor: [40, 14],
+            iconSize: [80, 28],
+          }),
+          interactive: true,
+        });
 
-      const photoHtml = report.photo_urls[0]
-        ? `<img src="${getDisplayUrl(report.photo_urls[0])}" alt="" style="margin-bottom: 6px; width: 100%; height: 80px; border-radius: 4px; object-fit: cover;" />`
-        : "";
+        const photoHtml = report.photo_urls[0]
+          ? `<img src="${getDisplayUrl(report.photo_urls[0])}" alt="${report.title}" style="margin-bottom: 6px; width: 100%; height: 80px; border-radius: 4px; object-fit: cover;" />`
+          : "";
 
-      marker.bindPopup(`
+        marker.bindPopup(`
         <div style="min-width: 200px;">
           ${photoHtml}
           <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600; line-height: 1.3;">${report.title}</p>
@@ -140,13 +137,14 @@ export function NearbyReportsLayer({ lat, lng }: NearbyReportsLayerProps) {
         </div>
       `);
 
-      layer.addLayer(marker);
+        layer.addLayer(marker);
+      }
     }
 
     return () => {
       layer.clearLayers();
     };
-  }, [reports, map]);
+  }, [reports, lat, lng, map]);
 
   return null;
 }

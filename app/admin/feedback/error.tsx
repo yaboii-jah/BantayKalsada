@@ -13,7 +13,7 @@ export default function AdminFeedbackError({
   return (
     <div className="py-16 text-center">
       <AlertCircle className="mx-auto size-12 text-destructive" />
-      <h2 className="mt-4 text-lg font-semibold">Something went wrong</h2>
+      <h1 className="mt-4 text-lg font-semibold">Something went wrong</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         {error.message || "Failed to load feedback inbox."}
       </p>

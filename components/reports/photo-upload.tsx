@@ -205,6 +205,8 @@ export function PhotoUpload({ onChange, initialUrls, initialFiles }: PhotoUpload
             key={photo.id}
             className="relative size-24 overflow-hidden rounded-md border border-border"
           >
+            {/* localUrl may be a blob: object URL (offline pending files) — next/image can't serve these */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={photo.localUrl}
               alt=""

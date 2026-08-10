@@ -125,12 +125,12 @@ export default async function ReportDetailPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
-        <Link href="/browse">
-          <Button variant="ghost" size="sm" className="-ml-2">
+        <Button variant="ghost" size="sm" className="-ml-2" asChild>
+          <Link href="/browse">
             <ArrowLeft className="mr-1 size-4" />
             Back to reports
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <ShareButton title={report.title} />
       </div>
 

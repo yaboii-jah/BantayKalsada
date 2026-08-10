@@ -32,11 +32,11 @@ export function PaginationBar({
       className="flex items-center justify-center gap-1"
     >
       {currentPage > 1 && (
-        <Link href={buildHref(currentPage - 1)}>
-          <Button variant="ghost" size="sm" aria-label="Previous page">
+        <Button variant="ghost" size="sm" aria-label="Previous page" asChild>
+          <Link href={buildHref(currentPage - 1)}>
             <ChevronLeft className="size-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       )}
       {pages.map((page, i) =>
         page === "..." ? (
@@ -44,23 +44,23 @@ export function PaginationBar({
             ...
           </span>
         ) : (
-          <Link key={page} href={buildHref(page)}>
-            <Button
-              variant={page === currentPage ? "default" : "ghost"}
-              size="sm"
-              className="min-w-9"
-            >
-              {page}
-            </Button>
-          </Link>
+          <Button
+            key={page}
+            variant={page === currentPage ? "default" : "ghost"}
+            size="sm"
+            className="min-w-9"
+            asChild
+          >
+            <Link href={buildHref(page)}>{page}</Link>
+          </Button>
         ),
       )}
       {currentPage < totalPages && (
-        <Link href={buildHref(currentPage + 1)}>
-          <Button variant="ghost" size="sm" aria-label="Next page">
+        <Button variant="ghost" size="sm" aria-label="Next page" asChild>
+          <Link href={buildHref(currentPage + 1)}>
             <ChevronRight className="size-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       )}
     </nav>
   );

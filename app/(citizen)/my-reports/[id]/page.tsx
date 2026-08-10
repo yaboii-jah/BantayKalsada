@@ -60,19 +60,19 @@ export default async function MyReportDetailPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
-        <Link href="/my-reports">
-          <Button variant="ghost" size="sm" className="-ml-2">
+        <Button variant="ghost" size="sm" className="-ml-2" asChild>
+          <Link href="/my-reports">
             <ArrowLeft className="mr-1 size-4" />
             Back to my reports
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         {report.status === "PENDING" && (
-          <Link href={`/my-reports/${report.id}/edit`}>
-            <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/my-reports/${report.id}/edit`}>
               <Pencil className="mr-1 size-4" />
               Edit
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         )}
       </div>
 

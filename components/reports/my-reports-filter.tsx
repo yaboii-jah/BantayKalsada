@@ -35,6 +35,7 @@ export function MyReportsFilter() {
             key={tab.value}
             type="button"
             onClick={() => handleSelect(tab.value)}
+            aria-pressed={currentStatus === tab.value}
             className={cn(
               "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
               currentStatus === tab.value

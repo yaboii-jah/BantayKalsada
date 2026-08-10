@@ -193,9 +193,9 @@ async function BrowseReports({
           <p className="mt-2 text-sm text-muted-foreground">
             Try changing or clearing the filters to see more reports.
           </p>
-          <Link href="/browse" className="mt-6">
-            <Button variant="outline">Clear all filters</Button>
-          </Link>
+          <Button variant="outline" className="mt-6" asChild>
+            <Link href="/browse">Clear all filters</Link>
+          </Button>
         </>
       ) : (
         <>
@@ -206,9 +206,9 @@ async function BrowseReports({
             There are no road hazard reports to show right now. Be the first
             to report an issue in your community.
           </p>
-          <Link href="/submit" className="mt-6">
-            <Button>Submit a report</Button>
-          </Link>
+          <Button className="mt-6" asChild>
+            <Link href="/submit">Submit a report</Link>
+          </Button>
         </>
       )}
     </div>
@@ -241,9 +241,9 @@ export default async function BrowsePage({
             Browse verified road incident reports submitted by the community.
           </p>
         </div>
-        <Link href="/submit">
-          <Button className="w-full sm:w-auto">Submit a report</Button>
-        </Link>
+        <Button className="w-full sm:w-auto" asChild>
+          <Link href="/submit">Submit a report</Link>
+        </Button>
       </div>
 
       <div className="mb-6">

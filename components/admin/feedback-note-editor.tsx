@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState, useEffect, useRef } from "react";
+import { useTransition, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateFeedbackNote } from "@/app/admin/actions";
@@ -23,9 +23,11 @@ export function FeedbackNoteEditor({
   const [pending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  const [prevNote, setPrevNote] = useState(initialNote ?? "");
+  if (initialNote !== prevNote) {
+    setPrevNote(initialNote ?? "");
     setNote(initialNote ?? "");
-  }, [initialNote]);
+  }
 
   const hasNote = initialNote !== null && initialNote.length > 0;
   const isDirty = note !== (initialNote ?? "");

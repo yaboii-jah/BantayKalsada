@@ -14,9 +14,9 @@ export default function AdminReportNotFound() {
           This report may have been deleted or the link is incorrect.
         </p>
       </div>
-      <Link href="/admin/pending">
-        <Button>Back to pending queue</Button>
-      </Link>
+      <Button className="mt-6" asChild>
+        <Link href="/admin/pending">Back to pending queue</Link>
+      </Button>
     </div>
   );
 }

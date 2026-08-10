@@ -103,11 +103,11 @@ export function CommentItem({
             <span className="text-xs font-semibold text-foreground">
               {comment.author_name || "Anonymous"}
             </span>
-            <span className="text-[11px] text-muted-foreground/60">
+            <span className="text-[11px] text-muted-foreground">
               {formatReportDate(comment.created_at)}
             </span>
             {comment.updated_at !== comment.created_at && (
-              <span className="text-[11px] text-muted-foreground/40">(edited)</span>
+              <span className="text-[11px] text-muted-foreground">(edited)</span>
             )}
           </div>
 
@@ -133,7 +133,7 @@ export function CommentItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-7 opacity-0 transition-opacity group-hover:opacity-100"
+                className="size-7 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <MoreHorizontal className="size-3.5" />
               </Button>

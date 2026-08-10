@@ -106,9 +106,9 @@ async function MyReportsContent({
             You haven&apos;t submitted any road hazard reports yet. Be the
             first to report an issue in your community.
           </p>
-          <Link href="/submit" className="mt-6">
-            <Button>Submit a report</Button>
-          </Link>
+          <Button className="mt-6" asChild>
+            <Link href="/submit">Submit a report</Link>
+          </Button>
         </>
       ) : (
         <>
@@ -121,9 +121,9 @@ async function MyReportsContent({
               : "You haven&apos;t submitted any road hazard reports yet."}
           </p>
           {isFiltered && (
-            <Link href="/my-reports" className="mt-6">
-              <Button variant="outline">Clear all filters</Button>
-            </Link>
+            <Button variant="outline" className="mt-6" asChild>
+              <Link href="/my-reports">Clear all filters</Link>
+            </Button>
           )}
         </>
       )}

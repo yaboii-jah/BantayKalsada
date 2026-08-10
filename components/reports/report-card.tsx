@@ -52,6 +52,8 @@ export function ReportCard({
     >
       {thumbnail && (
         <div className="aspect-[4/3] overflow-hidden bg-muted">
+          {/* next/image can't serve the custom regional-CDN rewrite from getDisplayUrl; keep raw img */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={thumbnail}
             alt={report.title}

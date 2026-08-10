@@ -214,8 +214,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       <button
         type="button"
         onClick={handleToggle}
-        className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none"
-        aria-label="Notifications"
+        className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        aria-label={hasUnread ? `${displayCount} unread notifications` : "Notifications"}
         aria-expanded={open}
       >
         {hasUnread ? (
@@ -224,7 +224,10 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           <Bell className="size-5" />
         )}
         {hasUnread && (
-          <span className="absolute -right-0.5 -top-0.5 flex min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-tight text-white">
+          <span
+            aria-live="polite"
+            className="absolute -right-0.5 -top-0.5 flex min-w-[18px] items-center justify-center rounded-full bg-red-700 px-1 text-[10px] font-bold leading-tight text-white"
+          >
             {displayCount}
           </span>
         )}
@@ -308,7 +311,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                         >
                           {notification.message}
                         </p>
-                        <p className="text-[11px] text-muted-foreground/60">
+                        <p className="text-[11px] text-muted-foreground">
                           {formatReportDate(notification.created_at)}
                         </p>
                       </div>
@@ -316,7 +319,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                     <button
                       type="button"
                       onClick={(e) => handleDeleteNotification(notification, e)}
-                      className="absolute right-2 top-2 flex size-5 items-center justify-center rounded text-muted-foreground/40 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                      className="absolute right-2 top-2 flex size-5 items-center justify-center rounded text-muted-foreground/40 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
                       aria-label="Delete notification"
                     >
                       <X className="size-3.5" />

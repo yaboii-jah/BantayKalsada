@@ -45,6 +45,8 @@ export function PhotoGallery({ urls }: { urls: string[] }) {
                 className="aspect-[16/10] overflow-hidden rounded-lg bg-muted cursor-pointer"
                 onClick={() => { setSelectedIndex(index); }}
               >
+                {/* next/image can't serve the custom regional-CDN rewrite from getDisplayUrl; keep raw img */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={getDisplayUrl(url)}
                   alt={`Photo ${index + 1}`}
@@ -95,6 +97,8 @@ export function PhotoGallery({ urls }: { urls: string[] }) {
             </button>
           )}
 
+          {/* next/image can't serve the custom regional-CDN rewrite from getDisplayUrl; keep raw img */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={getDisplayUrl(urls[selectedIndex])}
             alt={`Photo ${selectedIndex + 1}`}

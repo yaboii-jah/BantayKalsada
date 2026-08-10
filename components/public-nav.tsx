@@ -18,6 +18,8 @@ export function PublicNav() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const avatarRef = useRef<HTMLButtonElement>(null);
+  const wasMenuOpenRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,6 +48,36 @@ export function PublicNav() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (menuOpen) {
+      wasMenuOpenRef.current = true;
+      const frame = requestAnimationFrame(() => {
+        const first = menuRef.current?.querySelector<HTMLElement>("a, button");
+        first?.focus();
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    if (wasMenuOpenRef.current) {
+      wasMenuOpenRef.current = false;
+      avatarRef.current?.focus();
+    }
+  }, [menuOpen]);
+
+  function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>("a, button") ?? [],
+    );
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+    const nextIndex =
+      e.key === "ArrowDown"
+        ? (currentIndex + 1) % items.length
+        : (currentIndex - 1 + items.length) % items.length;
+    items[nextIndex].focus();
+  }
 
   const handleSignOut = async () => {
     const supabase = createSupabaseBrowserClient();
@@ -83,7 +115,7 @@ export function PublicNav() {
           Bantay Kalsada
         </Link>
 
-        <nav className="hidden items-center gap-6 sm:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-6 sm:flex">
           {navLinks}
           <ThemeToggle />
           {!loading && (
@@ -99,10 +131,13 @@ export function PublicNav() {
                   <NotificationBell userId={user.id} />
                   <div ref={menuRef} className="relative">
                   <button
+                    ref={avatarRef}
                     type="button"
                     onClick={() => setMenuOpen((p) => !p)}
-                    className="focus:outline-none"
+                    className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     aria-label="User menu"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
                   >
                     <Avatar className="size-8 cursor-pointer">
                       <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
@@ -111,10 +146,13 @@ export function PublicNav() {
                     </Avatar>
                   </button>
                   {menuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10">
+                    <div
+                      onKeyDown={handleMenuKeyDown}
+                      className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+                    >
                       <Link
                         href="/my-feedback"
-                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => setMenuOpen(false)}
                       >
                         <MessageSquare className="size-4" />
@@ -122,7 +160,7 @@ export function PublicNav() {
                       </Link>
                       <Link
                         href="/my-reports"
-                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => setMenuOpen(false)}
                       >
                         <FileText className="size-4" />
@@ -130,7 +168,7 @@ export function PublicNav() {
                       </Link>
                       <Link
                         href="/account"
-                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => setMenuOpen(false)}
                       >
                         <FileText className="size-4" />
@@ -139,7 +177,7 @@ export function PublicNav() {
                       <button
                         type="button"
                         onClick={handleSignOut}
-                        className="flex w-full items-center gap-2 rounded-md bg-destructive px-1.5 py-1 text-sm text-white outline-hidden select-none hover:bg-destructive/85"
+                        className="flex w-full items-center gap-2 rounded-md bg-destructive px-1.5 py-1 text-sm text-white outline-hidden select-none hover:bg-destructive/85 focus-visible:bg-destructive/85 focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <LogOut className="size-4" />
                         Sign out
@@ -150,14 +188,12 @@ export function PublicNav() {
                 </>
               ) : (
                 <div className="flex items-center gap-3">
-                  <Link href="/login">
-                    <Button variant="ghost" size="sm">
-                      Sign in
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button size="sm">Get started</Button>
-                  </Link>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/login">Sign in</Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link href="/register">Get started</Link>
+                  </Button>
                 </div>
               )}
             </>
@@ -182,7 +218,7 @@ export function PublicNav() {
             <SheetDescription className="sr-only">
               Main navigation and account links
             </SheetDescription>
-            <nav className="mt-8 flex flex-1 flex-col items-center gap-4">
+            <nav aria-label="Mobile" className="mt-8 flex flex-1 flex-col items-center gap-4">
               {navLinks}
               {!loading && !user && (
                 <>
@@ -193,12 +229,11 @@ export function PublicNav() {
                   >
                     Sign in
                   </Link>
-                  <Link
-                    href="/register"
-                    onClick={() => setSheetOpen(false)}
-                  >
-                    <Button className="w-full">Get started</Button>
-                  </Link>
+                  <Button className="w-full" asChild>
+                    <Link href="/register" onClick={() => setSheetOpen(false)}>
+                      Get started
+                    </Link>
+                  </Button>
                 </>
               )}
                   {!loading && user && (

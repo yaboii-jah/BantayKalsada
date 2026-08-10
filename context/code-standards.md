@@ -48,6 +48,16 @@
 
 ---
 
+## Accessibility
+
+- Every page renders exactly one `h1` — the page-level heading. Error (`error.tsx`) and not-found (`not-found.tsx`) boundaries render their message as `h1` (the boundary is a standalone page-level view). Lower-level section headings start at `h2`.
+- Never nest interactive elements. Render a `Button` as a link via `<Button asChild><Link href="…">…</Link></Button>` — never `<Link><Button>…</Button></Link>`, which emits `<a><button>`.
+- Associate every field with a visible `<Label>`. Native inputs use `htmlFor`/`id`; custom controls (e.g. `InlineSelect`) accept an `id` prop and wire it via `aria-labelledby` on the trigger. Standalone label-like groupings (`PhotoUpload`, star rating) are wrapped in `<div role="group" aria-labelledby="…-label">` with a `Label` whose `id` matches.
+- Stateful/toggle controls expose state via `aria-pressed`. Icon-only controls and dropdown triggers get an `aria-label` (plus `aria-haspopup`/`aria-expanded`/`aria-activedescendant` where relevant).
+- Images carry meaningful `alt` text — report thumbnails use the report title; purely decorative images use `alt=""`.
+
+---
+
 ## API Routes
 
 - The first thing every route handler does is authenticate the request. Create a Supabase server client using the factory in `lib/supabase/server.ts` and call `supabase.auth.getUser()`. If the returned `user` is null or an error is returned, respond with a `401` immediately — no further logic runs. Never use `getSession()` for server-side auth checks; it reads from the cookie without revalidating and is not trustworthy for authorization.

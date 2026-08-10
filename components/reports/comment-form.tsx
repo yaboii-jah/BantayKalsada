@@ -79,7 +79,8 @@ export function CommentForm({
         placeholder={placeholder}
         rows={2}
         maxLength={2000}
-        className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        aria-label="Write a comment"
+        className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
       />
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground/60">

@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition, useState, useRef, useEffect } from "react";
+import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Send, Loader2, Star } from "lucide-react";
@@ -16,12 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-
-const typeLabels: Record<CreateFeedbackInput["type"], string> = {
-  BUG_REPORT: "Bug Report",
-  FEATURE_REQUEST: "Feature Request",
-  GENERAL: "General Feedback",
-};
 
 const typeOptions = [
   { value: "", label: "Select feedback type" },
@@ -41,7 +35,7 @@ export function FeedbackForm() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<CreateFeedbackInput>({
     resolver: zodResolver(createFeedbackSchema),
@@ -54,7 +48,14 @@ export function FeedbackForm() {
     },
   });
 
-  const selectedRating = watch("rating");
+  const selectedRating = useWatch<CreateFeedbackInput, "rating">({
+    control,
+    name: "rating",
+  });
+  const selectedType = useWatch<CreateFeedbackInput, "type">({
+    control,
+    name: "type",
+  });
 
   const onSubmit = handleSubmit((data) => {
     setSubmitError(null);
@@ -80,7 +81,8 @@ export function FeedbackForm() {
       <div className="space-y-2">
         <Label htmlFor="type">Type</Label>
         <InlineSelect
-          value={watch("type") ?? ""}
+          id="type"
+          value={selectedType ?? ""}
           options={typeOptions}
           onSelect={(v) => setValue("type", v as CreateFeedbackInput["type"], { shouldValidate: true })}
         />
@@ -117,13 +119,15 @@ export function FeedbackForm() {
       </div>
 
       <div className="space-y-2">
-        <Label>Photos (optional)</Label>
-        <PhotoUpload onChange={setPhotoUrls} />
+        <Label id="photos-label">Photos (optional)</Label>
+        <div role="group" aria-labelledby="photos-label">
+          <PhotoUpload onChange={setPhotoUrls} />
+        </div>
       </div>
 
       <div className="space-y-2">
-        <Label>Rating (optional)</Label>
-        <div className="flex items-center gap-1">
+        <Label id="rating-label">Rating (optional)</Label>
+        <div role="group" aria-labelledby="rating-label" className="flex items-center gap-1">
           {[1, 2, 3, 4, 5].map((star) => {
             const filled = star <= (hoveredStar || selectedRating || 0);
             return (
@@ -139,14 +143,15 @@ export function FeedbackForm() {
                     { shouldValidate: true },
                   )
                 }
-                className="rounded-sm p-0.5 transition-colors hover:scale-110"
+                aria-pressed={filled}
                 aria-label={`${star} star${star > 1 ? "s" : ""}`}
+                className="rounded-sm p-0.5 transition-colors hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Star
                   className={`size-6 ${
                     filled
                       ? "fill-status-pending text-status-pending"
-                      : "fill-none text-muted-foreground/30"
+                      : "fill-none text-muted-foreground/60"
                   }`}
                 />
               </button>

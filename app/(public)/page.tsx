@@ -69,16 +69,12 @@ export default function Home() {
               and other hazards so everyone in Taytay stays informed.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"> 
-              <Link href="/register">
-                <Button size="lg" className="w-48">
-                  Get started
-                </Button>
-              </Link>
-              <Link href="/browse">
-                <Button variant="outline" size="lg" className="w-48">
-                  Browse reports
-                </Button>
-              </Link>
+              <Button size="lg" className="w-48" asChild>
+                <Link href="/register">Get started</Link>
+              </Button>
+              <Button variant="outline" size="lg" className="w-48" asChild>
+                <Link href="/browse">Browse reports</Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -148,11 +144,9 @@ export default function Home() {
               Every report goes through an administrator review before going
               public. Only verified, accurate information reaches the feed.
             </p>
-            <Link href="/submit" className="mt-8">
-              <Button size="lg">
-                Start reporting in Taytay
-              </Button>
-            </Link>
+            <Button size="lg" className="mt-8" asChild>
+              <Link href="/submit">Start reporting in Taytay</Link>
+            </Button>
           </div>
         </section>
     </>

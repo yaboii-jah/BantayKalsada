@@ -8,19 +8,19 @@ export default function MyReportNotFound() {
       <div className="mb-6 inline-flex size-16 items-center justify-center rounded-2xl bg-muted">
         <FileQuestion className="size-8 text-muted-foreground" />
       </div>
-      <h2 className="text-lg font-semibold text-foreground">
+      <h1 className="text-lg font-semibold text-foreground">
         Report not found
-      </h2>
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         This report doesn&apos;t exist or you don&apos;t have permission to
         view it.
       </p>
-      <Link href="/my-reports" className="mt-6">
-        <Button variant="outline">
+      <Button variant="outline" asChild className="mt-6">
+        <Link href="/my-reports">
           <ArrowLeft className="mr-1 size-4" />
           Back to my reports
-        </Button>
-      </Link>
+        </Link>
+      </Button>
     </div>
   );
 }

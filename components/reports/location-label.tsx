@@ -16,22 +16,20 @@ export function LocationLabel({
   className?: string;
   icon?: ReactNode;
 }) {
-  const [resolved, setResolved] = useState(label ?? undefined);
+  const [geocoded, setGeocoded] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (label) {
-      setResolved(label);
-      return;
-    }
+    if (label) return;
     let cancelled = false;
     reverseGeocode(latitude, longitude).then(({ displayName }) => {
-      if (!cancelled && displayName) setResolved(displayName);
+      if (!cancelled && displayName) setGeocoded(displayName);
     });
     return () => {
       cancelled = true;
     };
   }, [label, latitude, longitude]);
 
+  const resolved = label ?? geocoded;
   if (!resolved) return null;
 
   return (

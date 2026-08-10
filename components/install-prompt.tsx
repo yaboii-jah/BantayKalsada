@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -10,19 +10,31 @@ declare global {
   }
 }
 
+function subscribeToStandalone(callback: () => void) {
+  const mql = window.matchMedia("(display-mode: standalone)");
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+
+function getStandaloneSnapshot() {
+  return window.matchMedia("(display-mode: standalone)").matches;
+}
+
+function getStandaloneServerSnapshot() {
+  return false;
+}
+
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const isStandalone = useSyncExternalStore(
+    subscribeToStandalone,
+    getStandaloneSnapshot,
+    getStandaloneServerSnapshot,
+  );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsStandalone(true);
-      return;
-    }
-
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -80,7 +92,11 @@ export function InstallPrompt() {
           <Button size="sm" onClick={handleInstall}>
             Install
           </Button>
-          <button onClick={handleDismiss} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+          <button
+            onClick={handleDismiss}
+            aria-label="Dismiss install prompt"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          >
             <X className="size-4" />
           </button>
         </div>

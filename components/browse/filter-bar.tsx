@@ -82,6 +82,7 @@ export function FilterBar({ view }: { view: string }) {
                 : "border-input text-muted-foreground hover:bg-accent/50"
             }`}
             aria-label="List view"
+            aria-pressed={view === "grid"}
           >
             <LayoutGrid className="size-4" />
             List
@@ -95,6 +96,7 @@ export function FilterBar({ view }: { view: string }) {
                 : "border-input text-muted-foreground hover:bg-accent/50"
             }`}
             aria-label="Map view"
+            aria-pressed={view === "map"}
           >
             <Map className="size-4" />
             Map
@@ -108,13 +110,14 @@ export function FilterBar({ view }: { view: string }) {
                 type="text"
                 defaultValue={currentQ}
                 placeholder="Search by keyword..."
+                aria-label="Search reports"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     const value = (e.target as HTMLInputElement).value.trim();
                     router.push(buildHref("q", value));
                   }
                 }}
-                className={`h-8 w-48 rounded-lg border border-input bg-transparent pl-8 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${currentQ ? "pr-8" : "pr-2.5"}`}
+                className={`h-8 w-48 rounded-lg border border-input bg-transparent pl-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${currentQ ? "pr-8" : "pr-2.5"}`}
               />
               {currentQ && (
                 <button

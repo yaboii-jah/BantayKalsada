@@ -8,7 +8,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="fixed right-4 top-4 z-50">
         <ThemeToggle />
       </div>
-      <AuthCard>{children}</AuthCard>
+      <main id="main-content" tabIndex={-1} className="flex w-full justify-center">
+        <AuthCard>{children}</AuthCard>
+      </main>
     </div>
   );
 }

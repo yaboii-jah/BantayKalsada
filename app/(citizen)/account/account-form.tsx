@@ -77,7 +77,7 @@ export function AccountForm({
     } finally {
       setPushBusy(false);
     }
-  }, [pushSubscribed, userId]);
+  }, [pushSubscribed, userId, router]);
 
   const handleTestSms = useCallback(async () => {
     setTesting(true);

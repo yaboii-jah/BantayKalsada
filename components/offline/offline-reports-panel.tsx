@@ -26,6 +26,12 @@ export function OfflineReportsPanel() {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState(true);
+  const [now, setNow] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   const refresh = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -121,25 +127,34 @@ export function OfflineReportsPanel() {
   if (reports.length === 0) return null;
 
   return (
-    <div className="mb-8 rounded-lg border border-primary/20 bg-card p-4">
+    <section aria-labelledby="offline-reports-heading" className="mb-8 rounded-lg border border-primary/20 bg-card p-4">
+      <h2
+        id="offline-reports-heading"
+        className="text-sm font-semibold text-foreground"
+      >
+        Saved offline reports
+      </h2>
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
+        aria-expanded={!collapsed}
         className="flex w-full items-center gap-2 text-left"
       >
-        <CloudOff className="size-4 shrink-0 text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">
-          Saved offline reports
-        </h2>
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-          {reports.length} waiting
-        </span>
-        <span className="ml-auto">
-          {collapsed ? (
-            <ChevronDown className="size-4 text-muted-foreground" />
-          ) : (
-            <ChevronUp className="size-4 text-muted-foreground" />
-          )}
+        <span className="flex w-full items-center gap-2">
+          <CloudOff className="size-4 shrink-0 text-primary" />
+          <span
+            aria-live="polite"
+            className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+          >
+            {reports.length} waiting
+          </span>
+          <span className="ml-auto">
+            {collapsed ? (
+              <ChevronDown className="size-4 text-muted-foreground" />
+            ) : (
+              <ChevronUp className="size-4 text-muted-foreground" />
+            )}
+          </span>
         </span>
       </button>
       {!collapsed && (
@@ -154,7 +169,7 @@ export function OfflineReportsPanel() {
         {reports.map((report) => {
           const isRateLimited =
             !!report.rateLimitedUntil &&
-            Date.now() < new Date(report.rateLimitedUntil).getTime();
+            now < new Date(report.rateLimitedUntil).getTime();
           return (
           <li
             key={report.id}
@@ -250,6 +265,6 @@ export function OfflineReportsPanel() {
       </ul>
         </>
       )}
-    </div>
+    </section>
   );
 }

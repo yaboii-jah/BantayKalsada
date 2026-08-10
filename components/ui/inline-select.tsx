@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InlineSelectProps {
+  id?: string;
   value: string;
   options: { value: string; label: string }[];
   onSelect: (value: string) => void;
@@ -14,6 +15,7 @@ interface InlineSelectProps {
 }
 
 export function InlineSelect({
+  id,
   value,
   options,
   onSelect,
@@ -81,6 +83,7 @@ export function InlineSelect({
     <div ref={containerRef} className="relative shrink-0">
       <button
         type="button"
+        id={id}
         onClick={() => setOpen((p) => !p)}
         className={cn(
           "flex h-10 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none select-none hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",

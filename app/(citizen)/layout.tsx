@@ -16,7 +16,7 @@ export default async function CitizenLayout({ children }: { children: ReactNode 
       {user ? <PushSubscriptionManager userId={user.id} /> : null}
       <OfflineQueueProcessor />
       <OfflineUploadBanner />
-      <main className="flex-1 bg-radial-glow">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1 bg-radial-glow">{children}</main>
       <PublicFooter />
     </div>
   );

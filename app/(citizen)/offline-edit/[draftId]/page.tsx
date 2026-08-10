@@ -49,12 +49,12 @@ export default function OfflineEditPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <Link href="/my-reports">
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2">
+      <Button variant="ghost" size="sm" className="mb-6 -ml-2" asChild>
+        <Link href="/my-reports">
           <ArrowLeft className="mr-1 size-4" />
           Back to My Reports
-        </Button>
-      </Link>
+        </Link>
+      </Button>
 
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">

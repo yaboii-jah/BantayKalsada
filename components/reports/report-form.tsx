@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, type FieldPath } from "react-hook-form";
+import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Send, Loader2, Save, WifiOff, CheckCircle } from "lucide-react";
@@ -89,7 +89,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
     setError,
     getValues,
     reset,
-    watch,
+    control,
     formState: { errors },
   } = useForm<CreateReportInput>({
     resolver: zodResolver(createReportSchema),
@@ -106,8 +106,14 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
     },
   });
 
-  const selectedCategory = watch("category");
-  const selectedBarangay = watch("barangay");
+  const selectedCategory = useWatch<CreateReportInput, "category">({
+    control,
+    name: "category",
+  });
+  const selectedBarangay = useWatch<CreateReportInput, "barangay">({
+    control,
+    name: "barangay",
+  });
 
   const onPhotosChange = useCallback(
     (urls: string[], files: File[]) => {
@@ -350,8 +356,9 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
       )}
 
       <div className="space-y-2">
-        <Label>Category</Label>
+        <Label htmlFor="category">Category</Label>
         <InlineSelect
+          id="category"
           value={selectedCategory ?? ""}
           options={categoryOptions}
           onSelect={(value) => setValue("category", value as CreateReportInput["category"], { shouldValidate: true })}
@@ -388,7 +395,9 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
       </div>
 
       <fieldset className="space-y-3">
-        <Label>Severity</Label>
+        <legend className="text-sm font-medium leading-none text-foreground">
+          Severity
+        </legend>
         <div className="flex gap-3">
           {reportSeverityEnum.options.map((value) => (
             <label
@@ -411,8 +420,12 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
       </fieldset>
 
       <div className="space-y-2">
-        <Label>Barangay *</Label>
+        <Label htmlFor="barangay">
+          Barangay <span className="text-destructive" aria-hidden="true">*</span>
+          <span className="sr-only"> (required)</span>
+        </Label>
         <InlineSelect
+          id="barangay"
           value={selectedBarangay ?? ""}
           options={barangayOptions}
           onSelect={(value) => setValue("barangay", value as CreateReportInput["barangay"], { shouldValidate: true })}
@@ -424,29 +437,33 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
       </div>
 
       <div className="space-y-2">
-        <Label>Photos</Label>
-        <PhotoUpload
-          key={resetKey}
-          onChange={onPhotosChange}
-          initialUrls={isEdit || isDraft ? defaultValues!.photo_urls : undefined}
-          initialFiles={isDraft ? draftInitialPhotoFiles : undefined}
-        />
+        <Label id="photos-label">Photos</Label>
+        <div role="group" aria-labelledby="photos-label">
+          <PhotoUpload
+            key={resetKey}
+            onChange={onPhotosChange}
+            initialUrls={isEdit || isDraft ? defaultValues!.photo_urls : undefined}
+            initialFiles={isDraft ? draftInitialPhotoFiles : undefined}
+          />
+        </div>
         {errors.photo_urls && (
           <p className="text-xs text-destructive">{errors.photo_urls.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label>Location</Label>
-        <LocationPickerWrapper
-          key={resetKey}
-          value={
-            isEdit || isDraft
-              ? { lat: defaultValues!.latitude, lng: defaultValues!.longitude, label: defaultValues!.location_label }
-              : null
-          }
-          onChange={onLocationChange}
-        />
+        <Label id="location-label">Location</Label>
+        <div role="group" aria-labelledby="location-label">
+          <LocationPickerWrapper
+            key={resetKey}
+            value={
+              isEdit || isDraft
+                ? { lat: defaultValues!.latitude, lng: defaultValues!.longitude, label: defaultValues!.location_label }
+                : null
+            }
+            onChange={onLocationChange}
+          />
+        </div>
         {(errors.latitude || errors.longitude) && (
           <p className="text-xs text-destructive">
             Please pin the location on the map

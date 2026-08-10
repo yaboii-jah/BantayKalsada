@@ -38,10 +38,15 @@ export function CommentList({
   const [loading, setLoading] = useState(true);
 
   const optimisticRef = useRef(optimisticComments);
-  optimisticRef.current = optimisticComments;
-
   const confirmRef = useRef(onOptimisticConfirmed);
-  confirmRef.current = onOptimisticConfirmed;
+
+  useEffect(() => {
+    optimisticRef.current = optimisticComments;
+  }, [optimisticComments]);
+
+  useEffect(() => {
+    confirmRef.current = onOptimisticConfirmed;
+  }, [onOptimisticConfirmed]);
 
   useEffect(() => {
     let cancelled = false;

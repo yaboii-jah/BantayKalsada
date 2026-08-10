@@ -41,7 +41,10 @@ function LocationMarker({
 
   useEffect(() => {
     if (position) {
-      map.flyTo(position, map.getZoom(), { duration: 0.5 });
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      map.flyTo(position, map.getZoom(), { duration: reduceMotion ? 0 : 0.5 });
     }
   }, [position, map]);
 

@@ -8,7 +8,6 @@ import { FileText } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import type { Database } from "@/types/database.types";
 
 const PAGE_SIZE = 12;
 
