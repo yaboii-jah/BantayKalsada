@@ -250,6 +250,18 @@ No API or Server Action accepts a free-form `status` value from the client. Each
 ### Rate Limiting is Server-Side Only
 Max 5 submissions per user per 24-hour window. Enforced by counting the authenticated user's `reports` rows with `submitted_at` within the window. Client-side button disabling is a UX courtesy only and cannot be relied upon.
 
+### Security Hardening (Audit Fixes)
+A codebase-wide security audit produced 9 findings; fixes 1–8 are implemented, finding 9 (RLS spot-check) is noted as not independently verified from migrations. See `feature-specs/32-security-audit.md` for the full audit.
+
+- **Open redirect (F1)** — `app/auth/callback/route.ts` validates the post-OAuth `next` param via `safeNextPath()`: relative same-origin paths only; `//`-prefixed, non-relative, or backslash-containing values fall back to `/browse`.
+- **Flag spam (F2)** — `flagReport` counts the current user's `report_flags` rows in a 24h window and blocks at 30 actions, before the admin-notification dispatch.
+- **Paid SMS abuse (F3)** — new `test_sms_log` table (migration `20260811000001_add_test_sms_log.sql`, RLS on/no policies, service-role only) + `sendTestSms` 24h count capped at 5/day; a row is inserted only after a successful send.
+- **Rate-limit bypass via XFF spoofing (F4)** — `clientIp()` in `lib/api-rate-limit.ts` reads the **last** `x-forwarded-for` hop (the one appended by the trusted proxy), not the first, so a forged header prefix can't switch rate-limit buckets.
+- **PostgREST filter injection (F5)** — `sanitizeSearchTerm` (exported from `lib/api-reports.ts`) strips `% _ , . ( )` from the browse `q` param before it's interpolated into the `.or("title.ilike.%,description.ilike.%")` filter.
+- **Tile proxy abuse (F6)** — `app/api/traffic/tiles/[z]/[x]/[y]/route.ts` validates z ∈ 0–20 and x/y ∈ `0..2^z−1` (400 on invalid) before proxying to TomTom.
+- **Unbounded rejection reason (F7)** — `rejectReportSchema.rejectionReason` capped at 500 chars.
+- **Arbitrary photo URLs (F8)** — `createReportSchema.photo_urls` restricted to `https://res.cloudinary.com/` URLs, consistent with the signed Cloudinary upload flow.
+
 ### Performance Fixes Documented
 - **RLS policy fix:** `createSupabaseServerClient()` returns an `authenticated` session when the user is logged in. The original browse RLS policy only covered `anon`, causing 0 rows for logged-in users. Fixed by adding `authenticated` to the public-read policy.
 - **`formatReportDate` bug:** Original implementation used a loop with wrong iteration order and wrong count calculation (dividing by minutes-per-unit instead of milliseconds). Rewritten as a clean cascade: <1m → "Just now", <1h → minutes, <24h → hours, <30d → days, 30d+ → formatted fil-PH date.
@@ -499,7 +511,7 @@ Build/typecheck/runtime all verified with both absent.
 
 ```
 app/                     — Next.js App Router pages, layouts, loading states, error boundaries
-  actions.ts             — citizen & public Server Actions (submitReport, updateReport, submitFeedback, addComment, editComment, deleteComment, flagReport, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications, savePushSubscription, updateProfileSettings, sendTestSms, createOfflineSubmitFailedNotification, deleteOfflineSubmitNotification; also logs SUBMITTED/EDITED audit rows via lib/report-activity.ts)
+  actions.ts             — citizen & public Server Actions (submitReport, updateReport, submitFeedback, addComment, editComment, deleteComment, flagReport, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications, savePushSubscription, updateProfileSettings, sendTestSms, createOfflineSubmitFailedNotification, deleteOfflineSubmitNotification; also logs SUBMITTED/EDITED audit rows via lib/report-activity.ts). Rate-limited server-side: flagReport 30/24h (report_flags count), sendTestSms 5/24h (test_sms_log count via service-role client).
   layout.tsx             — root metadata: metadataBase (lib/site SITE_URL), canonical "/", default openGraph + twitter summary_large_image, manifest, icons
   opengraph-image.tsx    — default OG card (ImageResponse via lib/og-image BrandCard); overridden per-route by report detail
   twitter-image.tsx      — default Twitter card (same BrandCard)
@@ -515,7 +527,7 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   api/reports            — public read-only REST API list endpoint
   api/reports/[id]       — public read-only REST API single endpoint
   api/sms/diagnose       — admin-only PhilSMS diagnostic endpoint
-  api/traffic/tiles/[z]/[x]/[y] — TomTom raster flow tile proxy (server-side key)
+  api/traffic/tiles/[z]/[x]/[y] — TomTom raster flow tile proxy (server-side key; bounds-validates z 0–20 and x/y within 0..2^z−1, 400 on invalid)
   api/healthz            — lightweight 204 connectivity probe (offline detection)
   verify-email/          — email verification prompt
   sw.ts                  — service worker entry (precache + runtime caching + push)
@@ -555,8 +567,8 @@ lib/
   taytay-boundary.ts     — TAYTAY_POLYGON + isPointInTaytay ray-casting helper (client-safe)
   geocode.ts             — Nominatim reverse-geocode helper (offline submit label fallback)
   cloudinary-upload.ts   — uploadToCloudinary(file) shared by photo widget + queue processor
-  api-reports.ts         — public REST API service layer (serialize/fetch)
-  api-rate-limit.ts      — SHA-256 IP hashing + sliding-window rate limiting (api_request_log)
+  api-reports.ts         — public REST API service layer (serialize/fetch; exports sanitizeSearchTerm for filter-safe user input)
+  api-rate-limit.ts      — SHA-256 IP hashing + sliding-window rate limiting (api_request_log; clientIp reads the last x-forwarded-for hop)
   csv.ts                 — CSV generation utility (BOM-prefixed UTF-8, field escaping)
   validations/           — Zod schemas + inferred types
   cloudinary.ts          — Cloudinary config + signing

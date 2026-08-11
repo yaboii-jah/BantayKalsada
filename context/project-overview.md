@@ -74,7 +74,8 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 - Admin panel with report counts and status-separated lists, plus analytics dashboard (charts for submissions over time, category/status distribution, approval rate, and average resolution time).
 - Image upload to Cloudinary with EXIF metadata stripped on upload.
 - Interactive map using Leaflet.js and OpenStreetMap tiles.
-- Rate limiting: maximum 5 report submissions per citizen per 24-hour window.
+- Rate limiting: maximum 5 report submissions per citizen per 24-hour window, plus server-side caps on every other interactive write — 3 feedback / 24h, 30 comments / 24h, 30 flag actions / 24h, 30 Cloudinary upload signatures / hour, and 5 test SMS / 24h (via the `test_sms_log` table).
+- Security hardening (from the audit): post-OAuth redirects are restricted to relative same-origin paths (`safeNextPath`), rate-limit identity uses the last trusted `x-forwarded-for` hop, the browse search `q` param is sanitized before use in PostgREST filters, the TomTom tile proxy bounds-validates z/x/y, rejection reasons are capped at 500 chars, and report photo URLs must be Cloudinary-hosted.
 - In-app notification center: bell icon with unread badge, lazy-loaded dropdown, mark as read, and delete/clear all.
 - Map-view bounding box filter: as the user pans/zooms the map on `/browse?view=map`, markers and report count auto-constrain to the current viewport.
 - Browse map heatmap: a Markers/Heatmap toggle on `/browse?view=map` shows overall hazard density across Taytay, weighted by report severity (Minor/Urgent/Emergency).

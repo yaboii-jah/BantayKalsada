@@ -53,7 +53,7 @@ export interface ReportListData {
   pagination: PaginationMeta;
 }
 
-function sanitizeSearchTerm(q: string): string {
+export function sanitizeSearchTerm(q: string): string {
   return q.replace(/[%_.,()]/g, "").trim();
 }
 

@@ -33,7 +33,12 @@ export const createReportSchema = z.object({
   category: reportCategoryEnum,
   barangay: barangayEnum,
   photo_urls: z
-    .array(z.string().url())
+    .array(
+      z
+        .string()
+        .url()
+        .regex(/^https:\/\/res\.cloudinary\.com\//, "Photos must be uploaded Cloudinary images"),
+    )
     .min(1, "At least one photo is required")
     .max(3, "Maximum of 3 photos allowed"),
   latitude: z
@@ -59,7 +64,8 @@ export const rejectReportSchema = z.object({
   rejectionReason: z
     .string()
     .trim()
-    .min(10, "Rejection reason must be at least 10 characters"),
+    .min(10, "Rejection reason must be at least 10 characters")
+    .max(500, "Rejection reason must be at most 500 characters"),
 });
 
 export const resolveReportSchema = z.object({

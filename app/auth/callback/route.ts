@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+function safeNextPath(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//") && !raw.includes("\\")) {
+    return raw;
+  }
+  return "/browse";
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/browse";
+  const next = safeNextPath(searchParams.get("next"));
 
   if (code) {
     const supabase = createServerClient(

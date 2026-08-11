@@ -7,6 +7,7 @@ import { PaginationBar } from "@/components/browse/pagination-bar";
 import { BrowseMapWrapper } from "@/components/browse/browse-map-wrapper";
 import { ReportsGridSkeleton, MapSkeleton } from "@/components/reports/reports-grid-skeleton";
 import { severityWeight, type HeatPoint } from "@/lib/heatmap";
+import { sanitizeSearchTerm } from "@/lib/api-reports";
 import { Map } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -81,8 +82,10 @@ async function BrowseReports({
     dataQuery = dataQuery.eq("barangay", barangayFilter);
   }
 
-  if (query) {
-    const pattern = `%${query}%`;
+  const safeQuery = query ? sanitizeSearchTerm(query) : "";
+
+  if (safeQuery) {
+    const pattern = `%${safeQuery}%`;
     const ilikeFilter = `title.ilike.${pattern},description.ilike.${pattern}`;
     countQuery = countQuery.or(ilikeFilter);
     dataQuery = dataQuery.or(ilikeFilter);

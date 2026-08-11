@@ -655,10 +655,26 @@ export async function sendTestSms(): Promise<{ success: boolean; error?: string 
       return { success: false, error: "Set your phone number and enable SMS first" };
     }
 
+    const adminClient = createAdminClient();
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await adminClient
+      .from("test_sms_log")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", since);
+
+    if ((count ?? 0) >= 5) {
+      return { success: false, error: "You've reached the limit of 5 test SMS per day. Try again tomorrow." };
+    }
+
     const result = await sendSMS(
       profile.phone,
       "Bantay Kalsada: This is a test SMS. Your notification settings are working!",
     );
+
+    if (result.success) {
+      await adminClient.from("test_sms_log").insert({ user_id: user.id });
+    }
 
     return result;
   } catch {
@@ -727,6 +743,24 @@ export async function flagReport(
     const parsed = flagReportSchema.safeParse({ reportId, flagType });
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues.map((e) => e.message).join(", ") };
+    }
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count, error: countError } = await supabase
+      .from("report_flags")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", twentyFourHoursAgo);
+
+    if (countError) {
+      return { success: false, error: "Failed to verify flag limit" };
+    }
+
+    if (count !== null && count >= 30) {
+      return {
+        success: false,
+        error: "You have reached the maximum of 30 flag actions in 24 hours. Please try again later.",
+      };
     }
 
     const { data: report } = await supabase

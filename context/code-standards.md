@@ -68,7 +68,9 @@
   - Error: `{ success: false, error: "<human-readable message>" }` with the appropriate 4xx or 5xx status code.
 - Never return sensitive fields in API responses. Do not expose other users' email addresses, internal user IDs beyond what the client needs, or any fields from `auth.users` directly — always return data from the `profiles` table or application-owned tables only.
 - Never accept `status`, `role`, or `submitted_by_id` as free-form values from a request body and write them directly to the database. These fields are always set by server-side logic, never by the client.
-- Rate limiting is enforced server-side for both report submission (5 per 24h) and feedback submission (3 per 24h). The Server Actions count the authenticated user's rows with `submitted_at` / `created_at` within the window. If the limit is reached, return an error before any insertion runs.
+- Rate limiting is enforced server-side for every interactive write action before it runs: report submission (5 per 24h), feedback submission (3 per 24h), comments (30 per 24h), report flag actions (30 per 24h), Cloudinary upload signatures (30 per hour), and test SMS sends (5 per 24h). The Server Actions / route handlers count the authenticated user's rows in the relevant table within the window. If the limit is reached, return an error before any insertion runs.
+- Sanitize user input before interpolating it into query filters. Text destined for `.or("...ilike...")` / ILIKE patterns must be run through `sanitizeSearchTerm` (in `lib/api-reports.ts`) to strip filter-reserved characters (`% _ , . ( )`) — never concatenate raw user strings into a PostgREST filter.
+- Redirects driven by user-supplied input (e.g. a `next` param after OAuth) must be validated against an allowlist of relative same-origin paths before use — reject `//`-prefixed URLs, non-relative values, and backslash-containing strings. Never forward an unvalidated user-controlled URL in a `redirect()`.
 
 ---
 

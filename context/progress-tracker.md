@@ -31,8 +31,25 @@ change.
 - Offline connectivity detection + retained photos (Offline Experience v2.5) — complete and verified.
 - Admin trust features (Tier 3) — complete and verified (see Completed section).
 - Observability (Tier 5) — Sentry + Plausible wired and verified; pending real credentials for live verification.
+- Security hardening — audit resolved (fixes 1–8 implemented + verified; see Completed section).
 
 ## Completed
+
+### Security Hardening (Audit Fixes)
+
+- [x] Full security audit of the codebase completed — 9 findings documented (auth callback open redirect, flag/SMS spam vectors, XFF spoofing, PostgREST filter injection, tile proxy abuse, unbounded rejection reason, arbitrary photo URLs, unverifiable RLS spot-check). User approved fixes 1–6.
+- [x] **Fix 1 (High, open redirect)** — `app/auth/callback/route.ts`: added `safeNextPath()` that rejects non-relative / `//` / backslash-containing `next` values, falling back to `/browse` for the post-OAuth redirect
+- [x] **Fix 2 (Medium, flag spam → admin notification flooding)** — `app/actions.ts` `flagReport`: 24h sliding window counting `report_flags` rows for the current user (anon-key server client; RLS owner SELECT applies), blocks at `>= 30` actions with a friendly message; check runs before the report fetch
+- [x] **Fix 3 (Medium, paid SMS abuse)** — migration `supabase/migrations/20260811000001_add_test_sms_log.sql` (table `test_sms_log(id, user_id FK→auth.users ON DELETE CASCADE, created_at)`, RLS enabled with no policies — service-role only path, index `(user_id, created_at)`); applied to linked project `gvhyajfarhdbmgkloeit`, table verified; `types/database.types.ts` regenerated (incl. `test_sms_log`); `sendTestSms` now counts `test_sms_log` rows in the last 24h via `createAdminClient()` and blocks at 5/day, inserting a row only after a successful send
+- [x] **Fix 4 (Medium, rate-limit bypass via XFF spoofing)** — `lib/api-rate-limit.ts` `clientIp()`: switched from first to **last** `x-forwarded-for` hop (the one appended by the trusted proxy), `x-real-ip` fallback unchanged (removed `request.ip` — not on `NextRequest` in this Next version, caught by typecheck)
+- [x] **Fix 5 (Low-Med, PostgREST filter injection in /browse)** — exported `sanitizeSearchTerm` from `lib/api-reports.ts` and applied it to the `q` param in `app/(public)/browse/page.tsx` before building the `.or("title.ilike.%,description.ilike.%")` filter (strips `% _ , . ( )`)
+- [x] **Fix 6 (Low, TomTom tile proxy abuse)** — `app/api/traffic/tiles/[z]/[x]/[y]/route.ts`: validates z ∈ 0–20 (integer), x/y integers within `0..2^z-1`, returns 400 for invalid tiles
+- [x] **Fix 7 (Low)** — `lib/validations/report.ts` `rejectReportSchema.rejectionReason`: added `.max(500)`
+- [x] **Fix 8 (Low)** — `lib/validations/report.ts` `createReportSchema.photo_urls`: restricted to `https://res.cloudinary.com/` URLs via regex (consistent with the signed Cloudinary upload flow in `app/api/uploads/sign/route.ts`)
+- [x] Verification — `npx tsc --noEmit` clean (caught the `request.ip` type error), `npm run lint` clean
+- [x] Feature spec `context/feature-specs/32-security-audit.md` written (9 findings, 8 fixed; finding 9 RLS spot-check recorded as manual-only)
+- [x] Context updated — `data-model.md` (`test_sms_log` table/relationships/indexes/RLS/business rules), `architecture.md` (boundary notes, storage model, invariants 29–31), `code-standards.md` (rate-limit list, filter-sanitization + redirect rules), `app-codebase-context.md` (file-org annotations + Security Hardening subsection), `project-overview.md` (In Scope rate limiting + hardening), this tracker
+- [x] This tracker updated
 
 ### Observability (Tier 5)
 

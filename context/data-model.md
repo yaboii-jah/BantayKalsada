@@ -18,6 +18,7 @@ The database owns all structured application data. It does not store binary cont
 | Comments on reports | `report_comments` table |
 | Citizen flags on reports | `report_flags` table |
 | Upload sign request log | `upload_sign_log` table |
+| Test SMS send log (rate limiting) | `test_sms_log` table |
 | Municipality boundary polygons (Taytay, Rizal) | `municipality_boundaries` table |
 | Browser push subscription endpoints | `push_subscriptions` table |
 | Public REST API request log (rate limiting) | `api_request_log` table |
@@ -315,6 +316,30 @@ CREATE TABLE upload_sign_log (
 | `user_id` | `uuid` | No | — | FK to `auth.users.id`. The authenticated user who requested the signature. |
 | `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. Used for the 1-hour sliding window rate check. |
 
+### `test_sms_log`
+
+Tracks "Send Test SMS" requests to the `sendTestSms` Server Action for rate limiting. One row per successful test SMS. Prevents a logged-in user from racking up per-message PhilSMS charges via the account-page test button.
+
+```sql
+CREATE TABLE test_sms_log (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE test_sms_log ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX idx_test_sms_log_user_created ON test_sms_log(user_id, created_at);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `user_id` | `uuid` | No | — | FK to `auth.users.id`. The authenticated user who sent the test SMS. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. Used for the 24-hour sliding window rate check. |
+
+RLS is enabled with **no policies** — the table is only reachable through the service-role client in `app/actions.ts` (the `sendTestSms` count + insert), never via PostgREST. Consistent with `api_request_log` / `report_activity_log`. Created by migration `20260811000001_add_test_sms_log.sql`.
+
 ### `municipality_boundaries`
 
 Stores administrative boundary polygons for municipality-level geographic scoping. Currently holds Taytay, Rizal only. Used by the `report_within_taytay` CHECK constraint and the `is_within_boundary` RPC function to enforce that all report locations fall within the supported municipality.
@@ -497,6 +522,7 @@ auth.users (Supabase-managed)
   ├── report_comments.user_id   (one-to-many, cascade delete)
   ├── report_flags.user_id      (one-to-many, cascade delete)
   ├── upload_sign_log.user_id   (one-to-many, cascade delete)
+  ├── test_sms_log.user_id      (one-to-many, cascade delete)
   ├── feedback.user_id          (one-to-many, cascade delete)
   ├── notifications.user_id     (one-to-many, cascade delete)
   ├── push_subscriptions.user_id (one-to-many, cascade delete)
@@ -519,6 +545,9 @@ api_request_log
   — (no child references; no FK to auth.users — rows keyed by IP hash)
 
 upload_sign_log
+  — (no child references)
+
+test_sms_log
   — (no child references)
 
 feedback
@@ -587,6 +616,9 @@ CREATE INDEX idx_report_flags_report_id ON report_flags(report_id);
 
 -- upload_sign_log: counting requests per user in a time window for rate limiting
 CREATE INDEX idx_upload_sign_log_user_created ON upload_sign_log(user_id, created_at);
+
+-- test_sms_log: counting test SMS sends per user in a time window for rate limiting
+CREATE INDEX idx_test_sms_log_user_created ON test_sms_log(user_id, created_at);
 
 -- municipality_boundaries: spatial index for ST_Within boundary checks
 CREATE INDEX idx_muni_boundary ON municipality_boundaries USING GIST (boundary);
@@ -793,6 +825,7 @@ ALTER TABLE feedback           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_comments    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_flags       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE upload_sign_log    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE test_sms_log       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_request_log    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_activity_log ENABLE ROW LEVEL SECURITY;
@@ -1001,6 +1034,12 @@ Note: The `upload_sign_log` table is used exclusively for rate limiting the `/ap
 
 ---
 
+### `test_sms_log` RLS
+
+RLS is enabled with **no policies**. The anon and authenticated roles cannot read or mutate test-SMS rows via PostgREST. The table is only reachable through the service-role client in `app/actions.ts` — `sendTestSms` counts rows in the 24-hour window and inserts a row after a successful send.
+
+---
+
 ### `push_subscriptions` RLS
 
 ```sql
@@ -1051,9 +1090,11 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `reports.category` | Must match a valid enum value | DB enum type + Zod |
 | `reports.severity` | Must match a valid enum value | DB enum type + Zod |
 | `reports.photo_urls` | Array of 1–3 valid URLs | DB constraint + Zod |
+| `reports.photo_urls` | Each URL must be hosted on Cloudinary (`https://res.cloudinary.com/`) | Zod (`createReportSchema` — regex check; DB constraint unchanged) |
 | `reports.latitude` | Between -90 and 90 | DB constraint + Zod |
 | `reports.longitude` | Between -180 and 180 | DB constraint + Zod |
 | `reports.rejection_reason` | Required (min 10 chars) when status is `REJECTED` | DB constraint + Zod |
+| `reports.rejection_reason` | Max 500 characters | Zod (`rejectReportSchema` — `.max(500)`; DB constraint unchanged) |
 | `reports.status` | Set server-side only — never accepted from client | API route handler |
 | `profiles.role` | Set via seed or Supabase Studio only — never accepted from client | API route handler + no RLS update policy for role |
 | `reports.barangay` | Must match a valid barangay enum value | DB enum type + Zod |
@@ -1071,6 +1112,8 @@ These rules are enforced at two levels: database constraints (defined above) and
 | Comment admin removal | Admins can set status to `REMOVED` via service role client | Server Action handler (`verifyAdmin()` + service role update) |
 | Comment notification | Report owner receives in-app notification when someone comments on their report (not on own comment) | Server Action (`addComment` checks `submitted_by_id !== user.id`) |
 | Comment submission rate | Max 30 comments per user per 24-hour window | Server Action (`addComment` — count query before insert) |
+| Report flag submission rate | Max 30 flag actions per user per 24-hour window | Server Action (`flagReport` — count query on `report_flags` before insert/update) |
+| Test SMS send rate | Max 5 test SMS per user per 24-hour window | Server Action (`sendTestSms` — count query on `test_sms_log` before send) |
 | `report_flags.flag_type` | Must be `ALREADY_FIXED` or `WRONG_LOCATION` | DB enum type + Zod (`flagReportSchema`) |
 | `report_flags.report_id` + `user_id` + `flag_type` | One flag per citizen per report per type | DB `UNIQUE (report_id, user_id, flag_type)` constraint |
 | Report flag ownership | Only the flagger can create/toggle their own flag | RLS policies on `report_flags` + Server Action (`flagReport` checks `auth.uid()` = `user_id`) |
