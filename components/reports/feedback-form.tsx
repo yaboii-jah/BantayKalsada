@@ -11,6 +11,7 @@ import { InlineSelect } from "@/components/ui/inline-select";
 import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
 import { submitFeedback } from "@/app/actions";
 import { PhotoUpload } from "@/components/reports/photo-upload";
+import { useAnalytics } from "@/lib/analytics";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ const typeOptions = [
 
 export function FeedbackForm() {
   const router = useRouter();
+  const track = useAnalytics();
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hoveredStar, setHoveredStar] = useState(0);
@@ -62,6 +64,7 @@ export function FeedbackForm() {
     startTransition(async () => {
       const result = await submitFeedback({ ...data, photo_urls: photoUrls });
       if (result.success) {
+        track("Feedback Submitted", { props: { type: data.type ?? "GENERAL" } });
         toast.success("Feedback submitted! Thank you.");
         router.push("/my-feedback");
       } else {

@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
+import { useAnalytics } from "@/lib/analytics";
 
 function LoginForm() {
   const router = useRouter();
+  const track = useAnalytics();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/browse";
   const [email, setEmail] = useState("");
@@ -48,8 +50,9 @@ function LoginForm() {
 
       router.push(redirect);
       router.refresh();
+      track("Login");
     },
-    [email, password, redirect, router],
+    [email, password, redirect, router, track],
   );
 
   return (

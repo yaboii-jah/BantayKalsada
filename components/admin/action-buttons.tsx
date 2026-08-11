@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { Database } from "@/types/database.types";
 import { PhotoUpload } from "@/components/reports/photo-upload";
+import { useAnalytics } from "@/lib/analytics";
 
 type ReportStatus = Database["public"]["Enums"]["report_status"];
 
@@ -40,6 +41,7 @@ export function ActionButtons({
   onResolve,
 }: ActionButtonsProps) {
   const router = useRouter();
+  const track = useAnalytics();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleApprove = async () => {
@@ -47,6 +49,7 @@ export function ActionButtons({
     try {
       const result = await onApprove(reportId);
       if (result.success) {
+        track("Report Approved");
         toast.success("Report approved");
         router.refresh();
       } else {
@@ -104,6 +107,7 @@ function ResolveButton({
   disabled: boolean;
 }) {
   const router = useRouter();
+  const track = useAnalytics();
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -118,6 +122,7 @@ function ResolveButton({
     );
     setIsSubmitting(false);
     if (result.success) {
+      track("Report Resolved");
       toast.success("Report marked as resolved");
       setOpen(false);
       router.refresh();
@@ -206,6 +211,7 @@ function RejectButton({
   disabled: boolean;
 }) {
   const router = useRouter();
+  const track = useAnalytics();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -216,6 +222,7 @@ function RejectButton({
     const result = await onReject(reportId, reason.trim());
     setIsSubmitting(false);
     if (result.success) {
+      track("Report Rejected");
       toast.success("Report rejected");
       setOpen(false);
       router.refresh();

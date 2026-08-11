@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import PlausibleProvider from "next-plausible";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
+
+const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC;
 
 const inter = Inter({
   variable: "--font-sans",
@@ -70,7 +73,13 @@ export default function RootLayout({
           Skip to main content
         </a>
         <TooltipProvider>
-          {children}
+          {plausibleSrc ? (
+            <PlausibleProvider src={plausibleSrc}>
+              {children}
+            </PlausibleProvider>
+          ) : (
+            children
+          )}
           <Toaster />
         </TooltipProvider>
       </body>

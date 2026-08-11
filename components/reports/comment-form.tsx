@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { addComment, editComment } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useAnalytics } from "@/lib/analytics";
 
 interface CommentFormProps {
   reportId: string;
@@ -25,6 +26,7 @@ export function CommentForm({
   placeholder = "Write a comment...",
 }: CommentFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const track = useAnalytics();
   const [body, setBody] = useState(initialBody);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -62,6 +64,7 @@ export function CommentForm({
         });
         if (result.success) {
           setBody("");
+          track("Comment Added");
           onDone?.(result.data as Record<string, unknown> | undefined);
         } else {
           setError(result.error ?? "Failed to post comment");

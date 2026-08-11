@@ -21,6 +21,7 @@ change.
 - [x] Municipality Scope — Taytay, Rizal
 - [x] Browse Map Heatmap (Phase A) — Markers/Heatmap toggle, severity-weighted density of all Taytay reports
 - [x] Admin Trust Features (Tier 3) — admin report editing, activity log/audit trail, report lifecycle timeline, duplicate-report linking/merge
+- [x] Observability (Tier 5) — Sentry error monitoring (server + edge + client) and Plausible first-party analytics
 
 ## Current Goal
 
@@ -29,8 +30,35 @@ change.
 - Offline upload UX + reliability (Offline Experience v2.4) — complete and verified.
 - Offline connectivity detection + retained photos (Offline Experience v2.5) — complete and verified.
 - Admin trust features (Tier 3) — complete and verified (see Completed section).
+- Observability (Tier 5) — Sentry + Plausible wired and verified; pending real credentials for live verification.
 
 ## Completed
+
+### Observability (Tier 5)
+
+- [x] Installed `@sentry/nextjs@10.70.0` + `next-plausible@4.0.0` (no other new deps; builds use `--webpack` so no Turbopack Sentry conflict)
+- [x] `sentry.server.config.ts` — Node SDK init (`Sentry.init`), DSN-guarded (`dsn = process.env.NEXT_PUBLIC_SENTRY_DSN`, `if (dsn)`), `environment: process.env.NODE_ENV`, no `tracesSampleRate` (errors only)
+- [x] `sentry.edge.config.ts` — Edge SDK init for edge runtime/`proxy.ts`, same DSN guard
+- [x] `instrumentation.ts` (project root) — `register()` imports the correct config by `process.env.NEXT_RUNTIME`; `export const onRequestError = Sentry.captureRequestError;` (verified against installed SDK — the `captureRequestError` signature `(error, request, errorContext)` matches `onRequestError` without wrapper)
+- [x] `instrumentation-client.ts` — client SDK init (injected into the browser bundle by `withSentryConfig`), DSN-guarded
+- [x] `app/global-error.tsx` — last-resort root error boundary with its own `<html className="dark h-full antialiased">`/`<body>` (project had none), styled with tokens matching browse `error.tsx` (destructive icon, `bg-background`, `text-foreground`/`muted-foreground`, retry button), `Sentry.captureException(error)` in `useEffect` guarded by DSN
+- [x] `next.config.ts` — wrapped with `withSentryConfig(withSerwist(...)(nextConfig), {...})`; options `org`/`project`/`authToken` from env, `silent: true`, `suppressOnRouterTransitionStartWarning: true`, `webpack.treeshake: { removeTracing: true, removeDebugLogging: true }` (so no `onRouterTransitionStart` export needed); source-map upload skipped cleanly when `SENTRY_AUTH_TOKEN` absent
+- [x] No tunnel → no `proxy.ts` matcher changes (Sentry ingest stays external)
+- [x] `lib/analytics.ts` — `"use client"`; `AnalyticsEvents` type map + `useAnalytics()` → `usePlausible<AnalyticsEvents>()`; props-bearing events require `{ props: { ... } }`
+- [x] `app/layout.tsx` — `const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC;` conditional `<PlausibleProvider src={plausibleSrc}>` (provider throws on falsy `src`, so it renders children raw when unset); wraps `{children}` inside `TooltipProvider`
+- [x] Events wired (all via `useAnalytics()` `track`):
+  - `components/reports/report-form.tsx` — `Report Submitted` (props severity + category) on successful `onSubmit`; `Report Queued Offline` in `queueOfflineReport`; deps updated (queueOfflineReport `[pendingFiles, track]`, onSubmit `[router, isEdit, reportId, pendingFiles, queueOfflineReport, clearForm, track]`)
+  - `components/offline/offline-queue-processor.tsx` — `Offline Report Submitted` on successful queued submit; deps `[router, track]`
+  - `components/reports/share-button.tsx` — `Report Shared`
+  - `components/reports/flag-report-buttons.tsx` — `Report Flagged` (props flagType)
+  - `components/reports/comment-form.tsx` — `Comment Added`
+  - `components/reports/feedback-form.tsx` — `Feedback Submitted` (props type)
+  - `app/(auth)/register/page.tsx` — `Signup`; `app/(auth)/login/page.tsx` — `Login`
+  - `components/admin/action-buttons.tsx` — three separate components (ActionButtons/handleApprove, ResolveButton, RejectButton) each with its own `track` call: `Report Approved`, `Report Resolved`, `Report Rejected`
+- [x] `.env.example` — added `NEXT_PUBLIC_SENTRY_DSN` (public, build-time; used for runtime init), `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` (build-time only, source maps), `NEXT_PUBLIC_PLAUSIBLE_SRC` (public, build-time; provider not rendered when unset). `.env.local` stays gitignored
+- [x] Verification: `npx tsc --noEmit` clean; `npm run lint` clean (fixed one `react-hooks/exhaustive-deps` by adding `track` to report-form onSubmit deps); `npm run build` passes (~87s compile, webpack, TS 13.7s, 31 routes, `(serwist) Bundling the service worker script`, `ƒ Proxy (Middleware)`) — all with env vars absent
+- [x] Feature spec `context/feature-specs/31-observability.md` written
+- [x] Context updated — `project-overview.md` (In Scope), `architecture.md` (stack rows, boundaries, invariants 27–28), `app-codebase-context.md` (intro + observability data flow + file org), this tracker
 
 ### Admin Trust Features (Tier 3)
 

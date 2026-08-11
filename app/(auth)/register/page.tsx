@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
+import { useAnalytics } from "@/lib/analytics";
 
 export default function RegisterPage() {
+  const track = useAnalytics();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,8 +57,9 @@ export default function RegisterPage() {
       }
 
       setSubmitted(true);
+      track("Signup");
     },
-    [name, email, password],
+    [name, email, password, track],
   );
 
   if (submitted) {

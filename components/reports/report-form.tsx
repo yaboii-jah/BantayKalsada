@@ -13,6 +13,7 @@ import { addQueuedReport, overwriteQueuedReport } from "@/lib/offline-queue";
 import { isPointInTaytay } from "@/lib/taytay-boundary";
 import { useOnline } from "@/lib/use-online";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useAnalytics } from "@/lib/analytics";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +72,7 @@ interface ReportFormProps {
 
 export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftInitialPhotoFiles }: ReportFormProps) {
   const router = useRouter();
+  const track = useAnalytics();
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -157,8 +159,9 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
         photoUrls: data.photo_urls,
         photoFiles: pendingFiles,
       });
+      track("Report Queued Offline");
     },
-    [pendingFiles],
+    [pendingFiles, track],
   );
 
   const clearForm = useCallback(() => {
@@ -214,6 +217,9 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
         try {
           const result = await submitReport(null, data);
           if (result.success && result.data) {
+            track("Report Submitted", {
+              props: { severity: data.severity, category: data.category },
+            });
             toast.success("Report submitted successfully! It will be reviewed by an administrator.");
             router.push("/my-reports");
           } else {
@@ -235,7 +241,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
         }
       });
     },
-    [router, isEdit, reportId, pendingFiles, queueOfflineReport, clearForm],
+    [router, isEdit, reportId, pendingFiles, queueOfflineReport, clearForm, track],
   );
 
   const handleRawSubmit = useCallback(
