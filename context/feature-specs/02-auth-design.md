@@ -61,13 +61,9 @@ The Supabase server client is created directly in the proxy to read `auth.getUse
 
 Adds `bg-auth-gradient` using Tailwind v4's `@utility` directive. The gradient uses three stops from the project's OKLCH token system — a very light blue (`oklch(0.965 0.01 260)`), white, and a light indigo (`oklch(0.96 0.008 250)`) — subtly framing the auth card against a plain white page.
 
-### `components/auth/auth-card.tsx` — Split card container
+### `components/auth/auth-card.tsx` — Centered card container
 
-The card IS the container — not a wrapper with a split inside it. On desktop (`sm:` breakpoint) the card is a horizontal flex container: the first child (branding panel) takes 45% width, the form side takes 55%. On mobile it stacks vertically. Uses the existing Shadcn `bg-card`, `rounded-xl`, `shadow-lg`, and `ring-1` tokens.
-
-### `components/auth/branding-panel.tsx` — Left-side branding panel
-
-Shows the Bantay Kalsada logo (ShieldCheck icon from Lucide + wordmark), a short tagline about community safety, and three feature highlight bullets. Background uses a subtle primary-tinted gradient (`from-primary/5`). Hidden on mobile via `hidden sm:block` — replaced by a minimal footer note inside the form column.
+The card IS the container — a single centered card (`max-w-md`, `bg-card`, `rounded-xl`, `shadow-lg`, `ring-1`) holding only the auth form. No split layout. The former left-side branding panel (`components/auth/branding-panel.tsx`) was removed; on mobile the login page shows a minimal tagline strip inside the form column.
 
 ### `app/(auth)/layout.tsx` — Auth route group layout
 

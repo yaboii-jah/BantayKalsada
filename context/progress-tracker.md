@@ -1079,3 +1079,13 @@ and simpler (no cache table, no grid tuning).
 - [x] Maps/popups intentionally stay light (hardcoded `.browse-popup` / `.leaflet-popup-*` white) per decision — a bright map panel on dark UI is accepted.
 - [x] Context updated — `ui-context.md` Theme section rewritten (dark-only, no toggle), `app-codebase-context.md` file-org dropped `theme-toggle.tsx`, this tracker.
 - [x] Verified: `npx tsc --noEmit` clean, `npx eslint .` clean (0 problems), `npm run build` passes with zero errors.
+
+### Auth Pages — Remove Left Branding Panel
+
+- [x] **`components/auth/auth-card.tsx`** — collapsed the 45/55 split card into a single centered form card (`mx-auto w-full max-w-md rounded-xl bg-card p-6 shadow-lg ring-1 ring-foreground/10 sm:p-8`); removed the `BrandingPanel` import + `hidden sm:block` wrapper.
+- [x] **Deleted `components/auth/branding-panel.tsx`** — logo/tagline/highlights panel removed (was the only split-card consumer).
+- [x] **`app/(auth)/layout.tsx`** — unchanged (already centers `AuthCard` on `bg-auth-gradient`).
+- [x] **`login/page.tsx`** — mobile-only tagline strip kept as-is (`sm:hidden`).
+- [x] Applies to `/login`, `/register`, `/reset-password` via the shared `AuthCard`.
+- [x] Context updated — `context/feature-specs/02-auth-design.md` rewritten the `auth-card.tsx` entry (centered card, no split) and dropped the branding-panel entry; this tracker.
+- [x] Verified: `npx tsc --noEmit` clean, `npx eslint .` clean (0 problems), `npm run build` passes with zero errors.
