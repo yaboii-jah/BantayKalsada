@@ -13,6 +13,7 @@ import { addQueuedReport, overwriteQueuedReport } from "@/lib/offline-queue";
 import { isPointInTaytay } from "@/lib/taytay-boundary";
 import { useOnline } from "@/lib/use-online";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getSessionUser } from "@/lib/auth/session-user";
 import { useAnalytics } from "@/lib/analytics";
 
 import { Button } from "@/components/ui/button";
@@ -149,7 +150,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
   const queueOfflineReport = useCallback(
     async (data: CreateReportInput) => {
       const supabase = createSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getSessionUser(supabase);
       if (!user) {
         setSubmitError("You must be signed in to submit a report");
         return;

@@ -17,6 +17,7 @@ import { subscribeProcessing } from "@/lib/offline-processing";
 import { subscribeQueueChanged } from "@/lib/offline-queue-events";
 import { deleteOfflineSubmitNotification } from "@/app/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getSessionUser } from "@/lib/auth/session-user";
 import { Button } from "@/components/ui/button";
 import { formatReportDate } from "@/lib/date-utils";
 
@@ -35,7 +36,7 @@ export function OfflineReportsPanel() {
 
   const refresh = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getSessionUser(supabase);
     if (!user) {
       setReports([]);
       return;
@@ -46,9 +47,8 @@ export function OfflineReportsPanel() {
   useEffect(() => {
     let cancelled = false;
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(async ({ data }) => {
+    getSessionUser(supabase).then(async (user) => {
       if (cancelled) return;
-      const user = data.user;
       if (!user) {
         setReports([]);
         return;

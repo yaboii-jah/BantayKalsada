@@ -33,6 +33,7 @@ change.
 - Observability (Tier 5) — Sentry + Plausible wired and verified; pending real credentials for live verification.
 - Security hardening — audit resolved (fixes 1–8 implemented + verified; see Completed section).
 - Context/app alignment audit — completed (see "Context/App Alignment Audit" below).
+- Mobile submit access + offline/auth session hardening — completed (see Completed section).
 
 ## Completed
 
@@ -61,6 +62,14 @@ change.
 - [x] **Offline submit modal** — `components/reports/report-form.tsx` opens a dimmed dialog (`bg-black/60` overlay via new `overlayClassName` prop on `DialogContent` in `components/ui/dialog.tsx`) with a CheckCircle icon, "Report saved offline" message, and OK button, in both offline queue paths (network-error catch + explicit offline submit). Success toast replaced by modal.
 - [x] **Offline route precaching** — `app/sw.ts` adds `/`, `/submit`, `/browse`, `/my-reports`, `/my-feedback`, `/account`, `/feedback` to `precacheEntries` so they're navigable offline without a prior online visit (HTML cached at SW install; app JS/CSS already fully precached). Also enabled `navigationPreload: true` (was `false`, stale vs `feature-specs/17-pwa-support.md`).
 - [ ] Verification: `npx tsc --noEmit` + `npm run lint` + production build (needs `npm install` — this checkout has no `node_modules`).
+
+### Mobile Submit Access + Offline/Auth Session Hardening
+
+- [x] **Mobile submit = plus icon** — `components/public-nav.tsx`: added a ghost icon Button (`Plus`, `aria-label="Submit report"`) linking to `/submit` in the mobile top bar beside the notification bell (always visible; guests redirected by `proxy.ts` to `/login?redirect=/submit`). The full-text "Submit report" button stays in the desktop nav only via `hidden sm:inline-flex` (removed from the mobile Sheet). Kept the prior uncommitted reorder making it the first nav item.
+- [x] **`lib/auth/session-user.ts` helper** — client-side `getSessionUser(supabase)`: reads `getSession()` first (instant, from the persisted cookies, no network while the access token is valid), falls back to `getUser()` (refreshes the token online), wrapped in try/catch so a transient/offline network error never blanks the session.
+- [x] **Applied helper** to client auth reads: `components/public-nav.tsx` (boot user load), `components/reports/report-form.tsx` `queueOfflineReport`, `components/offline/offline-queue-processor.tsx`, `components/offline/offline-reports-panel.tsx`. All server-side `getUser()` unchanged (`proxy.ts`, `lib/supabase/server.ts`, layouts, actions).
+- [x] **Offline routes** — `public/sw.js` is a tracked stale build artifact; Vercel's own build regenerates it from `app/sw.ts` (OFFLINE_ROUTES + `navigationPreload: true`) on deploy, so no local build. **Requirement:** after deploy, load the app once online so the new service worker installs and precaches the offline routes; then offline navigation + queued submission works (enabled by the `getSessionUser` hardening above).
+- [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean.
 
 ### Security Hardening (Audit Fixes)
 

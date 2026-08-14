@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getSessionUser } from "@/lib/auth/session-user";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,8 +24,8 @@ export function PublicNav() {
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ?? null);
+    getSessionUser(supabase).then((user) => {
+      setUser(user);
       setLoading(false);
     });
   }, []);
@@ -90,6 +91,13 @@ export function PublicNav() {
 
   const navLinks = (
     <>
+      <Button size="sm" className="hidden sm:inline-flex" asChild>
+        <Link href="/submit" onClick={() => setSheetOpen(false)}>
+          <Plus className="size-4" />
+          Submit report
+        </Link>
+      </Button>
+
       <Link
         href="/browse"
         className="text-sm font-medium text-foreground transition-colors hover:text-primary"
@@ -97,12 +105,6 @@ export function PublicNav() {
       >
         Browse reports
       </Link>
-      <Button size="sm" asChild>
-        <Link href="/submit" onClick={() => setSheetOpen(false)}>
-          <Plus className="size-4" />
-          Submit report
-        </Link>
-      </Button>
     </>
   );
 
@@ -205,6 +207,11 @@ export function PublicNav() {
         </nav>
 
         <div className="flex items-center gap-1 sm:hidden">
+          <Button variant="ghost" size="icon" asChild aria-label="Submit report">
+            <Link href="/submit">
+              <Plus className="size-5" />
+            </Link>
+          </Button>
           {!loading && user && <NotificationBell userId={user.id} />}
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>

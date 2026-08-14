@@ -16,6 +16,7 @@ import {
   deleteOfflineSubmitNotification,
 } from "@/app/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getSessionUser } from "@/lib/auth/session-user";
 import { setProcessingIds } from "@/lib/offline-processing";
 import { emitQueueChanged } from "@/lib/offline-queue-events";
 import { useAnalytics } from "@/lib/analytics";
@@ -38,7 +39,7 @@ export function OfflineQueueProcessor() {
       }
 
       const supabase = createSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getSessionUser(supabase);
       if (!user) {
         setProcessingIds(new Set());
         return;
