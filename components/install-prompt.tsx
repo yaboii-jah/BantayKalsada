@@ -24,14 +24,42 @@ function getStandaloneServerSnapshot() {
   return false;
 }
 
+const DISMISSED_KEY = "bk-install-prompt-dismissed";
+const DISMISS_EVENT = "bk-install-prompt-dismissed";
+
+function subscribeToDismissed(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(DISMISS_EVENT, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(DISMISS_EVENT, callback);
+  };
+}
+
+function getDismissedSnapshot() {
+  try {
+    return window.localStorage.getItem(DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function getDismissedServerSnapshot() {
+  return false;
+}
+
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
   const isStandalone = useSyncExternalStore(
     subscribeToStandalone,
     getStandaloneSnapshot,
     getStandaloneServerSnapshot,
+  );
+  const isDismissed = useSyncExternalStore(
+    subscribeToDismissed,
+    getDismissedSnapshot,
+    getDismissedServerSnapshot,
   );
 
   useEffect(() => {
@@ -71,10 +99,15 @@ export function InstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    setDismissed(true);
+    try {
+      window.localStorage.setItem(DISMISSED_KEY, "1");
+    } catch {
+      // ignore storage failures
+    }
+    window.dispatchEvent(new Event(DISMISS_EVENT));
   };
 
-  if (isStandalone || !showPrompt || dismissed) return null;
+  if (isStandalone || !showPrompt || isDismissed) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[1300] border-t border-border bg-card p-4 shadow-lg">

@@ -39,6 +39,7 @@ CREATE TYPE report_category AS ENUM (
   'FLOODED_ROAD',
   'ROAD_ACCIDENT',
   'ROAD_RAGE',
+  'BROKEN_TRAFFIC_SIGN',
   'OTHER'
 );
 
@@ -102,6 +103,8 @@ CREATE TYPE comment_status AS ENUM ('ACTIVE', 'REMOVED');
 ```
 
 > **Note:** `REPORT_EDITED` was added to `notification_type` via `ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'REPORT_EDITED'` (migration `20260809000003_add_report_edited_notification.sql`), which must run **outside a transaction** — `ALTER TYPE ... ADD VALUE` cannot execute inside one. `report_activity_action` is a new enum created by migration `20260809000001_create_report_activity_log.sql`.
+>
+> **Note:** `BROKEN_TRAFFIC_SIGN` is a valid enum value (matching the DB enum and `reportCategoryEnum` in `lib/validations/report.ts`) and can be selected on the submission and admin-edit forms. It is **deliberately excluded** from the browse filter (`filter-bar.tsx`), browse-map category labels (`browse-map.tsx`), and the `/guidelines` "what to report" list — those intentionally surface only the five primary categories (Pothole, Flooded Road, Road Accident, Road Rage, Other).
 
 ---
 

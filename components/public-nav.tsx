@@ -7,7 +7,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Map, Menu, LogOut, FileText, MessageSquare } from "lucide-react";
+import { Map, Menu, LogOut, FileText, MessageSquare, Plus } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
 import type { User } from "@supabase/supabase-js";
 
@@ -97,6 +97,12 @@ export function PublicNav() {
       >
         Browse reports
       </Link>
+      <Button size="sm" asChild>
+        <Link href="/submit" onClick={() => setSheetOpen(false)}>
+          <Plus className="size-4" />
+          Submit report
+        </Link>
+      </Button>
     </>
   );
 

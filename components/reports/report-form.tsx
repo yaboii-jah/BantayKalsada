@@ -19,6 +19,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PhotoUpload } from "@/components/reports/photo-upload";
 import { LocationPickerWrapper } from "@/components/maps/location-picker-wrapper";
 import { InlineSelect } from "@/components/ui/inline-select";
@@ -79,6 +88,7 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
   const { isOnline } = useOnline();
   const isOffline = !isOnline;
   const [queuedOffline, setQueuedOffline] = useState(false);
+  const [offlineDialogOpen, setOfflineDialogOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [isSubmittingOffline, setIsSubmittingOffline] = useState(false);
   const isEdit = !!defaultValues && !!reportId;
@@ -229,10 +239,8 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
         } catch (err) {
           if (isNetworkError(err)) {
             await queueOfflineReport(data);
-            toast.success(
-              "You're offline — your report was saved and will be submitted automatically when you're back online.",
-            );
             setQueuedOffline(true);
+            setOfflineDialogOpen(true);
             clearForm();
           } else {
             setSubmitError("An unexpected error occurred. Please try again.");
@@ -318,10 +326,8 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
         } finally {
           setIsSubmittingOffline(false);
         }
-        toast.success(
-          "You're offline — your report was saved and will be submitted automatically when you're back online.",
-        );
         setQueuedOffline(true);
+        setOfflineDialogOpen(true);
         clearForm();
         return;
       }
@@ -495,6 +501,27 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
           </>
         )}
       </Button>
+
+      <Dialog open={offlineDialogOpen} onOpenChange={setOfflineDialogOpen}>
+        <DialogContent overlayClassName="bg-black/60" showCloseButton={false}>
+          <DialogHeader>
+            <div className="flex size-10 items-center justify-center rounded-full bg-status-approved/10">
+              <CheckCircle className="size-5 text-status-approved" />
+            </div>
+            <DialogTitle>Report saved offline</DialogTitle>
+            <DialogDescription>
+              Your report was saved on this device. It will be submitted
+              automatically when you&apos;re back online. You can also review it
+              under &quot;Saved offline reports&quot; on My Reports.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button className="w-full">OK</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

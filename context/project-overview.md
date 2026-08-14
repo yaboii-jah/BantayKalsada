@@ -30,7 +30,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 
 - Browse all approved and resolved road incident reports in a paginated list.
 - View the full details of any approved report: title, category, barangay, status badge, description, photo gallery (up to 3 photos), pinned map location, and submission date.
-- Filter reports by category (Pothole, Flooded Road, Road Accident, Road Rage, Other Road Hazard).
+- Filter reports by category (Pothole, Flooded Road, Road Accident, Road Rage, Other Road Hazard — Broken Traffic Sign is a valid submission category but is intentionally not offered as a browse filter).
 - Filter reports by status (Approved, Resolved).
 - Filter reports by barangay (Dolores, San Isidro, San Juan, Santa Ana, Muzon).
 
@@ -65,7 +65,7 @@ Bantay Kalsada is a community-driven road incident reporting web application bui
 
 - User registration, email verification, login, and password reset via Supabase Auth, with Google OAuth login.
 - Report road incident submission with a minimum of 1 and a maximum of 3 photos (each up to 10 MB; JPEG/PNG/WebP/HEIC) and a required map pin. Offline, type/size validation is skipped so any captured image is retained locally and uploaded on reconnect.
-- Five predefined report categories: Pothole, Flooded Road, Road Accident, Road Rage Incident, Other Road Hazard.
+- Six `report_category` enum values exist (Pothole, Flooded Road, Road Accident, Road Rage, Broken Traffic Sign, Other Road Hazard); the report form and admin edit form offer all six. The browse feed, browse map, and `/guidelines` list intentionally surface only the five primary categories — **Broken Traffic Sign** is deliberately excluded from browse filtering.
 - Admin moderation queue with approve, reject (with reason), and resolve actions.
 - Report status lifecycle: `PENDING → APPROVED → RESOLVED` and `PENDING → REJECTED`.
 - Public report feed with category and status filters, keyword search, and map view.

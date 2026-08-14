@@ -34,11 +34,21 @@ declare global {
 
 declare const self: WorkerGlobalScope & typeof globalThis;
 
+const OFFLINE_ROUTES = [
+  "/",
+  "/submit",
+  "/browse",
+  "/my-reports",
+  "/my-feedback",
+  "/account",
+  "/feedback",
+];
+
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries: [...self.__SW_MANIFEST, ...OFFLINE_ROUTES],
   skipWaiting: true,
   clientsClaim: true,
-  navigationPreload: false,
+  navigationPreload: true,
   runtimeCaching: defaultCache,
 });
 

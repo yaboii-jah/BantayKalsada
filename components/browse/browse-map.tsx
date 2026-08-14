@@ -2,8 +2,11 @@
 
 import { useEffect, useState, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import Link from "next/link";
 import { Car, Flame, Layers, Check } from "lucide-react";
 import { TaytayBoundary } from "@/components/maps/taytay-boundary";
@@ -269,47 +272,51 @@ function MapContent({
         <TrafficToggle showTraffic={showTraffic} onToggle={() => setShowTraffic((v) => !v)} />
       </div>
 
-      {reports.map((report) => (
-        <Marker
-          key={report.id}
-          position={[report.latitude, report.longitude]}
-        >
-          <Popup maxWidth={240} minWidth={200}>
-            <div className="browse-popup flex flex-col gap-2 text-sm">
-              {report.photo_urls[0] && (
-                /* next/image can't serve the custom regional-CDN rewrite from getDisplayUrl; keep raw img */
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={report.photo_urls[0]}
-                  alt={report.title}
-                  className="aspect-[4/3] w-full max-w-48 rounded object-cover"
-                />
-              )}
-              <p className="max-w-full truncate font-semibold text-foreground">
-                {report.title}
-              </p>
-              <div className="flex flex-wrap gap-1">
-                <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  {categoryLabels[report.category] ?? report.category}
-                </span>
-                <span
-                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                    statusColors[report.status] ?? "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {report.status}
-                </span>
+      <MarkerClusterGroup chunkedLoading>
+        {reports.map((report) => (
+          <Marker
+            key={report.id}
+            position={[report.latitude, report.longitude]}
+          >
+            <Popup maxWidth={200} minWidth={160} autoPanPadding={[24, 24]}>
+              <div className="browse-popup flex flex-row items-start gap-2 text-xs">
+                {report.photo_urls[0] && (
+                  /* next/image can't serve the custom regional-CDN rewrite from getDisplayUrl; keep raw img */
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={report.photo_urls[0]}
+                    alt={report.title}
+                    className="h-14 w-14 shrink-0 rounded object-cover"
+                  />
+                )}
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="truncate font-semibold text-foreground">
+                    {report.title}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      {categoryLabels[report.category] ?? report.category}
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        statusColors[report.status] ?? "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {report.status}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/reports/${report.id}`}
+                    className="font-medium text-primary hover:text-primary/80"
+                  >
+                    View details →
+                  </Link>
+                </div>
               </div>
-              <Link
-                href={`/reports/${report.id}`}
-                className="text-xs font-medium text-primary hover:text-primary/80"
-              >
-                View details →
-              </Link>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+            </Popup>
+          </Marker>
+        ))}
+      </MarkerClusterGroup>
 
       {showHeat && <HeatLayer points={heatPoints} max={3} />}
       {showTraffic && <TrafficLayer />}

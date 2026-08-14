@@ -32,8 +32,35 @@ change.
 - Admin trust features (Tier 3) — complete and verified (see Completed section).
 - Observability (Tier 5) — Sentry + Plausible wired and verified; pending real credentials for live verification.
 - Security hardening — audit resolved (fixes 1–8 implemented + verified; see Completed section).
+- Context/app alignment audit — completed (see "Context/App Alignment Audit" below).
 
 ## Completed
+
+### Context/App Alignment Audit
+
+- [x] Audited all context files against the actual codebase (routes, components, lib, API routes, migrations, configs, server actions, deps). Found and fixed 4 discrepancies.
+- [x] **`report_category` enum** — `context/data-model.md` enum block was missing `BROKEN_TRAFFIC_SIGN` (DB enum + `reportCategoryEnum` have 6 values). Added it plus a note: it's a valid submission category (form + admin edit form) but **deliberately excluded** from the browse filter, browse-map labels, and `/guidelines` list (those surface 5 primary categories).
+- [x] **`context/project-overview.md` category wording** — "Five predefined report categories" reworded to document the 6-value enum with Broken Traffic Sign intentionally absent from browse filtering; the Public Feed filter bullet notes the same.
+- [x] **`.env.example` created** — sourced from every `process.env.*` usage in the codebase (`lib/`, `app/api/`, configs, instrumentation, proxy): Supabase (URL/anon/service-role), Cloudinary (cloud name/api key/secret; upload preset is hardcoded as `bantay-kalsada` in `lib/cloudinary.ts` — no env var), Brevo (API key + sender email), PhilSMS (base/token/sender id), TomTom API key, VAPID keys + subject, `API_RATE_LIMIT_SECRET`, `NEXT_PUBLIC_SITE_URL`, and optional Sentry (DSN/org/project/auth token) + Plausible (`NEXT_PUBLIC_PLAUSIBLE_SRC`). Optional vars documented as omit-to-disable.
+- [x] **Stale `middleware.ts` references** — `context/architecture.md` ("session refresh helper called in `middleware.ts`" → `proxy.ts`) and `context/code-standards.md` (Next.js 16 `proxy.ts` replaces `middleware.ts`) corrected.
+- [x] Docs only — no application code changed; `npx tsc --noEmit` and `npm run lint` unaffected.
+
+### Auth Session Persistence (from current-issues-suggestions.md)
+
+- [x] **Verified: users already stay signed in across browser/tab closes.** `lib/supabase/client.ts` uses `@supabase/ssr` defaults (`persistSession: true`, `autoRefreshToken: true`, `detectSessionInUrl: true`) — session persisted in `localStorage` (`sb-<project-ref>-auth-token`) + mirrored into access/refresh cookies for server reads. `proxy.ts` → `lib/supabase/middleware.ts` `updateSession()` refreshes on every request. No code change needed.
+- [x] **1-week inactivity goal depends on hosted Supabase project settings (not in repo).** Dashboard checklist — Supabase → Authentication → Configuration: (1) **Refresh token lifetime** — default 60 days rolling, must be ≥ 7 days; (2) **Session duration / timebox** — must be ≥ 7 days; (3) **JWT expiry** — default 1h, does NOT need raising (auto-refresh covers return). No `supabase/config.toml` exists; auth settings live on the dashboard.
+- [ ] Pending: user to confirm dashboard values ≥ 7 days; log result here.
+
+### UI/UX Batch (from current-issues-suggestions.md)
+
+- [x] **Browse map clustering** — wrapped flat markers in `<MarkerClusterGroup chunkedLoading>` (`components/browse/browse-map.tsx`); imported `leaflet.markercluster` CSS. `react-leaflet-cluster` + `leaflet.markercluster` were already installed but unused (removed in commit `2f58ad9`). Docs (`architecture.md`, `feature-specs/10`, `13`) now match code again.
+- [x] **Compact mobile popup** — popup reduced to `maxWidth={200}` `minWidth={160}`; layout switched from tall vertical to compact horizontal card (56px thumb left, truncated title + category/status badges + View details right).
+- [x] **Submit Report button in nav** — primary CTA added to `navLinks` fragment in `components/public-nav.tsx` (renders in both desktop nav and mobile Sheet); `/submit` already redirects guests through `/login?redirect=/submit` via `proxy.ts`.
+- [x] **Back button on Account Settings** — `<BackButton fallbackHref="/browse" />` added to `app/(citizen)/account/page.tsx`, matching my-reports/feedback pattern.
+- [x] **Install banner persists dismissal** — `components/install-prompt.tsx` now stores dismissal in `localStorage` (`bk-install-prompt-dismissed`); already hidden when `display-mode: standalone` and on `appinstalled`.
+- [x] **Offline submit modal** — `components/reports/report-form.tsx` opens a dimmed dialog (`bg-black/60` overlay via new `overlayClassName` prop on `DialogContent` in `components/ui/dialog.tsx`) with a CheckCircle icon, "Report saved offline" message, and OK button, in both offline queue paths (network-error catch + explicit offline submit). Success toast replaced by modal.
+- [x] **Offline route precaching** — `app/sw.ts` adds `/`, `/submit`, `/browse`, `/my-reports`, `/my-feedback`, `/account`, `/feedback` to `precacheEntries` so they're navigable offline without a prior online visit (HTML cached at SW install; app JS/CSS already fully precached). Also enabled `navigationPreload: true` (was `false`, stale vs `feature-specs/17-pwa-support.md`).
+- [ ] Verification: `npx tsc --noEmit` + `npm run lint` + production build (needs `npm install` — this checkout has no `node_modules`).
 
 ### Security Hardening (Audit Fixes)
 

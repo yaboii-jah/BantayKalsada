@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
+import { BackButton } from "@/components/back-button";
 import { AccountForm } from "./account-form";
 
 export default async function AccountPage() {
@@ -22,6 +23,7 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+      <BackButton fallbackHref="/browse" />
       <h1 className="text-2xl font-semibold text-foreground">Account Settings</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Manage your notification preferences and contact information.
