@@ -105,7 +105,8 @@ export async function sendReportNotifications(
     );
     const result = await sendSMS(submitter.phone, smsMessage);
     if (!result.success) {
-      const errMsg = `SMS failed for ${submitter.phone}: ${result.error}`;
+      const maskedPhone = submitter.phone.replace(/.(?=.{4})/g, "*");
+      const errMsg = `SMS failed for ${maskedPhone}: ${result.error}`;
       console.error(`Failed to send SMS for report ${reportId}:`, errMsg);
       return { smsError: errMsg };
     }

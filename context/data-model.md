@@ -362,6 +362,13 @@ CREATE TABLE municipality_boundaries (
 CREATE INDEX idx_muni_boundary ON municipality_boundaries USING GIST (boundary);
 ```
 
+> **RLS (2026-08-15):** the migration previously shipped without RLS, which — combined with Supabase's default grants to `anon`/`authenticated` — let anyone INSERT/UPDATE/DELETE the Taytay polygon (geo-scope bypass / submission-flow DoS). Migration `20260815000001_harden_rls.sql` enables RLS (no policies → default deny for anon/authenticated) and revokes table access:
+> ```sql
+> ALTER TABLE municipality_boundaries ENABLE ROW LEVEL SECURITY;
+> REVOKE ALL ON municipality_boundaries FROM anon, authenticated;
+> ```
+> Reads that power submission validation go through the `SECURITY DEFINER` `is_within_boundary` RPC and the `report_within_taytay` trigger/CHECK, which bypass RLS as function owner — submission flow is unaffected.
+
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
 | `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
@@ -852,6 +859,13 @@ CREATE POLICY "Citizens can update own profile"
   WITH CHECK (auth.uid() = id);
 ```
 
+> **Column-level restriction (2026-08-15):** the UPDATE policy above is owner-scoped but column-unrestricted, so a citizen could set `role = 'ADMIN'` on their own row. Migration `20260815000001_harden_rls.sql` closes this with column grants:
+> ```sql
+> REVOKE UPDATE ON profiles FROM authenticated;
+> GRANT UPDATE (phone, sms_notifications, full_name) ON profiles TO authenticated;
+> ```
+> The policy remains as the owner-scoping gate; only the granted columns are now writable by citizens. In-app citizen updates only touch `phone`/`sms_notifications` (`updateProfileSettings` in `app/actions.ts`).
+
 Note: Admins read other users' profiles (for the report review page) using the service role client, which bypasses RLS. There is no public read policy on `profiles`.
 
 ---
@@ -881,12 +895,16 @@ CREATE POLICY "Authenticated users can insert reports"
 
 -- Citizens can update their own pending reports (edit typos, photos, pin, etc.)
 -- Once reviewed (APPROVED/REJECTED/RESOLVED) the status guard locks the record
+-- WITH CHECK also requires status = 'PENDING' so a citizen can never flip the
+-- row out of PENDING (status, duplicate_of_id, reviewer fields are admin-only).
 CREATE POLICY "Citizens can update their own pending reports"
   ON reports FOR UPDATE
   TO authenticated
   USING (auth.uid() = submitted_by_id AND status = 'PENDING')
-  WITH CHECK (auth.uid() = submitted_by_id);
+  WITH CHECK (auth.uid() = submitted_by_id AND status = 'PENDING');
 ```
+
+> **Note (2026-08-15):** the `WITH CHECK` previously omitted `status = 'PENDING'`, letting a citizen self-approve/self-reject their own pending report (and set admin fields) via PostgREST. Hardened in migration `20260815000001_harden_rls.sql`.
 
 > **Note:** These three policies (plus `ALTER TABLE reports ENABLE ROW LEVEL SECURITY;`) were materialized as a single migration `20250713000009` — they were documented here earlier but never created in the database, causing `submitReport` inserts to fail with default-deny RLS.
 
@@ -900,11 +918,15 @@ CREATE POLICY "Citizens can update their own pending reports"
 ### `report_flags` RLS
 
 ```sql
--- Citizens can insert their own flags
+-- Citizens can insert their own flags on approved/resolved reports only
 CREATE POLICY "Citizens can insert flags"
   ON report_flags FOR INSERT
   TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    auth.uid() = user_id AND EXISTS (
+      SELECT 1 FROM reports WHERE reports.id = report_id AND reports.status IN ('APPROVED', 'RESOLVED')
+    )
+  );
 
 -- Citizens can read their own flags
 CREATE POLICY "Citizens can read own flags"
@@ -912,12 +934,16 @@ CREATE POLICY "Citizens can read own flags"
   TO authenticated
   USING (auth.uid() = user_id);
 
--- Citizens can switch their own flag type
+-- Citizens can switch their own flag type (target stays approved/resolved)
 CREATE POLICY "Citizens can update own flags"
   ON report_flags FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    auth.uid() = user_id AND EXISTS (
+      SELECT 1 FROM reports WHERE reports.id = report_id AND reports.status IN ('APPROVED', 'RESOLVED')
+    )
+  );
 
 -- Citizens can remove their own flag
 CREATE POLICY "Citizens can delete own flags"
@@ -999,12 +1025,18 @@ CREATE POLICY "Authenticated users can insert comments"
     )
   );
 
--- Users can update own comments (body edit, not status)
+-- Users can update own active comments on public reports (body edit, not status)
+-- USING blocks re-activating a REMOVED comment; WITH CHECK re-verifies the
+-- comment stays ACTIVE and its target report stays public.
 CREATE POLICY "Users can update own comments"
   ON report_comments FOR UPDATE
   TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id AND status = 'ACTIVE');
+  USING (auth.uid() = user_id AND status = 'ACTIVE')
+  WITH CHECK (
+    auth.uid() = user_id AND status = 'ACTIVE' AND EXISTS (
+      SELECT 1 FROM reports WHERE reports.id = report_id AND reports.status IN ('APPROVED', 'RESOLVED')
+    )
+  );
 
 -- Users can delete own comments
 CREATE POLICY "Users can delete own comments"
@@ -1098,8 +1130,8 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `reports.longitude` | Between -180 and 180 | DB constraint + Zod |
 | `reports.rejection_reason` | Required (min 10 chars) when status is `REJECTED` | DB constraint + Zod |
 | `reports.rejection_reason` | Max 500 characters | Zod (`rejectReportSchema` — `.max(500)`; DB constraint unchanged) |
-| `reports.status` | Set server-side only — never accepted from client | API route handler |
-| `profiles.role` | Set via seed or Supabase Studio only — never accepted from client | API route handler + no RLS update policy for role |
+| `reports.status` | Set server-side only — never accepted from client | API route handler + RLS `WITH CHECK (status = 'PENDING')` on the citizen update policy |
+| `profiles.role` | Set via seed or Supabase Studio only — never accepted from client | API route handler + column-level RLS grant (UPDATE revoked from `authenticated`, re-granted on `phone`/`sms_notifications`/`full_name` only) |
 | `reports.barangay` | Must match a valid barangay enum value | DB enum type + Zod |
 | `reports.location` | Must fall within Taytay boundary polygon | DB trigger (`trg_reports_location_boundary` on INSERT/UPDATE of latitude/longitude) + Server Action (`is_within_boundary` RPC call) |
 | Report submission rate | Max 5 submissions per user per 24-hour window | API route handler (count query before insert) |

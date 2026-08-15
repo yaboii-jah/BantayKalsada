@@ -1,23 +1,37 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { clientIp, enforceApiRateLimit } from "@/lib/api-rate-limit";
 
 const OLD_BASE = "https://app.philsms.com";
 const NEW_BASE = "https://dashboard.philsms.com";
 
-async function philsmsGet(baseUrl: string, path: string, token: string) {
-  const url = `${baseUrl}${path}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token.trim()}`,
-      Accept: "application/json",
-    },
-  });
-  const body = await res.json().catch(() => null);
-  return { status: res.status, body };
+async function philsmsHead(baseUrl: string, path: string, token: string) {
+  try {
+    const res = await fetch(`${baseUrl}${path}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    await res.text();
+    return { status: res.status, ok: res.ok };
+  } catch {
+    return { status: 0, ok: false };
+  }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const rateLimit = await enforceApiRateLimit(clientIp(request), { hourly: 30 });
+    if (rateLimit.limited) {
+      return NextResponse.json(
+        { success: false, error: "Rate limit exceeded. Try again later." },
+        { status: 429 },
+      );
+    }
+
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -51,37 +65,27 @@ export async function GET() {
         env: {
           hasToken: !!token,
           hasSenderId: !!senderId,
-          tokenLength: token?.length ?? 0,
-          senderIdLength: senderId?.length ?? 0,
           apiBase: configuredBase,
         },
       });
     }
 
-    const tokenPreview = token.trim().slice(0, 6) + "..." + token.trim().slice(-4);
-
     const [oldMe, oldBalance, newMe, newBalance] = await Promise.all([
-      philsmsGet(OLD_BASE, "/api/v3/me", token),
-      philsmsGet(OLD_BASE, "/api/v3/balance", token),
-      philsmsGet(NEW_BASE, "/api/v3/me", token),
-      philsmsGet(NEW_BASE, "/api/v3/balance", token),
+      philsmsHead(OLD_BASE, "/api/v3/me", token),
+      philsmsHead(OLD_BASE, "/api/v3/balance", token),
+      philsmsHead(NEW_BASE, "/api/v3/me", token),
+      philsmsHead(NEW_BASE, "/api/v3/balance", token),
     ]);
 
     return NextResponse.json({
       success: true,
-      tokenPreview,
-      tokenLength: token.length,
-      tokenTrimmedLength: token.trim().length,
       configuredApiBase: configuredBase,
       oldSite: { base: OLD_BASE, me: oldMe, balance: oldBalance },
       newSite: { base: NEW_BASE, me: newMe, balance: newBalance },
     });
-  } catch (err) {
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: err instanceof Error ? err.message : "Unknown error",
-      },
+      { success: false, error: "Failed to run SMS diagnostics" },
       { status: 500 },
     );
   }

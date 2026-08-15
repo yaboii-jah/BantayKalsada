@@ -1,8 +1,35 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCloudinaryConfig, generateSignature } from "@/lib/cloudinary";
 
-export async function GET() {
+function isSameOrigin(origin: string | null, host: string | null): boolean {
+  if (!origin || !host) return false;
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  if (originHost === host) return true;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) {
+    try {
+      if (originHost === new URL(siteUrl).host) return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+export async function POST(request: NextRequest) {
+  if (!isSameOrigin(request.headers.get("origin"), request.headers.get("host"))) {
+    return NextResponse.json(
+      { success: false, error: "Invalid origin" },
+      { status: 403 },
+    );
+  }
+
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();

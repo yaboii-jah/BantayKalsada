@@ -1,6 +1,9 @@
 export function toCsv(headers: string[], rows: string[][]): string {
   const escape = (val: string): string => {
-    const str = val ?? "";
+    let str = val ?? "";
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = `'${str}`;
+    }
     if (
       str.includes(",") ||
       str.includes('"') ||

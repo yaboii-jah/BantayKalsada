@@ -71,7 +71,16 @@ export const rejectReportSchema = z.object({
 export const resolveReportSchema = z.object({
   reportId: z.string().uuid(),
   resolutionNotes: z.string().max(2000).optional(),
-  resolvedImageUrls: z.array(z.string()).min(1).max(3).optional(),
+  resolvedImageUrls: z
+    .array(
+      z
+        .string()
+        .url()
+        .regex(/^https:\/\/res\.cloudinary\.com\//, "Resolution photos must be Cloudinary images"),
+    )
+    .min(1)
+    .max(3)
+    .optional(),
 });
 
 export const reportFlagTypeEnum = z.enum(["ALREADY_FIXED", "WRONG_LOCATION"]);

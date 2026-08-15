@@ -23,13 +23,13 @@ export function hashIp(ip: string): string {
 }
 
 export function clientIp(request: NextRequest): string {
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp;
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     const last = forwarded.split(",").pop()?.trim();
     if (last) return last;
   }
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) return realIp;
   return "unknown";
 }
 
@@ -64,7 +64,12 @@ function retryAfterSeconds(oldestMs: number, windowMs: number, now: number): num
  * RLS enabled with no policies, so the service role is the only access path).
  * Returns `limited: true` with a `Retry-After` hint when a limit is hit.
  */
-export async function enforceApiRateLimit(ip: string): Promise<RateLimitResult> {
+export async function enforceApiRateLimit(
+  ip: string,
+  limits: { hourly?: number; daily?: number } = {},
+): Promise<RateLimitResult> {
+  const hourlyLimit = limits.hourly ?? HOURLY_LIMIT;
+  const dailyLimit = limits.daily ?? DAILY_LIMIT;
   const ipHash = hashIp(ip);
   const now = Date.now();
 
@@ -84,7 +89,7 @@ export async function enforceApiRateLimit(ip: string): Promise<RateLimitResult> 
     .eq("ip_hash", ipHash)
     .gte("created_at", hourlyFrom);
 
-  if ((hourlyCount ?? 0) >= HOURLY_LIMIT) {
+  if ((hourlyCount ?? 0) >= hourlyLimit) {
     const oldest = await oldestInWindow(ipHash, hourlyFrom);
     return {
       limited: true,
@@ -100,7 +105,7 @@ export async function enforceApiRateLimit(ip: string): Promise<RateLimitResult> 
     .eq("ip_hash", ipHash)
     .gte("created_at", dailyFrom);
 
-  if ((dailyCount ?? 0) >= DAILY_LIMIT) {
+  if ((dailyCount ?? 0) >= dailyLimit) {
     const oldest = await oldestInWindow(ipHash, dailyFrom);
     return {
       limited: true,

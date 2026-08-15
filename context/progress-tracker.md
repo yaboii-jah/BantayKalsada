@@ -35,6 +35,7 @@ change.
 - Context/app alignment audit — completed (see "Context/App Alignment Audit" below).
 - Mobile submit access + offline/auth session hardening — completed (see Completed section).
 - Offline routes + OAuth session fix (Offline Experience v2.6) — complete and verified on the live deployment (see Completed section).
+- Security hardening round 2 (2026-08-15 audit) — complete; see "Security Hardening (2026-08-15 Audit)" below.
 
 ## Completed
 
@@ -92,6 +93,24 @@ change.
 - [x] **`.env.example`** — Sentry + Plausible blocks removed (no more `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`, `NEXT_PUBLIC_PLAUSIBLE_SRC`).
 - [x] **Docs updated** — `architecture.md` (tech table rows, `sentry.*`/`analytics.ts` bullets, invariants 27–28 removed, rest renumbered), `project-overview.md` (Observability line removed), `app-codebase-context.md` (intro, Observability Data Flow section, file-org entries removed). Admin dashboard analytics (recharts from Supabase data) is untouched — it is not Plausible.
 - [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean, repo grep for `sentry|plausible|useAnalytics|next-plausible` (excl. node_modules/.git/.agents) zero hits.
+
+### Security Hardening (2026-08-15 Audit)
+
+- [x] Full security audit round 2 — dependencies, RLS policies, server actions, API routes, email/SMS/push, CSV export. 5 high + 6 medium + 8 low findings documented (prior round covered fixes 1–8).
+- [x] **Migration `20260815000001_harden_rls.sql`** — (1) `reports` citizen UPDATE policy: `WITH CHECK` now requires `status = 'PENDING'` (fixes **self-approval/self-reject/self-resolve** of own pending report via PostgREST — previously `WITH CHECK` only checked `auth.uid() = submitted_by_id`); (2) `municipality_boundaries`: RLS enabled + `REVOKE ALL FROM anon, authenticated` (fixes writable boundary polygon → geo-scope bypass / submit-flow DoS); (3) `profiles`: `REVOKE UPDATE` + column-level `GRANT UPDATE (phone, sms_notifications, full_name)` (fixes potential `role='ADMIN'` self-promotion via the column-unrestricted documented UPDATE policy); (4) `report_comments` UPDATE policy: requires `status='ACTIVE'` on both USING/WITH CHECK + target report `APPROVED/RESOLVED` (blocks re-publishing admin-removed comments + cross-report moves); (5) `report_flags` INSERT/UPDATE policies: require target report `APPROVED/RESOLVED`. **Not yet applied to remote** — needs `supabase db push` or the user to run it (pending dashboard verifications below).
+- [x] **Dependencies** — `next` 16.2.6 → **16.3.1** (+ `eslint-config-next` 16.3.1): resolves high-severity Next advisories (Server Actions DoS/unbounded payload, middleware/proxy bypass, SSRF, cache confusion) plus `sharp`/`postcss` transitives; then `npm audit fix` cleared all remaining transitives (hono, @hono/node-server, js-yaml, ip-address, brace-expansion, fast-uri, body-parser — all dev-tooling via shadcn CLI MCP SDK / eslint / serwist). **`npm audit` now reports 0 vulnerabilities.**
+- [x] **CSV formula injection (High)** — `lib/csv.ts` `escape()` now prefixes cells starting with `= + - @ \t \r` with `'` (admin export no longer executes formulas in Excel/Sheets).
+- [x] **Email HTML injection (Med)** — `emails/render.ts`: added `escapeHtml()` applied to every user/admin-controlled interpolation (citizenName, reportTitle, rejectionReason, resolutionNotes, adminNote, feedbackTitle) + button href/label.
+- [x] **Rate-limit IP spoofing (Med)** — `lib/api-rate-limit.ts` `clientIp()` now prefers `x-real-ip` (trusted-proxy set) over the last `x-forwarded-for` hop; `enforceApiRateLimit` accepts per-caller `{ hourly, daily }` limits.
+- [x] **Tile proxy abuse (Med)** — `app/api/traffic/tiles/[...]`: per-IP rate limit (7200/h, 50k/d), `AbortSignal.timeout(10s)`, 504 on upstream failure, `Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400` (edge + browser caching reduces paid TomTom quota burn).
+- [x] **Cloudinary sign CSRF (Med)** — `app/api/uploads/sign/route.ts` `GET` → **`POST`** + same-origin check (Origin host must match request host or `NEXT_PUBLIC_SITE_URL`); client caller `lib/cloudinary-upload.ts` updated. Cross-site `<img>` can no longer burn a victim's 30/h quota.
+- [x] **`sms/diagnose` de-leak (Med)** — `app/api/sms/diagnose/route.ts`: removed token preview + length math and full `/me`/`/balance` response bodies (now status/ok only), added 30/h IP rate limit, generic 500 error (no raw `err.message`).
+- [x] **Duplicate-search wildcard injection (Med)** — `app/admin/actions.ts` `findDuplicateCandidates` reuses `sanitizeSearchTerm` on the title query.
+- [x] **Admin id validation (Low)** — `z.string().uuid()` added to `editReport`, `findDuplicateCandidates`, `linkDuplicate`, `unlinkDuplicate`, `mergeReports`, `removeComment`; `removeComment` now 404s when the comment doesn't exist (previously silent success).
+- [x] **Low items** — push-subscription schema (`lib/validations/push.ts`: endpoint restricted to known push-service hosts — fcm.googleapis.com, Mozilla autopush, Apple, WNS — plus keys shape) applied in `savePushSubscription`; `resolvedImageUrls` restricted to `https://res.cloudinary.com/` URLs; `addComment` `parent_id` validated (uuid + same report + ACTIVE); `createOfflineSubmitFailedNotification` input caps (queueId ≤ 40, title ≤ 100); SMS-failure logs mask the recipient phone (`lib/admin-notifications.tsx`).
+- [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean (3 pre-existing warnings), `npm run build` passes on Next 16.3.1 (webpack, 32 routes, serwist SW bundled), `npm audit` = 0 vulns.
+- [ ] **Pending (user, Supabase dashboard):** (1) confirm live `profiles` UPDATE policy column exposure — migration's column grants close the `role` escalation regardless; (2) confirm `notifications` SELECT/UPDATE policies exist in the live DB (base migration isn't in this repo — mark-as-read relies on them); (3) confirm the Cloudinary upload preset restricts `resource_type` to images with size/format limits.
+- [ ] **Pending:** apply migration `20260815000001_harden_rls.sql` to the linked project (`gvhyajfarhdbmgkloeit`) once the dashboard checks are done.
 
 ### Security Hardening (Audit Fixes)
 

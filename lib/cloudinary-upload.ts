@@ -1,5 +1,5 @@
 export async function uploadToCloudinary(file: File): Promise<string> {
-  const res = await fetch("/api/uploads/sign");
+  const res = await fetch("/api/uploads/sign", { method: "POST" });
   const { data: config } = await res.json();
 
   const formData = new FormData();

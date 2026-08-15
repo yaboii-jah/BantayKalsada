@@ -1,7 +1,9 @@
 "use server";
 
+import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
+import { sanitizeSearchTerm } from "@/lib/api-reports";
 import {
   approveReportSchema,
   rejectReportSchema,
@@ -283,6 +285,10 @@ export async function editReport(
       return { success: false, error: auth.error };
     }
 
+    if (!z.string().uuid().safeParse(reportId).success) {
+      return { success: false, error: "Invalid report id" };
+    }
+
     const adminClient = createAdminClient();
 
     const { data: existing, error: fetchError } = await adminClient
@@ -404,6 +410,10 @@ export async function findDuplicateCandidates(
       return { success: false, error: auth.error };
     }
 
+    if (!z.string().uuid().safeParse(reportId).success) {
+      return { success: false, error: "Invalid report id" };
+    }
+
     const adminClient = createAdminClient();
 
     const { data: report } = await adminClient
@@ -429,9 +439,9 @@ export async function findDuplicateCandidates(
       }
     }
 
-    const titleQuery = query?.trim();
+    const titleQuery = query ? sanitizeSearchTerm(query) : "";
     let titleMatches: { id: string }[] = [];
-    if (titleQuery && titleQuery.length >= 3) {
+    if (titleQuery.length >= 3) {
       const { data } = await adminClient
         .from("reports")
         .select("id")
@@ -482,6 +492,13 @@ export async function linkDuplicate(
     const auth = await verifyAdmin();
     if (auth.error || !auth.user) {
       return { success: false, error: auth.error };
+    }
+
+    if (
+      !z.string().uuid().safeParse(duplicateId).success ||
+      !z.string().uuid().safeParse(canonicalId).success
+    ) {
+      return { success: false, error: "Invalid report id" };
     }
 
     if (duplicateId === canonicalId) {
@@ -538,6 +555,10 @@ export async function unlinkDuplicate(
       return { success: false, error: auth.error };
     }
 
+    if (!z.string().uuid().safeParse(duplicateId).success) {
+      return { success: false, error: "Invalid report id" };
+    }
+
     const adminClient = createAdminClient();
 
     const { data: existing } = await adminClient
@@ -580,6 +601,13 @@ export async function mergeReports(
     const auth = await verifyAdmin();
     if (auth.error || !auth.user) {
       return { success: false, error: auth.error };
+    }
+
+    if (
+      !z.string().uuid().safeParse(duplicateId).success ||
+      !z.string().uuid().safeParse(canonicalId).success
+    ) {
+      return { success: false, error: "Invalid report id" };
     }
 
     if (duplicateId === canonicalId) {
@@ -1071,6 +1099,10 @@ export async function removeComment(
       return { success: false, error: auth.error };
     }
 
+    if (!z.string().uuid().safeParse(commentId).success) {
+      return { success: false, error: "Invalid comment id" };
+    }
+
     const adminClient = createAdminClient();
 
     const { data: comment } = await adminClient
@@ -1078,6 +1110,10 @@ export async function removeComment(
       .select("report_id")
       .eq("id", commentId)
       .single();
+
+    if (!comment) {
+      return { success: false, error: "Comment not found" };
+    }
 
     const { error } = await adminClient
       .from("report_comments")
@@ -1088,7 +1124,7 @@ export async function removeComment(
       return { success: false, error: "Failed to remove comment" };
     }
 
-    if (comment?.report_id) {
+    if (comment.report_id) {
       await logReportActivity({
         reportId: comment.report_id,
         actorId: auth.user.id,

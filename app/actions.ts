@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { createReportSchema, flagReportSchema, type CreateReportInput } from "@/lib/validations/report";
@@ -8,6 +9,7 @@ import {
   updateProfileSettingsSchema,
   type UpdateProfileSettingsInput,
 } from "@/lib/validations/profile";
+import { pushSubscriptionSchema } from "@/lib/validations/push";
 import { normalizePhoneNumber, sendSMS } from "@/lib/sms";
 import { sendPushNotification } from "@/lib/push";
 import { createNotification, getMessageForType } from "@/lib/notifications";
@@ -134,6 +136,10 @@ export async function createOfflineSubmitFailedNotification(
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return { success: false, error: "Not authenticated" };
+    }
+
+    if (offlineQueueId.length > 40 || title.length > 100) {
+      return { success: false, error: "Invalid notification data" };
     }
 
     await createNotification({
@@ -490,6 +496,23 @@ export async function addComment(
       return { success: false, error: "Cannot comment on this report" };
     }
 
+    const parentId = formData.parent_id ?? null;
+    if (parentId) {
+      if (!z.string().uuid().safeParse(parentId).success) {
+        return { success: false, error: "Invalid parent comment" };
+      }
+      const { data: parent } = await supabase
+        .from("report_comments")
+        .select("id")
+        .eq("id", parentId)
+        .eq("report_id", formData.report_id)
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+      if (!parent) {
+        return { success: false, error: "Cannot reply to that comment" };
+      }
+    }
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("full_name")
@@ -501,7 +524,7 @@ export async function addComment(
       .insert({
         report_id: formData.report_id,
         user_id: user.id,
-        parent_id: formData.parent_id ?? null,
+        parent_id: parentId,
         body,
         author_name: profile?.full_name ?? "Anonymous",
       })
@@ -687,7 +710,12 @@ export async function savePushSubscription(
   subscriptionJson: string,
 ): Promise<ActionResponse> {
   try {
-    const subscription = JSON.parse(subscriptionJson) as PushSubscriptionJSON;
+    const subscription = pushSubscriptionSchema.safeParse(
+      JSON.parse(subscriptionJson),
+    );
+    if (!subscription.success) {
+      return { success: false, error: "Invalid push subscription" };
+    }
 
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -703,7 +731,7 @@ export async function savePushSubscription(
       .from("push_subscriptions")
       .select("id")
       .eq("user_id", userId)
-      .eq("subscription->>endpoint", subscription.endpoint)
+      .eq("subscription->>endpoint", subscription.data.endpoint)
       .maybeSingle();
 
     if (existing.data) {
@@ -714,7 +742,7 @@ export async function savePushSubscription(
       .from("push_subscriptions")
       .insert({
         user_id: userId,
-        subscription: subscription as unknown as never,
+        subscription: subscription.data as unknown as never,
       });
 
     if (insertError) {
