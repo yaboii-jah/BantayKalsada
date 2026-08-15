@@ -20,6 +20,10 @@ interface SwClients {
   openWindow(url: string): Promise<Window | null>;
 }
 
+interface ActivateEvent extends Event {
+  waitUntil(promise: Promise<unknown>): void;
+}
+
 interface Swr {
   showNotification(title: string, options?: SwNotifOptions): Promise<void>;
 }
@@ -36,12 +40,16 @@ declare const self: WorkerGlobalScope & typeof globalThis;
 
 const OFFLINE_ROUTES = [
   "/",
-  "/submit",
   "/browse",
-  "/my-reports",
-  "/my-feedback",
-  "/account",
-  "/feedback",
+  "/offline",
+];
+
+const NAVIGATION_CACHE_SUFFIXES = [
+  "pages-rsc-prefetch",
+  "pages-rsc",
+  "next-data",
+  "pages",
+  "others",
 ];
 
 const serwist = new Serwist({
@@ -50,9 +58,36 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: defaultCache,
+  fallbacks: {
+    entries: [
+      {
+        url: "/offline",
+        matcher: ({ request }) => request.mode === "navigate",
+      },
+    ],
+  },
 });
 
 serwist.addEventListeners();
+
+self.addEventListener("activate", (event) => {
+  const activateEvent = event as ActivateEvent;
+  activateEvent.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(
+            (key) =>
+              NAVIGATION_CACHE_SUFFIXES.some(
+                (suffix) => key === suffix || key.endsWith(`-${suffix}`),
+              ),
+          )
+          .map((key) => caches.delete(key)),
+      );
+    })(),
+  );
+});
 
 interface PushData {
   title?: string;

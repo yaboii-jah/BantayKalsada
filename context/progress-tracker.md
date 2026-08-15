@@ -34,6 +34,7 @@ change.
 - Security hardening — audit resolved (fixes 1–8 implemented + verified; see Completed section).
 - Context/app alignment audit — completed (see "Context/App Alignment Audit" below).
 - Mobile submit access + offline/auth session hardening — completed (see Completed section).
+- Offline routes + OAuth session fix (Offline Experience v2.6) — implemented; pending live verification on the deployed site.
 
 ## Completed
 
@@ -70,6 +71,17 @@ change.
 - [x] **Applied helper** to client auth reads: `components/public-nav.tsx` (boot user load), `components/reports/report-form.tsx` `queueOfflineReport`, `components/offline/offline-queue-processor.tsx`, `components/offline/offline-reports-panel.tsx`. All server-side `getUser()` unchanged (`proxy.ts`, `lib/supabase/server.ts`, layouts, actions).
 - [x] **Offline routes** — `public/sw.js` is a tracked stale build artifact; Vercel's own build regenerates it from `app/sw.ts` (OFFLINE_ROUTES + `navigationPreload: true`) on deploy, so no local build. **Requirement:** after deploy, load the app once online so the new service worker installs and precaches the offline routes; then offline navigation + queued submission works (enabled by the `getSessionUser` hardening above).
 - [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean.
+
+### Offline Routes + OAuth Session Fix (Offline Experience v2.6)
+
+- [x] **OAuth (Google) session persistence** — `app/auth/callback/route.ts`: `setAll` now captures `cookiesToSet` (with `options`), and the OAuth redirect response applies those `options` (400-day lifetime). Previously cookies were copied without options → session cookies wiped on browser close (Google sign-in only; email/password already set 400-day cookies client-side). Pattern matches `lib/supabase/middleware.ts`.
+- [x] **Stop precaching auth pages** — `app/sw.ts` `OFFLINE_ROUTES` trimmed to public-only (`/`, `/browse`, `/offline`). The old list precached `/submit`, `/my-reports`, `/my-feedback`, `/account`, `/feedback` at SW install — a logged-out/fresh install cached the **login-redirect HTML under `/submit`** (offline submit → `/login`), an **empty shell under `/account`** (`page.tsx` returns `null` when logged out), and a **guest-visible `/feedback`** (no auth gate).
+- [x] **Offline navigation fallback** — `app/sw.ts` adds Serwist `fallbacks.entries: [{ url: "/offline", matcher: ({ request }) => request.mode === "navigate" }]` so any failed offline navigation serves `/offline` (precached, static, noindex) — including `/submit`, `/account`, `/feedback`, `/my-reports`, `/my-feedback`.
+- [x] **`/offline` page** — new `app/(public)/offline/page.tsx` (server component, `robots: { index: false, follow: false }`) + `components/offline/offline-page.tsx` (client): online-aware banner ("You're offline" / "You're back online" via `useOnline`) + embedded `<ReportForm />` so offline submission still queues (photo blobs + already-uploaded URLs) and drains via `OfflineQueueProcessor` on the next online citizen visit.
+- [x] **Stale navigation-cache cleanup** — `app/sw.ts` adds an `activate` listener deleting navigation caches (`pages`, `pages-rsc`, `pages-rsc-prefetch`, `next-data`, `others`; suffix-matched) so an old cached login/empty page can't be served after a deploy; precache + tile caches untouched.
+- [x] **`/account` + `/feedback` protected online** — added to `proxy.ts` `protectedRoutes` (guests redirected to `/login?redirect=...`). Fixes the empty `/account` page for guests; `/feedback` previously had no auth gate. Nav already exposes the Feedback link only to logged-in users.
+- [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean.
+- [ ] Live verification pending — user to share the deployed site URL; confirm the Vercel-regenerated `public/sw.js` contains the `fallbacks` block + `navigationPreload: true` and no protected routes in the precache; then re-test offline submit (incognito) and Google session persistence across browser close.
 
 ### Security Hardening (Audit Fixes)
 

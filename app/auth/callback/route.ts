@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 function safeNextPath(raw: string | null): string {
   if (raw && raw.startsWith("/") && !raw.startsWith("//") && !raw.includes("\\")) {
@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
   const next = safeNextPath(searchParams.get("next"));
 
   if (code) {
+    let sessionCookies: { name: string; value: string; options: CookieOptions }[] = [];
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
+            sessionCookies = cookiesToSet;
             cookiesToSet.forEach(({ name, value }) => {
               request.cookies.set(name, value);
             });
@@ -35,8 +38,8 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       const redirectResponse = NextResponse.redirect(new URL(next, origin));
-      request.cookies.getAll().forEach(({ name, value }) => {
-        redirectResponse.cookies.set(name, value);
+      sessionCookies.forEach(({ name, value, options }) => {
+        redirectResponse.cookies.set(name, value, options);
       });
       return redirectResponse;
     }
