@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Send, Loader2, Save, WifiOff, CheckCircle } from "lucide-react";
+import { Send, Loader2, Save, CheckCircle } from "lucide-react";
 
 import { createReportSchema, reportSeverityEnum, type CreateReportInput } from "@/lib/validations/report";
 import { submitReport, updateReport } from "@/app/actions";
@@ -85,7 +85,6 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const { isOnline } = useOnline();
-  const isOffline = !isOnline;
   const [queuedOffline, setQueuedOffline] = useState(false);
   const [offlineDialogOpen, setOfflineDialogOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
@@ -335,16 +334,6 @@ export function ReportForm({ defaultValues, reportId, draftId, draftMeta, draftI
   return (
     <form onSubmit={handleRawSubmit} className="space-y-6">
       <TaytayTilesPreloader />
-      {isOffline && !isEdit && (
-        <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
-          <WifiOff className="mt-0.5 size-4 shrink-0 text-primary" />
-          <span>
-            You&apos;re offline. Your report will be saved on this device and
-            submitted automatically when you&apos;re back online.
-          </span>
-        </div>
-      )}
-
       {queuedOffline && (
         <div className="flex items-start gap-2 rounded-lg border border-status-approved/20 bg-status-approved/10 px-4 py-3 text-sm text-foreground">
           <CheckCircle className="mt-0.5 size-4 shrink-0 text-status-approved" />
