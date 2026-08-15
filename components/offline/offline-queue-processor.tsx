@@ -19,11 +19,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getSessionUser } from "@/lib/auth/session-user";
 import { setProcessingIds } from "@/lib/offline-processing";
 import { emitQueueChanged } from "@/lib/offline-queue-events";
-import { useAnalytics } from "@/lib/analytics";
 
 export function OfflineQueueProcessor() {
   const router = useRouter();
-  const track = useAnalytics();
   const processingRef = useRef(false);
 
   const processQueue = useCallback(async () => {
@@ -76,7 +74,6 @@ export function OfflineQueueProcessor() {
           void deleteOfflineSubmitNotification(report.id);
           emitQueueChanged();
           submittedAny = true;
-          track("Offline Report Submitted");
           toast.success(
             `Offline report "${report.title}" was submitted successfully!`,
           );
@@ -121,7 +118,7 @@ export function OfflineQueueProcessor() {
       setProcessingIds(new Set());
       processingRef.current = false;
     }
-  }, [router, track]);
+  }, [router]);
 
   useEffect(() => {
     void processQueue();

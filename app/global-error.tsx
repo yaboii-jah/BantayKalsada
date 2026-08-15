@@ -1,19 +1,6 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
-import { useEffect } from "react";
-
-export default function GlobalError({
-  error,
-}: {
-  error: Error & { digest?: string };
-}) {
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-      Sentry.captureException(error);
-    }
-  }, [error]);
-
+export default function GlobalError() {
   return (
     <html lang="en" className="dark h-full antialiased">
       <body className="flex min-h-full flex-col items-center justify-center bg-background px-4 text-center">

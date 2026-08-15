@@ -30,7 +30,7 @@ change.
 - Offline upload UX + reliability (Offline Experience v2.4) — complete and verified.
 - Offline connectivity detection + retained photos (Offline Experience v2.5) — complete and verified.
 - Admin trust features (Tier 3) — complete and verified (see Completed section).
-- Observability (Tier 5) — Sentry + Plausible wired and verified; pending real credentials for live verification.
+- Observability (Tier 5) — **decommissioned**: Sentry + Plausible fully removed from the app (deps, configs, instrumentation, analytics hooks, env vars, docs). See "Observability Removal" below.
 - Security hardening — audit resolved (fixes 1–8 implemented + verified; see Completed section).
 - Context/app alignment audit — completed (see "Context/App Alignment Audit" below).
 - Mobile submit access + offline/auth session hardening — completed (see Completed section).
@@ -83,6 +83,16 @@ change.
 - [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean.
 - [ ] Live verification pending — user to share the deployed site URL; confirm the Vercel-regenerated `public/sw.js` contains the `fallbacks` block + `navigationPreload: true` and no protected routes in the precache; then re-test offline submit (incognito) and Google session persistence across browser close.
 
+### Observability Removal (Sentry + Plausible decommissioned)
+
+- [x] **Deps removed** — `npm uninstall @sentry/nextjs next-plausible` (package.json + package-lock.json cleaned).
+- [x] **Files deleted** — `sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `lib/analytics.ts`, and the stale tracked `public/sw.js` build artifact (it carried a `_sentryDebugIds` prelude; `withSerwist` regenerates `public/sw.js` on every production build, and dev has Serwist disabled). `context/feature-specs/31-observability.md` deleted.
+- [x] **Config reverted** — `next.config.ts` drops the `withSentryConfig` wrapper (keeps `withSerwist`); `app/layout.tsx` drops `PlausibleProvider` + `NEXT_PUBLIC_PLAUSIBLE_SRC` gating (renders `{children}` directly); `app/global-error.tsx` drops the Sentry import/`captureException` (error UI kept).
+- [x] **Analytics hooks stripped** — removed `useAnalytics()`/`track(...)` from `components/reports/report-form.tsx`, `components/offline/offline-queue-processor.tsx`, `components/reports/share-button.tsx`, `components/reports/flag-report-buttons.tsx`, `components/reports/comment-form.tsx`, `components/reports/feedback-form.tsx`, `components/admin/action-buttons.tsx`, `app/(auth)/login/page.tsx`, `app/(auth)/register/page.tsx` (incl. `track` from all dependency arrays).
+- [x] **`.env.example`** — Sentry + Plausible blocks removed (no more `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`, `NEXT_PUBLIC_PLAUSIBLE_SRC`).
+- [x] **Docs updated** — `architecture.md` (tech table rows, `sentry.*`/`analytics.ts` bullets, invariants 27–28 removed, rest renumbered), `project-overview.md` (Observability line removed), `app-codebase-context.md` (intro, Observability Data Flow section, file-org entries removed). Admin dashboard analytics (recharts from Supabase data) is untouched — it is not Plausible.
+- [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean, repo grep for `sentry|plausible|useAnalytics|next-plausible` (excl. node_modules/.git/.agents) zero hits.
+
 ### Security Hardening (Audit Fixes)
 
 - [x] Full security audit of the codebase completed — 9 findings documented (auth callback open redirect, flag/SMS spam vectors, XFF spoofing, PostgREST filter injection, tile proxy abuse, unbounded rejection reason, arbitrary photo URLs, unverifiable RLS spot-check). User approved fixes 1–6.
@@ -100,6 +110,8 @@ change.
 - [x] This tracker updated
 
 ### Observability (Tier 5)
+
+> **Superseded:** Sentry + Plausible were fully decommissioned — see "Observability Removal (Sentry + Plausible decommissioned)" above. This log documents the original (now-removed) implementation.
 
 - [x] Installed `@sentry/nextjs@10.70.0` + `next-plausible@4.0.0` (no other new deps; builds use `--webpack` so no Turbopack Sentry conflict)
 - [x] `sentry.server.config.ts` — Node SDK init (`Sentry.init`), DSN-guarded (`dsn = process.env.NEXT_PUBLIC_SENTRY_DSN`, `if (dsn)`), `environment: process.env.NODE_ENV`, no `tracesSampleRate` (errors only)

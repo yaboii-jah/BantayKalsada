@@ -3,14 +3,10 @@
 import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useAnalytics } from "@/lib/analytics";
 
 export function ShareButton({ title }: { title: string }) {
-  const track = useAnalytics();
-
   const handleShare = async () => {
     const url = window.location.href;
-    track("Report Shared");
 
     if (navigator.share) {
       try {

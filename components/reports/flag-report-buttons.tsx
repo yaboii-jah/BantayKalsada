@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { flagReport } from "@/app/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { useAnalytics } from "@/lib/analytics";
 
 type FlagType = "ALREADY_FIXED" | "WRONG_LOCATION";
 
@@ -22,7 +21,6 @@ const flagOptions: { type: FlagType; label: string; icon: typeof Flag }[] = [
 ];
 
 export function FlagReportButtons({ reportId }: FlagReportButtonsProps) {
-  const track = useAnalytics();
   const [activeFlags, setActiveFlags] = useState<FlagType[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingType, setPendingType] = useState<FlagType | null>(null);
@@ -63,7 +61,6 @@ export function FlagReportButtons({ reportId }: FlagReportButtonsProps) {
           result.active ? [...prev, type] : prev.filter((t) => t !== type),
         );
         if (result.active) {
-          track("Report Flagged", { props: { flagType: type } });
           toast.success(type === "ALREADY_FIXED" ? "Marked as already fixed" : "Flagged as wrong location");
         } else {
           toast.success(type === "ALREADY_FIXED" ? "Removed already-fixed flag" : "Removed wrong-location flag");

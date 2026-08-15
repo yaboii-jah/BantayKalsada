@@ -1,6 +1,6 @@
 # Bantay Kalsada — Codebase Context
 
-This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete implementation including Google OAuth, in-app notifications, keyword search, map view with heatmap/traffic/base-layer toggles, admin analytics, app feedback system, admin notes on feedback, report severity tagging, comments on reports, citizen report flagging, share report via link/social, PWA support, bulk admin actions, SMS + push notifications, offline report submission/editing, offline map preloading, the public REST API, CSV export, Suspense-boundary loading for filter navigation, dark mode, static content pages (About / Privacy / Terms / Guidelines / Disclaimer), Tier 3 admin trust features (admin report editing, activity log/audit trail, report lifecycle timeline, and duplicate-report linking/merge), and Tier 5 observability (Sentry error monitoring + Plausible analytics).
+This file documents the app's architecture, routing, access model, data flow patterns, and key conventions. Covers the complete implementation including Google OAuth, in-app notifications, keyword search, map view with heatmap/traffic/base-layer toggles, admin analytics, app feedback system, admin notes on feedback, report severity tagging, comments on reports, citizen report flagging, share report via link/social, PWA support, bulk admin actions, SMS + push notifications, offline report submission/editing, offline map preloading, the public REST API, CSV export, Suspense-boundary loading for filter navigation, dark mode, static content pages (About / Privacy / Terms / Guidelines / Disclaimer), Tier 3 admin trust features (admin report editing, activity log/audit trail, report lifecycle timeline, and duplicate-report linking/merge).
 
 ---
 
@@ -467,46 +467,6 @@ Offline Report Editing + Offline Map (v2.3)
 
 ---
 
-## Observability Data Flow
-
-### Sentry (errors only)
-
-```
-Build                      → next.config.ts withSentryConfig (org/project/authToken from env, silent,
-                             suppressOnRouterTransitionStartWarning, webpack treeshake removeTracing/removeDebugLogging)
-                             → injects client SDK init into the bundle (from instrumentation-client.ts)
-                             → uploads source maps when SENTRY_AUTH_TOKEN is set (dist/)
-
-Server (Node + Edge)       → instrumentation.ts register(): if NEXT_RUNTIME === "nodejs" import ./sentry.server.config
-                             else import ./sentry.edge.config  (each DSN-guarded: if (dsn) Sentry.init)
-onRequestError             → instrumentation.ts export const onRequestError = Sentry.captureRequestError
-                             (App-Router hook → router errors + root Error Boundary for Node server)
-
-Browser                    → client SDK (DSN-guarded). Unhandled exceptions in "use client" code captured.
-                             Root layout failures → app/global-error.tsx (own <html><body>, dark) →
-                             Sentry.captureException(error) in useEffect when DSN is set.
-```
-
-### Plausible (analytics)
-
-```
-app/layout.tsx (server)    → const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC
-                             plausibleSrc ? render <PlausibleProvider src={plausibleSrc}> (pageviews tracked
-                             automatically per route) : render children raw (analytics off).
-lib/analytics.ts (client)  → AnalyticsEvents type map + useAnalytics() = usePlausible<AnalyticsEvents>()
-Each widget               → const track = useAnalytics(); track("Event Name", { props: { dim } })
-                             Events: Report Submitted (severity, category), Report Queued Offline,
-                             Offline Report Submitted, Report Shared, Report Flagged (flagType),
-                             Comment Added, Feedback Submitted (type), Signup, Login,
-                             Report Approved, Report Rejected, Report Resolved.
-```
-
-**Env guard invariant:** `NEXT_PUBLIC_SENTRY_DSN` unset → every Sentry init no-ops.
-`NEXT_PUBLIC_PLAUSIBLE_SRC` unset → provider not mounted, no tracking script, events inert.
-Build/typecheck/runtime all verified with both absent.
-
----
-
 ## File Organization Reference
 
 ```
@@ -531,14 +491,7 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   api/healthz            — lightweight 204 connectivity probe (offline detection)
   verify-email/          — email verification prompt
   sw.ts                  — service worker entry (precache + runtime caching + push)
-  global-error.tsx       — last-resort root error boundary (own html/body in dark); Sentry.captureException (DSN-guarded)
-
-observability/root files:
-  sentry.server.config.ts — Node SDK init for server runtimes (if (dsn) guard)
-  sentry.edge.config.ts   — Edge SDK init for edge runtime / proxy (if (dsn) guard)
-  instrumentation.ts      — register() imports the config by NEXT_RUNTIME; onRequestError = Sentry.captureRequestError
-  instrumentation-client.ts — client SDK init (injected by withSentryConfig)
-  next.config.ts          — withSentryConfig wrapping withSerwist (org/project/authToken, silent, treeshake removeTracing/removeDebugLogging)
+  global-error.tsx       — last-resort root error boundary (own html/body in dark)
 
 components/
   admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager
@@ -555,7 +508,6 @@ components/
   ui/                    — Shadcn/ui primitives (DO NOT EDIT)
 
 lib/
-  analytics.ts           — typed Plausible events (AnalyticsEvents) + useAnalytics() hook (client)
   supabase/              — client factories (server, client, middleware, service-role)
   site.ts                — SITE_URL constant (NEXT_PUBLIC_SITE_URL || https://bantay-kalsada.vercel.app)
   og-image.tsx           — BrandCard JSX + OG_IMAGE_SIZE (1200×630) for default opengraph/twitter images
