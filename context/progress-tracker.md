@@ -34,7 +34,7 @@ change.
 - Security hardening — audit resolved (fixes 1–8 implemented + verified; see Completed section).
 - Context/app alignment audit — completed (see "Context/App Alignment Audit" below).
 - Mobile submit access + offline/auth session hardening — completed (see Completed section).
-- Offline routes + OAuth session fix (Offline Experience v2.6) — implemented; pending live verification on the deployed site.
+- Offline routes + OAuth session fix (Offline Experience v2.6) — complete and verified on the live deployment (see Completed section).
 
 ## Completed
 
@@ -81,7 +81,7 @@ change.
 - [x] **Stale navigation-cache cleanup** — `app/sw.ts` adds an `activate` listener deleting navigation caches (`pages`, `pages-rsc`, `pages-rsc-prefetch`, `next-data`, `others`; suffix-matched) so an old cached login/empty page can't be served after a deploy; precache + tile caches untouched.
 - [x] **`/account` + `/feedback` protected online** — added to `proxy.ts` `protectedRoutes` (guests redirected to `/login?redirect=...`). Fixes the empty `/account` page for guests; `/feedback` previously had no auth gate. Nav already exposes the Feedback link only to logged-in users.
 - [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean.
-- [ ] Live verification pending — user to share the deployed site URL; confirm the Vercel-regenerated `public/sw.js` contains the `fallbacks` block + `navigationPreload: true` and no protected routes in the precache; then re-test offline submit (incognito) and Google session persistence across browser close.
+- [x] Live verification on `https://bantay-kalsada-sooty.vercel.app` — deployed `public/sw.js` contains `fallbacks.entries [{ url: "/offline", matcher: navigate }]`, `navigationPreload: true`, the activate-time navigation-cache cleanup, and a precache of `/`, `/browse`, `/offline` only (protected routes appear only as `/_next/static/chunks/...` JS assets, never as route HTML); no Sentry prelude; `/offline` page renders HTTP 200. Offline submit in incognito works (offline page + queued submission, no `/login` redirect); Google sign-in persists across browser close — user-confirmed.
 
 ### Observability Removal (Sentry + Plausible decommissioned)
 

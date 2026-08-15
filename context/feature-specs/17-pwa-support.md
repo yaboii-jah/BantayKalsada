@@ -46,7 +46,7 @@
 
 ### Offline Fallback
 
-When a navigation request fails (user is offline and page is not cached), the service worker returns the cached version of the page if available. No dedicated offline fallback page — the stale cached page is preferable to a generic "You're offline" screen.
+When a navigation request fails (user is offline and the page is not cached), the service worker serves the precached static `/offline` page (`app/(public)/offline/page.tsx`, noindex) instead of a stale or login-redirect page. `/offline` embeds `<ReportForm />`, so submitting a report still works offline (queued to IndexedDB and replayed on reconnect). Only public routes are precached — `/`, `/browse`, `/offline` — so protected pages (`/submit`, `/my-reports`, `/my-feedback`, `/account`, `/feedback`) are never precached; that previously cached the login-redirect HTML (under `/submit`) and an empty shell (under `/account`) at install time. On SW `activate`, stale navigation caches (`pages`, `pages-rsc`, `pages-rsc-prefetch`, `next-data`, `others`) are deleted so an old cached login/empty page can't be served after a deploy.
 
 ## Service Worker — `app/sw.ts`
 
