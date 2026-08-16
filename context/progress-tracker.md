@@ -39,14 +39,6 @@ change.
 
 ## Completed
 
-### Landing Page Redesign (Civic Watchpoint)
-
-- [x] **`app/(public)/page.tsx`** rebuilt from a generic 3-section hero into a **civic municipal watchpoint** for Taytay, Rizal. The route is now **dynamic** (ƒ) — it fetches live data via `createSupabaseServerClient()` in three parallel `Promise.all` queries (approved/resolved total count, resolved count, 3 most recent approved/resolved reports), so the hero stats and "Recent verified community alerts" reflect real DB state.
-- [x] **Sections (in DOM order):** (1) Hero — civic badge, single `h1` ("Community road hazard monitoring for Taytay, Rizal."), dual CTAs (`/submit` + `/browse?view=map`), and a 4-tile live pulse strip (verified reports, resolved hazards, 5 barangays, free service — falls back to honest non-metric labels when the DB is empty, no invented numbers); (2) Category jump matrix — all 6 report categories linking to pre-filtered `/browse?category=...` (includes BROKEN_TRAFFIC_SIGN as a browse landing path even though the browse filter bar omits it); (3) Live feed snapshot — 3 latest approved/resolved reports rendered via the existing `ReportCard`, with an empty state CTA; (4) Barangay explorer — 5 cards (Dolores, San Isidro, San Juan, Santa Ana, Muzon) linking to `/browse?barangay=...`; (5) How it works — 3-step civic workflow (pin + boundary geofence, 48h moderation, live map + resolution); (6) Resilience features — offline PWA queue, SMS/push alerts, EXIF stripping; (7) Closing community CTA (`/submit` + `/guidelines`).
-- [x] **Compliance:** semantic tokens only (`bg-card`, `border-border`, `text-muted-foreground`, `bg-primary/10`, `text-status-approved`, etc. — no hardcoded hex), single `h1`, `Button asChild` + `Link` for all interactive elements (no nested `<a><button>`), Lucide icons per `ui-context.md` sizing, `satisfies`-free clean `Record<string, ...>` for the category/barangay arrays, honest copy with no fabricated stats.
-- [x] `Metadata`/`JsonLd` preserved (title/description refreshed to "Taytay Municipal Road Hazard Watch"; OpenGraph/Twitter/canonical kept).
-- [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean (only the pre-existing `reset-password` `window.location` warning), `npm run build` passes (route `/` now `ƒ Dynamic`; 32 static pages generated).
-
 ### Context/App Alignment Audit
 
 - [x] Audited all context files against the actual codebase (routes, components, lib, API routes, migrations, configs, server actions, deps). Found and fixed 4 discrepancies.
