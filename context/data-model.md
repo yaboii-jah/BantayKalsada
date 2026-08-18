@@ -31,6 +31,8 @@ The database owns all structured application data. It does not store binary cont
 
 Define these types before creating any tables. They are referenced as column types.
 
+> **Baseline provenance (2026-08-18):** the enums, original definitions of `reports`/`profiles`/`notifications`, the `handle_new_user`/`set_updated_at` functions, triggers, and all RLS policies for `profiles` and `notifications` were previously **absent from every migration** (they existed only in the live DB, verified via the dashboard — finding 9 of the security audit). Migration `20260818000002_baseline_profiles_notifications_rls.sql` now captures them idempotently (`CREATE TABLE IF NOT EXISTS`, `DO`-block enum creation, `DROP POLICY IF EXISTS` + recreate). Applied to the live DB `gvhyajfarhdbmgkloeit` on 2026-08-18 via the dashboard SQL Editor, no errors. Two deliberate exclusions keep incremental migrations replayable: `report_within_taytay_check` references the `location` column added later by `20250713000002`, and the `reports` base table intentionally omits columns/constraints added by later migrations. Tables/constraints created only by later migrations are **not** recreated by the baseline.
+
 ```sql
 CREATE TYPE user_role AS ENUM ('CITIZEN', 'ADMIN');
 
@@ -268,6 +270,31 @@ CREATE INDEX idx_report_flags_report_id ON report_flags(report_id);
 | `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. |
 
 The `UNIQUE (report_id, user_id, flag_type)` constraint guarantees each citizen can have at most one flag row per type per report; each type is toggled independently — flagging a type inserts its row, and unflagging deletes only that type's row. Migration `20250731000002` changed the constraint from `(report_id, user_id)` so both types can be active at once.
+
+### `report_flag_actions`
+
+Append-only audit log of every flag/unflag action, added by migration `20260818000001_create_report_flag_actions.sql` (applied to the live DB 2026-08-18) and prompted by finding S3 from the security audit: the flag rate limit previously counted *live* `report_flags` rows, so the flag→unflag→re-flag loop could bypass the 30-actions/24h cap by deleting its own rows. The `flagReport` Server Action now counts **actions** from this table within the 24h window instead, closing the bypass. RLS is enabled with **no policies** — reachable only through the service-role client, consistent with `api_request_log` and `test_sms_log`.
+
+```sql
+CREATE TABLE report_flag_actions (
+  id          uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid              NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  report_id   uuid              NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  action      report_flag_action NOT NULL,
+  created_at  timestamptz       NOT NULL DEFAULT now()
+);
+
+CREATE INDEX report_flag_actions_user_time_idx
+  ON report_flag_actions (user_id, created_at DESC);
+```
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key, auto-generated. |
+| `user_id` | `uuid` | No | — | FK to `auth.users.id`. Cascade deletes when the auth user is deleted. |
+| `report_id` | `uuid` | No | — | FK to `reports.id`. Cascade deletes when the report is deleted. |
+| `action` | `report_flag_action` | No | — | `FLAGGED` or `UNFLAGGED`, written by `flagReport`. |
+| `created_at` | `timestamptz` | No | `now()` | Auto-set on row creation. Served by `report_flag_actions_user_time_idx` for the 24h sliding-window count. |
 
 ### `report_comments`
 
@@ -1147,7 +1174,7 @@ These rules are enforced at two levels: database constraints (defined above) and
 | Comment admin removal | Admins can set status to `REMOVED` via service role client | Server Action handler (`verifyAdmin()` + service role update) |
 | Comment notification | Report owner receives in-app notification when someone comments on their report (not on own comment) | Server Action (`addComment` checks `submitted_by_id !== user.id`) |
 | Comment submission rate | Max 30 comments per user per 24-hour window | Server Action (`addComment` — count query before insert) |
-| Report flag submission rate | Max 30 flag actions per user per 24-hour window | Server Action (`flagReport` — count query on `report_flags` before insert/update) |
+| Report flag submission rate | Max 30 flag actions per user per 24-hour window | Server Action (`flagReport` — count query on `report_flag_actions` before insert) |
 | Test SMS send rate | Max 5 test SMS per user per 24-hour window | Server Action (`sendTestSms` — count query on `test_sms_log` before send) |
 | `report_flags.flag_type` | Must be `ALREADY_FIXED` or `WRONG_LOCATION` | DB enum type + Zod (`flagReportSchema`) |
 | `report_flags.report_id` + `user_id` + `flag_type` | One flag per citizen per report per type | DB `UNIQUE (report_id, user_id, flag_type)` constraint |

@@ -5,5 +5,9 @@ export const bulkActionSchema = z.object({
 });
 
 export const bulkRejectSchema = bulkActionSchema.extend({
-  rejectionReason: z.string().trim().min(10),
+  rejectionReason: z
+    .string()
+    .trim()
+    .min(10, "Rejection reason must be at least 10 characters")
+    .max(500, "Rejection reason must be at most 500 characters"),
 });

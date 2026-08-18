@@ -1,20 +1,13 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { Flag, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 
 export const dynamic = "force-dynamic";
 
 const flagLabels: Record<string, string> = {
   ALREADY_FIXED: "Already fixed",
   WRONG_LOCATION: "Wrong location",
-};
-
-const statusStyles: Record<string, string> = {
-  PENDING: "border-status-pending/30 bg-status-pending/10 text-status-pending",
-  APPROVED: "border-status-approved/30 bg-status-approved/10 text-status-approved",
-  REJECTED: "border-status-rejected/30 bg-status-rejected/10 text-status-rejected",
-  RESOLVED: "border-status-resolved/30 bg-status-resolved/10 text-status-resolved",
 };
 
 export default async function AdminFlagsPage() {
@@ -45,11 +38,13 @@ export default async function AdminFlagsPage() {
 
   const reportMap = new Map(reports?.map((r) => [r.id, r]) ?? []);
   const rows = reportIds
-    .map((id) => ({
-      report: reportMap.get(id),
-      ...flagsByReport.get(id)!,
-    }))
-    .filter((r) => r.report)
+    .map((id) => {
+      const report = reportMap.get(id);
+      const entry = flagsByReport.get(id);
+      if (!report || !entry) return null;
+      return { report, ...entry };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null)
     .sort((a, b) => (a.latest < b.latest ? 1 : -1));
 
   return (
@@ -80,24 +75,17 @@ export default async function AdminFlagsPage() {
         <div className="rounded-lg border border-border bg-card">
           <ul className="divide-y divide-border">
             {rows.map(({ report, count, types, latest }) => (
-              <li key={report!.id}>
+              <li key={report.id}>
                 <Link
-                  href={`/admin/reports/${report!.id}`}
+                  href={`/admin/reports/${report.id}`}
                   className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-medium text-foreground">
-                        {report!.title}
+                        {report.title}
                       </span>
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
-                          statusStyles[report!.status] ?? "",
-                        )}
-                      >
-                        {report!.status}
-                      </span>
+                      <ReportStatusBadge status={report.status} />
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {[...new Set(types)].map((t) => flagLabels[t] ?? t).join(", ")} ·{" "}

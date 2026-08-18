@@ -24,21 +24,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatReportDate } from "@/lib/date-utils";
+import { ReportStatusBadge } from "@/components/reports/report-status-badge";
 import { cn } from "@/lib/utils";
-
-const statusLabels: Record<string, string> = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  RESOLVED: "Resolved",
-};
-
-const statusStyles: Record<string, string> = {
-  PENDING: "bg-muted text-muted-foreground",
-  APPROVED: "bg-status-approved/10 text-status-approved",
-  REJECTED: "bg-status-rejected/10 text-status-rejected",
-  RESOLVED: "bg-status-resolved/10 text-status-resolved",
-};
 
 export function DuplicateManager({
   reportId,
@@ -200,11 +187,7 @@ export function DuplicateManager({
                       )}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium ${statusStyles[candidate.status] ?? "bg-muted text-muted-foreground"}`}
-                  >
-                    {statusLabels[candidate.status] ?? candidate.status}
-                  </span>
+                  <ReportStatusBadge status={candidate.status} />
                 </button>
               ))
             ) : (

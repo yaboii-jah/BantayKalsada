@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 const COOLDOWN_SECONDS = 60;
 
 export default function ResetPasswordPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -122,9 +124,9 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      window.location.href = "/browse";
+      router.push("/browse");
     },
-    [password],
+    [password, router],
   );
 
   if (hasToken) {

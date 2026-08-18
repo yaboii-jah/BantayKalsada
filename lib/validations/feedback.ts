@@ -25,7 +25,14 @@ export const createFeedbackSchema = z.object({
     .max(5, "Rating must be at most 5")
     .optional()
     .nullable(),
-  photo_urls: z.array(z.string().url()).max(3),
+  photo_urls: z
+    .array(
+      z
+        .string()
+        .url()
+        .regex(/^https:\/\/res\.cloudinary\.com\//, "Photos must be uploaded Cloudinary images"),
+    )
+    .max(3),
 });
 
 export const acknowledgeFeedbackSchema = z.object({

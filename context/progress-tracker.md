@@ -36,6 +36,7 @@ change.
 - Mobile submit access + offline/auth session hardening — completed (see Completed section).
 - Offline routes + OAuth session fix (Offline Experience v2.6) — complete and verified on the live deployment (see Completed section).
 - Security hardening round 2 (2026-08-15 audit) — complete; see "Security Hardening (2026-08-15 Audit)" below.
+- Security + standards audit (2026-08-18) — remediation complete (S3–S5, T1, T2, T4 + hygiene; S1/S2 recorded as reproducibility gap and baselined); see "Security + Standards Audit Remediation" below. Migrations `20260818000001`/`20260818000002` applied to the live DB and verified (2026-08-18, dashboard SQL Editor, no errors).
 
 ## Completed
 
@@ -111,6 +112,22 @@ change.
 - [x] Verification — `npx tsc --noEmit` clean, `npm run lint` clean (3 pre-existing warnings), `npm run build` passes on Next 16.3.1 (webpack, 32 routes, serwist SW bundled), `npm audit` = 0 vulns.
 - [x] **Migration applied to remote** — `20260815000001_harden_rls.sql` run in the Supabase SQL Editor on `gvhyajfarhdbmgkloeit`, no errors; verification query confirmed the hardened `WITH CHECK` policies (reports `status='PENDING'`, comments/flags `EXISTS` public-report guards), `profiles` column grants (`can_update` true only for `phone`/`sms_notifications`/`full_name`), and `municipality_boundaries.relrowsecurity = t`.
 - [x] **Dashboard verifications complete** — `notifications` `"Citizens can read own notifications"` + `"Citizens can update own notifications"` policies confirmed present in the live DB (mark-as-read path intact); `profiles` column exposure closed by the migration's grants; Cloudinary upload preset `bantay-kalsada` confirmed to restrict `resource_type` to images with size/format limits.
+
+### Security + Standards Audit Remediation (2026-08-18)
+
+Full standards + security audit (feature spec `32-security-audit.md`). Findings re-verified against the live DB and codebase; false positives corrected before fixing. Verified via `npx tsc --noEmit` (clean), `npm run lint` (clean), `npm run build` (passes, 32 routes).
+
+- [x] **S1/S2 — profiles/notifications RLS: NOT live bugs, reproducibility gap.** Live DB confirmed to have RLS enabled with the documented owner policies (user-verified via dashboard + prior verification log above). Finding recorded as: base schema + those policies exist in **no migration**. Fixed by baseline migration `20260818000002_baseline_profiles_notifications_rls.sql` (idempotent — `CREATE TABLE IF NOT EXISTS`, `DO`-block enum creation for `user_role`/`report_category`/`report_status`/`notification_type`, `CREATE OR REPLACE FUNCTION` + `DROP TRIGGER IF EXISTS` for `handle_new_user`/`set_updated_at`, `DROP POLICY IF EXISTS` + recreate for the 5 owner policies). Deliberate exclusions: `report_within_taytay_check` (references `location` from `20250713000002`) and all columns added by later migrations are NOT recreated, so incremental migrations still replay cleanly.
+- [x] **S3 — flag rate-limit bypass (real)** — `flagReport` counted live `report_flags` rows, so flag→unflag→re-flag evaded the 30/24h cap. New table `report_flag_actions` (migration `20260818000001_create_report_flag_actions.sql`: `user_id`, `report_id`, `action` `FLAGGED`/`UNFLAGGED`, `created_at`, index `(user_id, created_at DESC)`, RLS on/no policies). `flagReport` in `app/actions.ts` now counts **actions** via the service-role client; action rows written best-effort in try/catch (logging never blocks the user's flag toggle).
+- [x] **S4 — bulk reject unbounded reason (real)** — `bulkRejectSchema.rejectionReason` in `lib/validations/bulk.ts` gained `.max(500)` (mirrors `rejectReportSchema`).
+- [x] **S5 — feedback photo URL validation (real)** — `createFeedbackSchema.photo_urls` in `lib/validations/feedback.ts` now restricts items to `https://res.cloudinary.com/` via regex (matches `createReportSchema`).
+- [x] **T1 — validation ordering (real)** — `submitReport`, `submitFeedback`, `addComment` in `app/actions.ts` now Zod-parse before any DB query / RPC call.
+- [x] **T2 — comment actions used inline validation (real)** — new `lib/validations/comment.ts` (`addCommentSchema`, `editCommentSchema`, `deleteCommentSchema`); `addComment`/`editComment`/`deleteComment` now use them; unused `z` import removed from `app/actions.ts`.
+- [x] **T4 — admin flags/duplicate UI type-safety** — `app/admin/flags/page.tsx`: removed inline `statusStyles`, uses shared `ReportStatusBadge`; rows filtered type-safely (non-null assertions removed). `components/admin/duplicate-manager.tsx`: replaced `statusLabels`/`statusStyles` with `ReportStatusBadge`; `DuplicateCandidate.status` retyped to `Database["public"]["Enums"]["report_status"]`.
+- [x] **Hygiene** — `app/(auth)/reset-password/page.tsx`: `window.location.href = "/browse"` → `router.push("/browse")` (removes the only lint warning); `public/sw.js` (Serwist build artifact) added to `.gitignore`; `context/architecture.md` `/admin` access-control claim corrected (role gate is `app/admin/layout.tsx` + `verifyAdmin()` in every action — the proxy only checks authentication, it never reads the profile).
+- [x] **Docs** — `data-model.md`: `report_flag_actions` table section + baseline-provenance note on the enum/tables intro; `app-codebase-context.md` F2 flag-spam note updated to the actions-counting design; `architecture.md` fixed; this tracker; spec `32` updated.
+- [x] **Migrations applied to live DB** — `20260818000001` + `20260818000002` run in the dashboard SQL Editor on `gvhyajfarhdbmgkloeit` (2026-08-18), no errors. Verified: `report_flag_actions` table/RLS/index present, `count(*) = 0`; baseline enums/triggers/owner policies confirmed present exactly once. `types/database.types.ts` was hand-edited for `report_flag_actions` — re-run `supabase gen types` when the CLI is installed to confirm parity (optional).
+- [ ] **Deferred (flagged, not auto-fixed)** — T3 `as unknown as` casts (behavioral risk; needs per-site typed validation), T5 oversized modules (`app/admin/actions.ts` 1140 lines, `app/actions.ts` 868), T6 hardcoded hex/token drift (`globals.css` vs `ui-context.md`).
 
 ### Security Hardening (Audit Fixes)
 

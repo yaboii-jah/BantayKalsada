@@ -298,6 +298,30 @@ export type Database = {
           },
         ]
       }
+      report_flag_actions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          report_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          report_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          report_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_flags: {
         Row: {
           created_at: string

@@ -1,10 +1,14 @@
 "use server";
 
-import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { createReportSchema, flagReportSchema, type CreateReportInput } from "@/lib/validations/report";
 import { createFeedbackSchema, type CreateFeedbackInput } from "@/lib/validations/feedback";
+import {
+  addCommentSchema,
+  editCommentSchema,
+  deleteCommentSchema,
+} from "@/lib/validations/comment";
 import {
   updateProfileSettingsSchema,
   type UpdateProfileSettingsInput,
@@ -197,6 +201,14 @@ export async function submitReport(
       return { success: false, error: "Please verify your email before submitting a report" };
     }
 
+    const parsed = createReportSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count, error: countError } = await supabase
       .from("reports")
@@ -231,22 +243,14 @@ export async function submitReport(
     }
 
     const { data: withinBoundary } = await supabase.rpc("is_within_boundary", {
-      lat: formData.latitude,
-      lng: formData.longitude,
+      lat: parsed.data.latitude,
+      lng: parsed.data.longitude,
       municipality_name: "Taytay",
     });
     if (!withinBoundary) {
       return {
         success: false,
         error: "Reports are accepted for Taytay, Rizal only. Please pin a location within Taytay.",
-      };
-    }
-
-    const parsed = createReportSchema.safeParse(formData);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: parsed.error.issues.map((e) => e.message).join(", "),
       };
     }
 
@@ -401,6 +405,14 @@ export async function submitFeedback(
       return { success: false, error: "You must be signed in to submit feedback" };
     }
 
+    const parsed = createFeedbackSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count, error: countError } = await supabase
       .from("feedback")
@@ -416,14 +428,6 @@ export async function submitFeedback(
       return {
         success: false,
         error: "You have reached the maximum of 3 feedback submissions in 24 hours. Please try again tomorrow.",
-      };
-    }
-
-    const parsed = createFeedbackSchema.safeParse(formData);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: parsed.error.issues.map((e) => e.message).join(", "),
       };
     }
 
@@ -463,10 +467,16 @@ export async function addComment(
       return { success: false, error: "You must be signed in to comment" };
     }
 
-    const body = formData.body.trim();
-    if (!body || body.length > 2000) {
-      return { success: false, error: "Comment must be between 1 and 2000 characters" };
+    const parsed = addCommentSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
     }
+
+    const body = parsed.data.body;
+    const parentId = parsed.data.parent_id ?? null;
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count, error: countError } = await supabase
@@ -489,23 +499,19 @@ export async function addComment(
     const { data: report } = await supabase
       .from("reports")
       .select("status, submitted_by_id, title")
-      .eq("id", formData.report_id)
+      .eq("id", parsed.data.report_id)
       .single();
 
     if (!report || !["APPROVED", "RESOLVED"].includes(report.status)) {
       return { success: false, error: "Cannot comment on this report" };
     }
 
-    const parentId = formData.parent_id ?? null;
     if (parentId) {
-      if (!z.string().uuid().safeParse(parentId).success) {
-        return { success: false, error: "Invalid parent comment" };
-      }
       const { data: parent } = await supabase
         .from("report_comments")
         .select("id")
         .eq("id", parentId)
-        .eq("report_id", formData.report_id)
+        .eq("report_id", parsed.data.report_id)
         .eq("status", "ACTIVE")
         .maybeSingle();
       if (!parent) {
@@ -522,7 +528,7 @@ export async function addComment(
     const { data: comment, error: insertError } = await supabase
       .from("report_comments")
       .insert({
-        report_id: formData.report_id,
+        report_id: parsed.data.report_id,
         user_id: user.id,
         parent_id: parentId,
         body,
@@ -540,7 +546,7 @@ export async function addComment(
       const message = `${profile?.full_name ?? "Someone"} commented on the report "${report.title}".`;
       await adminClient.from("notifications").insert({
         user_id: report.submitted_by_id,
-        report_id: formData.report_id,
+        report_id: parsed.data.report_id,
         type: "COMMENT_ADDED",
         message,
       });
@@ -548,7 +554,7 @@ export async function addComment(
         report.submitted_by_id,
         "New Comment",
         message,
-        `/reports/${formData.report_id}`,
+        `/reports/${parsed.data.report_id}`,
       ).catch((err) => console.error("Push failed for comment:", err));
     }
 
@@ -569,15 +575,20 @@ export async function editComment(
       return { success: false, error: "You must be signed in to edit a comment" };
     }
 
-    const body = formData.body.trim();
-    if (!body || body.length > 2000) {
-      return { success: false, error: "Comment must be between 1 and 2000 characters" };
+    const parsed = editCommentSchema.safeParse(formData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((e) => e.message).join(", "),
+      };
     }
+
+    const { comment_id, body } = parsed.data;
 
     const { error: updateError } = await supabase
       .from("report_comments")
       .update({ body, updated_at: new Date().toISOString() })
-      .eq("id", formData.comment_id)
+      .eq("id", comment_id)
       .eq("user_id", user.id);
 
     if (updateError) {
@@ -594,6 +605,11 @@ export async function deleteComment(
   commentId: string,
 ): Promise<ActionResponse> {
   try {
+    const parsed = deleteCommentSchema.safeParse({ comment_id: commentId });
+    if (!parsed.success) {
+      return { success: false, error: "Invalid comment" };
+    }
+
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -603,7 +619,7 @@ export async function deleteComment(
     const { error: deleteError } = await supabase
       .from("report_comments")
       .delete()
-      .eq("id", commentId)
+      .eq("id", parsed.data.comment_id)
       .eq("user_id", user.id);
 
     if (deleteError) {
@@ -774,9 +790,10 @@ export async function flagReport(
     }
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count, error: countError } = await supabase
-      .from("report_flags")
-      .select("*", { count: "exact", head: true })
+    const adminClient = createAdminClient();
+    const { count, error: countError } = await adminClient
+      .from("report_flag_actions")
+      .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .gte("created_at", twentyFourHoursAgo);
 
@@ -825,6 +842,13 @@ export async function flagReport(
       if (deleteError) {
         return { success: false, error: "Failed to remove flag" };
       }
+      try {
+        await adminClient
+          .from("report_flag_actions")
+          .insert({ user_id: user.id, report_id: reportId, action: "UNFLAGGED" });
+      } catch (err) {
+        console.error("flag action log failed:", err);
+      }
       return { success: true, active: false };
     }
 
@@ -840,7 +864,14 @@ export async function flagReport(
       return { success: false, error: "Failed to flag report. Please try again." };
     }
 
-    const adminClient = createAdminClient();
+    try {
+      await adminClient
+        .from("report_flag_actions")
+        .insert({ user_id: user.id, report_id: reportId, action: "FLAGGED" });
+    } catch (err) {
+      console.error("flag action log failed:", err);
+    }
+
     const { data: admins } = await adminClient
       .from("profiles")
       .select("id")

@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# generated service worker (Serwist build artifact)
+/public/sw.js
+
 # production
 /build
 

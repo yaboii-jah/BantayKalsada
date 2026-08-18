@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { sanitizeSearchTerm } from "@/lib/api-reports";
+import type { Database } from "@/types/database.types";
 import {
   approveReportSchema,
   rejectReportSchema,
@@ -395,7 +396,7 @@ export async function editReport(
 export interface DuplicateCandidate {
   id: string;
   title: string;
-  status: string;
+  status: Database["public"]["Enums"]["report_status"];
   submitted_at: string;
   distance_m?: number | null;
 }

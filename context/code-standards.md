@@ -20,7 +20,7 @@
 - Zod schemas are the single source of truth for input shapes. Derive TypeScript types from Zod schemas using `z.infer<typeof schema>` — do not maintain a separate interface that duplicates a schema.
 - Avoid non-null assertions (`!`). If a value can be null or undefined, handle both cases explicitly.
 - Use `satisfies` over `as` where possible when annotating object literals — it catches excess property errors while preserving the inferred type.
-- Database types are generated via the Supabase CLI (`supabase gen types typescript --local > types/database.types.ts`). Always use these generated types when reading from or writing to Supabase tables — do not manually define types that duplicate the database schema.
+- Database types are generated via the Supabase CLI (`supabase gen types typescript --local > types/database.types.ts`). Always use these generated types when reading from or writing to Supabase tables — do not manually define types that duplicate the database schema. **One-off exception (2026-08-18):** `report_flag_actions` was hand-added to `types/database.types.ts` because the Supabase CLI was not installed locally; the migration `20260818000001` is now applied to the live DB, so a `supabase gen types` regeneration is pending to reconcile parity.
 
 ---
 

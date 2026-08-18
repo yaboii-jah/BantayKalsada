@@ -121,7 +121,7 @@ Invalid tile:  /api/traffic/tiles/30/1/1 → 400 Invalid tile coordinates
 | Finding 6 — tile bounds validation | ✅ |
 | Finding 7 — rejection reason `.max(500)` | ✅ |
 | Finding 8 — Cloudinary-only photo URLs | ✅ |
-| Finding 9 — RLS spot-check | ⏸ Not code — recommend manual verification in Supabase |
+| Finding 9 — RLS spot-check | ✅ **Resolved 2026-08-18** — live DB confirmed to have the policies; baseline migration `20260818000002` now makes them reproducible from migrations. |
 | `npx tsc --noEmit` clean | ✅ |
 | `npm run lint` clean | ✅ |
 | Docs (this spec + 5 context files + progress tracker) | ✅ |
@@ -149,3 +149,43 @@ Invalid tile:  /api/traffic/tiles/30/1/1 → 400 Invalid tile coordinates
 - **Zod-only caps (findings 7, 8).** The 500-char rejection reason and Cloudinary-only
   photo host are enforced at the application layer only; the DB columns remain
   unconstrained (a DB constraint would require a migration + enum/column changes).
+
+## 2026-08-18 Remediation (Standards + Security follow-up)
+
+Full standards + security re-audit. Findings were re-verified against the live DB and code
+before fixing; two reported "findings" were corrected to reproducibility gaps.
+
+### Re-verified findings
+
+| # | Verdict | Detail |
+|---|---------|--------|
+| S1/S2 | **Not live bugs — reproducibility gap** | `profiles` + `notifications` DO have RLS enabled with the documented owner policies in the live DB (confirmed via dashboard; also logged at `progress-tracker.md` "Dashboard verifications complete"). Gap: the base schema + policies exist in **no migration**. |
+| S3 | Real | `flagReport` counted live `report_flags` rows → flag→unflag→re-flag loop bypassed the 30/24h cap (finding 2's limit). |
+| S4 | Real | `bulkRejectSchema.rejectionReason` (bulk reject) unbounded — finding 7's cap only covered single reject. |
+| S5 | Real | `createFeedbackSchema.photo_urls` accepted arbitrary hosts — finding 8's regex only covered report submission. |
+| T1 | Real | `submitReport`/`submitFeedback`/`addComment` touched the DB before Zod parsing. |
+| T2 | Real | Comment actions validated inline; no shared schema. |
+| T4 | Real | Inline status-color maps in admin flags/duplicate UI duplicated `ReportStatusBadge` tokens. |
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `supabase/migrations/20260818000001_create_report_flag_actions.sql` (new) | `report_flag_actions(user_id, report_id, action FLAGGED/UNFLAGGED, created_at)`, index `(user_id, created_at DESC)`, RLS on/no policies — service-role only. |
+| `supabase/migrations/20260818000002_baseline_profiles_notifications_rls.sql` (new) | Idempotent baseline: enums (`user_role`, `report_category`, `report_status`, `notification_type`), original `reports`/`profiles`/`notifications` definitions, `handle_new_user` + `set_updated_at` functions/triggers, the 5 owner RLS policies. Excludes `report_within_taytay_check` (references `location` from `20250713000002`) and all later-added columns. **Finding 9 closed.** |
+| `app/actions.ts` | `flagReport` counts `report_flag_actions` actions (service-role) instead of live flag rows; action rows written best-effort. `submitReport`/`submitFeedback`/`addComment` parse Zod before DB queries. Comment actions use shared schemas. |
+| `lib/validations/bulk.ts` | `bulkRejectSchema.rejectionReason` `.max(500)` (S4). |
+| `lib/validations/feedback.ts` | `createFeedbackSchema.photo_urls` restricted to `https://res.cloudinary.com/` (S5). |
+| `lib/validations/comment.ts` (new) | `addCommentSchema`, `editCommentSchema`, `deleteCommentSchema` (T2). |
+| `app/admin/flags/page.tsx`, `components/admin/duplicate-manager.tsx` | Shared `ReportStatusBadge`; `DuplicateCandidate.status` retyped to the `report_status` enum (T4). |
+| `app/(auth)/reset-password/page.tsx` | `window.location.href` → `router.push` (removed the only lint warning). |
+| `.gitignore` | `public/sw.js` (Serwist build artifact) ignored. |
+| `context/architecture.md` | `/admin` access-control claim corrected: role gate lives in `app/admin/layout.tsx` + `verifyAdmin()` in every action; the proxy only checks authentication. |
+| `context/data-model.md`, `context/app-codebase-context.md` | `report_flag_actions` table + baseline provenance note; F2 flag-spam note updated. |
+| `types/database.types.ts` | `report_flag_actions` added by hand (re-run `supabase gen types` when CLI available). |
+
+### Status
+
+- [x] Code + docs complete; `npx tsc --noEmit`, `npm run lint`, and `npm run build` all clean.
+- [x] **Applied + verified** — both new migrations run in the dashboard SQL Editor on `gvhyajfarhdbmgkloeit` (2026-08-18), no errors; `report_flag_actions` present with RLS on and `count(*) = 0`.
+- [ ] Deferred: T3 `as unknown as` casts, T5 oversized modules (`app/admin/actions.ts` 1140 lines, `app/actions.ts` 868), T6 hardcoded hex/token drift (`globals.css` vs `ui-context.md`).
