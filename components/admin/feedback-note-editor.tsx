@@ -23,10 +23,11 @@ export function FeedbackNoteEditor({
   const [pending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const [prevNote, setPrevNote] = useState(initialNote ?? "");
-  if (initialNote !== prevNote) {
-    setPrevNote(initialNote ?? "");
-    setNote(initialNote ?? "");
+  const normalizedNote = initialNote ?? "";
+  const [prevNote, setPrevNote] = useState(normalizedNote);
+  if (normalizedNote !== prevNote) {
+    setPrevNote(normalizedNote);
+    setNote(normalizedNote);
   }
 
   const hasNote = initialNote !== null && initialNote.length > 0;

@@ -2,7 +2,7 @@
   - [x] sms notification doesn't work when admin rejecting a report — fixed (2026-08-19): rejection reason was untruncated in the SMS (gateway rejected long messages); reason now sanitized/truncated to ~120 chars. SMS failures/skips are surfaced to the admin as toast warnings.
   - [x] sms notification doesn't work on bulk approved reports — fixed (2026-08-19): bulk actions were sending email+SMS serially per report and timing out on Vercel; sends are now parallelized (`Promise.allSettled`) and SMS outcomes are surfaced as warnings.
   - [x] in admin side, transparent bottom bulk selection panel covers the pagination numbers — fixed (2026-08-19): bar made fully opaque and the 4 queue pages got bottom clearance (`pb-20`).
-  - [x] in admin/feedback/[id] route, it display a error : Minified React error #301 — investigated (2026-08-19): no hook-order bug found in code (lint `rules-of-hooks` passes, all route components hook-safe, routes compile + serve clean in dev). Most likely a stale service-worker/chunk race. **Action needed:** DevTools → Application → Service Workers → Unregister + "Clear storage", then hard-reload. If it reappears, reproduce logged-in under `npm run dev` for the full error.
+  - [x] in admin/feedback/[id] route, it display a error : Minified React error #301 — fixed (2026-08-19): root cause was a render-phase `setState` loop in `components/admin/feedback-note-editor.tsx` (introduced by commit `b611670`). The prop-sync guard compared the raw `initialNote` (null when no admin note) against the always-string `prevNote`, so with `admin_note = null` the guard was true on every render → "Too many re-renders". Guard now compares normalized values and terminates; verified with tsc/lint/build.
   - 
 
 ## Suggestions
