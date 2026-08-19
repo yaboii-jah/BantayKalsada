@@ -27,9 +27,13 @@ type ReportStatus = Database["public"]["Enums"]["report_status"];
 interface ActionButtonsProps {
   reportId: string;
   status: ReportStatus;
-  onApprove: (reportId: string) => Promise<{ success: boolean; error?: string }>;
-  onReject: (reportId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
-  onResolve: (reportId: string, resolutionNotes?: string, resolvedImageUrls?: string[]) => Promise<{ success: boolean; error?: string }>;
+  onApprove: (reportId: string) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
+  onReject: (reportId: string, reason: string) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
+  onResolve: (reportId: string, resolutionNotes?: string, resolvedImageUrls?: string[]) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
+}
+
+function showWarnings(warnings?: string[]) {
+  warnings?.forEach((w) => toast.warning(w));
 }
 
 export function ActionButtons({
@@ -48,6 +52,7 @@ export function ActionButtons({
       const result = await onApprove(reportId);
       if (result.success) {
         toast.success("Report approved");
+        showWarnings(result.warnings);
         router.refresh();
       } else {
         toast.error(result.error ?? "Failed to approve report");
@@ -100,7 +105,7 @@ function ResolveButton({
   disabled,
 }: {
   reportId: string;
-  onResolve: (reportId: string, resolutionNotes?: string, resolvedImageUrls?: string[]) => Promise<{ success: boolean; error?: string }>;
+  onResolve: (reportId: string, resolutionNotes?: string, resolvedImageUrls?: string[]) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
   disabled: boolean;
 }) {
   const router = useRouter();
@@ -119,6 +124,7 @@ function ResolveButton({
     setIsSubmitting(false);
     if (result.success) {
       toast.success("Report marked as resolved");
+      showWarnings(result.warnings);
       setOpen(false);
       router.refresh();
     } else {
@@ -202,7 +208,7 @@ function RejectButton({
   disabled,
 }: {
   reportId: string;
-  onReject: (reportId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
+  onReject: (reportId: string, reason: string) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
   disabled: boolean;
 }) {
   const router = useRouter();
@@ -217,6 +223,7 @@ function RejectButton({
     setIsSubmitting(false);
     if (result.success) {
       toast.success("Report rejected");
+      showWarnings(result.warnings);
       setOpen(false);
       router.refresh();
     } else {

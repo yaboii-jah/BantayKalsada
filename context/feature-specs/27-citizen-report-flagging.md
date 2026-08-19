@@ -34,6 +34,7 @@ Public report detail page (/reports/[id])
             └── per-type toggle: row exists → DELETE; else INSERT + on INSERT:
                   query profiles WHERE role = 'ADMIN'
                   → createNotification (REPORT_FLAGGED) for each admin
+                  → createNotification (REPORT_FLAGGED_OWNER) for report.submitted_by_id
                     ↓
         report_flags table
             ├── UNIQUE (report_id, user_id, flag_type)  ← one row per type per citizen
@@ -61,7 +62,7 @@ type (both types may be active at once). Changed from `UNIQUE (report_id, user_i
 
 Index: `idx_report_flags_report_id ON report_flags(report_id)` for admin lookups.
 
-Also adds `'REPORT_FLAGGED'` to the `notification_type` enum (admin alerting).
+Also adds `'REPORT_FLAGGED'` to the `notification_type` enum (admin alerting). `'REPORT_FLAGGED_OWNER'` was added later by migration `20260819000001_add_notification_flagged_owner_type.sql` to notify the report's owner that their report was flagged.
 
 ### RLS
 
@@ -145,6 +146,7 @@ rows; unflagging one leaves the other intact.
 - **User deleted** — flag cascade-deleted via FK
 - **Report deleted** — flags cascade-deleted via FK
 - **Multiple admins** — every admin gets an in-app notification on each new flag INSERT; notification is in-app only (no email/SMS/push per decision)
+- **Report owner** — the submitter also gets an in-app `REPORT_FLAGGED_OWNER` notification (added 2026-08-19, migration `20260819000001`), routing to their report via the notification bell; in-app only
 - **No admins exist** — notify loop no-ops safely
 - **Double-click** — the pressed button is disabled while pending; the UNIQUE constraint makes a duplicate INSERT impossible
 - **Admin reading flags** — uses service role client so RLS never hides rows; flagger name comes from a profiles join

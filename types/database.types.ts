@@ -1484,6 +1484,7 @@ export type Database = {
         | "FEEDBACK_NOTE_ADDED"
         | "COMMENT_ADDED"
         | "REPORT_FLAGGED"
+        | "REPORT_FLAGGED_OWNER"
         | "OFFLINE_SUBMIT_FAILED"
         | "REPORT_EDITED"
       report_activity_action:
@@ -1654,6 +1655,7 @@ export const Constants = {
         "FEEDBACK_NOTE_ADDED",
         "COMMENT_ADDED",
         "REPORT_FLAGGED",
+        "REPORT_FLAGGED_OWNER",
         "OFFLINE_SUBMIT_FAILED",
         "REPORT_EDITED",
       ],

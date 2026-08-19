@@ -16,11 +16,15 @@ import { Loader2 } from "lucide-react";
 interface BulkActionBarProps {
   selectedCount: number;
   onDeselectAll: () => void;
-  onApprove: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
-  onReject: (ids: string[], reason: string) => Promise<{ success: boolean; error?: string }>;
-  onResolve: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
+  onApprove: (ids: string[]) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
+  onReject: (ids: string[], reason: string) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
+  onResolve: (ids: string[]) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
   selectedIds: string[];
   actions: string[];
+}
+
+function showWarnings(warnings?: string[]) {
+  warnings?.forEach((w) => toast.warning(w));
 }
 
 export function BulkActionBar({
@@ -42,6 +46,7 @@ export function BulkActionBar({
       const result = await onApprove(selectedIds);
       if (result.success) {
         toast.success(`Approved ${selectedIds.length} report${selectedIds.length > 1 ? "s" : ""}`);
+        showWarnings(result.warnings);
         router.refresh();
         onDeselectAll();
       } else {
@@ -55,6 +60,7 @@ export function BulkActionBar({
       const result = await onResolve(selectedIds);
       if (result.success) {
         toast.success(`Resolved ${selectedIds.length} report${selectedIds.length > 1 ? "s" : ""}`);
+        showWarnings(result.warnings);
         router.refresh();
         onDeselectAll();
       } else {
@@ -68,6 +74,7 @@ export function BulkActionBar({
       const result = await onReject(selectedIds, rejectReason.trim());
       if (result.success) {
         toast.success(`Rejected ${selectedIds.length} report${selectedIds.length > 1 ? "s" : ""}`);
+        showWarnings(result.warnings);
         router.refresh();
         setRejectOpen(false);
         setRejectReason("");
@@ -80,7 +87,7 @@ export function BulkActionBar({
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 px-6 py-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background px-6 py-3 shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <span className="text-sm text-muted-foreground">
             <strong className="text-foreground">{selectedCount}</strong> selected

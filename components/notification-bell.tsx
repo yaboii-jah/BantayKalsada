@@ -45,6 +45,7 @@ const NOTIFICATION_ICONS: Record<
   FEEDBACK_CLOSED: Check,
   FEEDBACK_NOTE_ADDED: MessageSquare,
   REPORT_FLAGGED: Flag,
+  REPORT_FLAGGED_OWNER: Flag,
   OFFLINE_SUBMIT_FAILED: AlertTriangle,
   REPORT_EDITED: PenLine,
 };
@@ -55,6 +56,9 @@ function getNotificationHref(notification: Notification): string {
   }
   if (notification.type === "REPORT_FLAGGED" && notification.report_id) {
     return `/admin/reports/${notification.report_id}`;
+  }
+  if (notification.type === "REPORT_FLAGGED_OWNER" && notification.report_id) {
+    return `/my-reports/${notification.report_id}`;
   }
   if (notification.type.startsWith("FEEDBACK_") && notification.feedback_id) {
     return `/my-feedback/${notification.feedback_id}`;
@@ -75,6 +79,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const fetchedRef = useRef(false);
 
@@ -156,14 +162,23 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const handleItemClick = useCallback(
     (notification: Notification) => {
       startTransition(async () => {
-        if (!notification.is_read) {
-          await markNotificationAsRead(notification.id);
-          setUnreadCount((c) => Math.max(0, c - 1));
-          setNotifications((prev) =>
-            prev?.map((n) =>
-              n.id === notification.id ? { ...n, is_read: true } : n,
-            ) ?? null,
-          );
+        setPendingIds((prev) => new Set(prev).add(notification.id));
+        try {
+          if (!notification.is_read) {
+            await markNotificationAsRead(notification.id);
+            setUnreadCount((c) => Math.max(0, c - 1));
+            setNotifications((prev) =>
+              prev?.map((n) =>
+                n.id === notification.id ? { ...n, is_read: true } : n,
+              ) ?? null,
+            );
+          }
+        } finally {
+          setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(notification.id);
+            return next;
+          });
         }
         setOpen(false);
         router.push(getNotificationHref(notification));
@@ -187,12 +202,21 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     (notification: Notification, e: React.MouseEvent) => {
       e.stopPropagation();
       startTransition(async () => {
-        await deleteNotification(notification.id);
-        setNotifications((prev) =>
-          prev?.filter((n) => n.id !== notification.id) ?? null,
-        );
-        if (!notification.is_read) {
-          setUnreadCount((c) => Math.max(0, c - 1));
+        setPendingIds((prev) => new Set(prev).add(notification.id));
+        try {
+          await deleteNotification(notification.id);
+          setNotifications((prev) =>
+            prev?.filter((n) => n.id !== notification.id) ?? null,
+          );
+          if (!notification.is_read) {
+            setUnreadCount((c) => Math.max(0, c - 1));
+          }
+        } finally {
+          setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(notification.id);
+            return next;
+          });
         }
       });
     },
@@ -200,11 +224,17 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   );
 
   const handleClearAll = useCallback(async () => {
-    await clearAllNotifications();
-    setNotifications(null);
-    setUnreadCount(0);
-    setOpen(false);
-  }, []);
+    if (clearing) return;
+    setClearing(true);
+    try {
+      await clearAllNotifications();
+      setNotifications(null);
+      setUnreadCount(0);
+      setOpen(false);
+    } finally {
+      setClearing(false);
+    }
+  }, [clearing]);
 
   const hasUnread = unreadCount > 0;
   const displayCount = unreadCount > 99 ? "99+" : String(unreadCount);
@@ -252,9 +282,10 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                 <button
                   type="button"
                   onClick={handleClearAll}
-                  className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  disabled={clearing}
+                  className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                 >
-                  Clear all
+                  {clearing ? "Clearing..." : "Clear all"}
                 </button>
               </div>
             )}
@@ -281,28 +312,32 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                     <button
                       type="button"
                       onClick={() => handleItemClick(notification)}
-                      disabled={isPending}
+                      disabled={isPending || pendingIds.has(notification.id)}
                       className="flex flex-1 items-start gap-3 text-left disabled:opacity-50"
                     >
-                      <Icon
-                        className={`mt-0.5 size-4 shrink-0 ${
-                          notification.type === "REPORT_APPROVED"
-                            ? "text-status-approved"
-                            : notification.type === "REPORT_REJECTED"
-                              ? "text-status-rejected"
-                              : notification.type === "REPORT_FLAGGED"
-                                ? "text-yellow-500"
-                              : notification.type === "FEEDBACK_ACKNOWLEDGED"
-                                ? "text-status-approved"
-                            : notification.type === "FEEDBACK_CLOSED"
-                              ? "text-status-resolved"
-                              : notification.type === "FEEDBACK_NOTE_ADDED"
-                                ? "text-status-approved"
-                              : notification.type === "OFFLINE_SUBMIT_FAILED"
+                      {pendingIds.has(notification.id) ? (
+                        <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground" />
+                      ) : (
+                        <Icon
+                          className={`mt-0.5 size-4 shrink-0 ${
+                            notification.type === "REPORT_APPROVED"
+                              ? "text-status-approved"
+                              : notification.type === "REPORT_REJECTED"
                                 ? "text-status-rejected"
-                                : "text-primary"
-                        }`}
-                      />
+                                : notification.type === "REPORT_FLAGGED" || notification.type === "REPORT_FLAGGED_OWNER"
+                                  ? "text-yellow-500"
+                                : notification.type === "FEEDBACK_ACKNOWLEDGED"
+                                  ? "text-status-approved"
+                                : notification.type === "FEEDBACK_CLOSED"
+                                  ? "text-status-resolved"
+                                  : notification.type === "FEEDBACK_NOTE_ADDED"
+                                    ? "text-status-approved"
+                                  : notification.type === "OFFLINE_SUBMIT_FAILED"
+                                    ? "text-status-rejected"
+                                    : "text-primary"
+                          }`}
+                        />
+                      )}
                       <div className="flex-1 space-y-0.5">
                         <p
                           className={`text-xs leading-snug ${
@@ -319,10 +354,15 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                     <button
                       type="button"
                       onClick={(e) => handleDeleteNotification(notification, e)}
-                      className="absolute right-2 top-2 flex size-5 items-center justify-center rounded text-muted-foreground/40 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+                      disabled={pendingIds.has(notification.id)}
+                      className="absolute right-2 top-2 flex size-5 items-center justify-center rounded text-muted-foreground/40 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-0"
                       aria-label="Delete notification"
                     >
-                      <X className="size-3.5" />
+                      {pendingIds.has(notification.id) ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <X className="size-3.5" />
+                      )}
                     </button>
                   </div>
                 );

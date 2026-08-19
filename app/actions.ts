@@ -891,6 +891,13 @@ export async function flagReport(
       }
     }
 
+    await createNotification({
+      userId: report.submitted_by_id,
+      reportId,
+      type: "REPORT_FLAGGED_OWNER",
+      message: `Your report "${report.title}" was flagged as ${label} and is under review.`,
+    });
+
     return { success: true, active: true };
   } catch (err) {
     console.error("flagReport error:", err);

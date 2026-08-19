@@ -4,9 +4,10 @@ export type ReportNotificationType = "REPORT_APPROVED" | "REPORT_REJECTED" | "RE
 export type CommentNotificationType = "COMMENT_ADDED";
 export type FeedbackNotificationType = "FEEDBACK_ACKNOWLEDGED" | "FEEDBACK_CLOSED" | "FEEDBACK_NOTE_ADDED";
 export type FlagNotificationType = "REPORT_FLAGGED";
+export type FlagOwnerNotificationType = "REPORT_FLAGGED_OWNER";
 export type OfflineNotificationType = "OFFLINE_SUBMIT_FAILED";
 export type EditedNotificationType = "REPORT_EDITED";
-export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType | FlagNotificationType | OfflineNotificationType | EditedNotificationType;
+export type NotificationType = CommentNotificationType | ReportNotificationType | FeedbackNotificationType | FlagNotificationType | FlagOwnerNotificationType | OfflineNotificationType | EditedNotificationType;
 
 export function getMessageForType(type: NotificationType, title: string): string {
   switch (type) {
@@ -28,6 +29,8 @@ export function getMessageForType(type: NotificationType, title: string): string
       return `An admin has added a note to your feedback "${title}".`;
     case "REPORT_FLAGGED":
       return `Report "${title}" was flagged by a citizen for admin review.`;
+    case "REPORT_FLAGGED_OWNER":
+      return `Your report "${title}" was flagged and is under admin review.`;
     case "OFFLINE_SUBMIT_FAILED":
       return `Couldn't submit your saved offline report "${title}" after several attempts. Open it in My Reports to retry.`;
   }
@@ -46,11 +49,18 @@ export function getSmsMessageForType(
       return `Bantay Kalsada: Your report "${truncated}" was approved and is now on the public feed.`;
     case "REPORT_REJECTED":
       return `Bantay Kalsada: Your report "${truncated}" was rejected${
-        rejectionReason ? `. Reason: ${rejectionReason}` : ""
+        rejectionReason ? `. Reason: ${sanitizeSmsReason(rejectionReason)}` : ""
       }.`;
     case "REPORT_RESOLVED":
       return `Bantay Kalsada: Your report "${truncated}" was marked resolved. Thank you!`;
   }
+}
+
+function sanitizeSmsReason(reason: string): string {
+  const collapsed = reason.replace(/\s+/g, " ").trim();
+  return collapsed.length > 120
+    ? `${collapsed.slice(0, 117)}...`
+    : collapsed;
 }
 
 export function getSubjectForType(type: NotificationType): string {
@@ -73,6 +83,8 @@ export function getSubjectForType(type: NotificationType): string {
       return "Admin Note Added to Your Feedback — Bantay Kalsada";
     case "REPORT_FLAGGED":
       return "Report Flagged for Review — Bantay Kalsada";
+    case "REPORT_FLAGGED_OWNER":
+      return "Your Report Was Flagged — Bantay Kalsada";
     case "OFFLINE_SUBMIT_FAILED":
       return "Offline Report Not Submitted — Bantay Kalsada";
   }

@@ -24,6 +24,7 @@ import {
 import {
   fetchReportWithSubmitter,
   sendReportNotifications,
+  type ReportNotificationResult,
 } from "@/lib/admin-notifications";
 import {
   fetchFeedbackWithSubmitter,
@@ -35,6 +36,7 @@ import { createNotification, getMessageForType } from "@/lib/notifications";
 export interface AdminActionResponse {
   success: boolean;
   error?: string;
+  warnings?: string[];
 }
 
 interface AdminAuth {
@@ -68,6 +70,35 @@ async function verifyAdmin(): Promise<AdminAuthResult> {
   }
 
   return { user, error: null };
+}
+
+function collectSmsWarnings(result: ReportNotificationResult): string[] {
+  const warnings: string[] = [];
+  if (result.smsSkipped) {
+    warnings.push(
+      "SMS skipped — submitter has no phone number or SMS notifications disabled.",
+    );
+  }
+  if (result.smsError) {
+    warnings.push(result.smsError);
+  }
+  return warnings;
+}
+
+async function settleNotificationPromises(
+  promises: Promise<ReportNotificationResult>[],
+): Promise<string[]> {
+  if (promises.length === 0) return [];
+  const settled = await Promise.allSettled(promises);
+  const warnings: string[] = [];
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      warnings.push(...collectSmsWarnings(result.value));
+    } else {
+      console.error("Notification send failed:", result.reason);
+    }
+  }
+  return warnings;
 }
 
 export async function approveReport(
@@ -121,9 +152,11 @@ export async function approveReport(
         reportData.submitter,
         "REPORT_APPROVED",
       );
-      if (notifResult.smsError) {
-        console.error("SMS warning:", notifResult.smsError);
+      const warnings = collectSmsWarnings(notifResult);
+      for (const warning of warnings) {
+        console.error("SMS warning:", warning);
       }
+      return { success: true, warnings: warnings.length ? warnings : undefined };
     }
 
     return { success: true };
@@ -190,9 +223,11 @@ export async function rejectReport(
         "REPORT_REJECTED",
         parsed.data.rejectionReason,
       );
-      if (notifResult.smsError) {
-        console.error("SMS warning:", notifResult.smsError);
+      const warnings = collectSmsWarnings(notifResult);
+      for (const warning of warnings) {
+        console.error("SMS warning:", warning);
       }
+      return { success: true, warnings: warnings.length ? warnings : undefined };
     }
 
     return { success: true };
@@ -265,9 +300,11 @@ export async function resolveReport(
         undefined,
         parsed.data.resolutionNotes,
       );
-      if (notifResult.smsError) {
-        console.error("SMS warning:", notifResult.smsError);
+      const warnings = collectSmsWarnings(notifResult);
+      for (const warning of warnings) {
+        console.error("SMS warning:", warning);
       }
+      return { success: true, warnings: warnings.length ? warnings : undefined };
     }
 
     return { success: true };
@@ -880,6 +917,7 @@ export async function bulkApproveReports(
     const adminClient = createAdminClient();
     let approved = 0;
     const errors: string[] = [];
+    const notifPromises: Promise<ReportNotificationResult>[] = [];
 
     for (const id of parsed.data.reportIds) {
       const reportData = await fetchReportWithSubmitter(id);
@@ -915,15 +953,14 @@ export async function bulkApproveReports(
       });
 
       if (reportData.submitter) {
-        const notifResult = await sendReportNotifications(
-          id,
-          reportData.title,
-          reportData.submitter,
-          "REPORT_APPROVED",
+        notifPromises.push(
+          sendReportNotifications(
+            id,
+            reportData.title,
+            reportData.submitter,
+            "REPORT_APPROVED",
+          ),
         );
-        if (notifResult.smsError) {
-          console.error("SMS warning for report", id, ":", notifResult.smsError);
-        }
       }
     }
 
@@ -931,7 +968,9 @@ export async function bulkApproveReports(
       return { success: false, error: errors.join("; ") || "No reports were approved" };
     }
 
-    return { success: true };
+    const warnings = await settleNotificationPromises(notifPromises);
+
+    return { success: true, warnings: warnings.length ? warnings : undefined };
   } catch {
     return { success: false, error: "An unexpected error occurred" };
   }
@@ -958,6 +997,7 @@ export async function bulkRejectReports(
     const adminClient = createAdminClient();
     let rejected = 0;
     const errors: string[] = [];
+    const notifPromises: Promise<ReportNotificationResult>[] = [];
 
     for (const id of parsed.data.reportIds) {
       const reportData = await fetchReportWithSubmitter(id);
@@ -995,16 +1035,15 @@ export async function bulkRejectReports(
       });
 
       if (reportData.submitter) {
-        const notifResult = await sendReportNotifications(
-          id,
-          reportData.title,
-          reportData.submitter,
-          "REPORT_REJECTED",
-          parsed.data.rejectionReason,
+        notifPromises.push(
+          sendReportNotifications(
+            id,
+            reportData.title,
+            reportData.submitter,
+            "REPORT_REJECTED",
+            parsed.data.rejectionReason,
+          ),
         );
-        if (notifResult.smsError) {
-          console.error("SMS warning for report", id, ":", notifResult.smsError);
-        }
       }
     }
 
@@ -1012,7 +1051,9 @@ export async function bulkRejectReports(
       return { success: false, error: errors.join("; ") || "No reports were rejected" };
     }
 
-    return { success: true };
+    const warnings = await settleNotificationPromises(notifPromises);
+
+    return { success: true, warnings: warnings.length ? warnings : undefined };
   } catch {
     return { success: false, error: "An unexpected error occurred" };
   }
@@ -1035,6 +1076,7 @@ export async function bulkResolveReports(
     const adminClient = createAdminClient();
     let resolved = 0;
     const errors: string[] = [];
+    const notifPromises: Promise<ReportNotificationResult>[] = [];
 
     for (const id of parsed.data.reportIds) {
       const reportData = await fetchReportWithSubmitter(id);
@@ -1069,15 +1111,14 @@ export async function bulkResolveReports(
       });
 
       if (reportData.submitter) {
-        const notifResult = await sendReportNotifications(
-          id,
-          reportData.title,
-          reportData.submitter,
-          "REPORT_RESOLVED",
+        notifPromises.push(
+          sendReportNotifications(
+            id,
+            reportData.title,
+            reportData.submitter,
+            "REPORT_RESOLVED",
+          ),
         );
-        if (notifResult.smsError) {
-          console.error("SMS warning for report", id, ":", notifResult.smsError);
-        }
       }
     }
 
@@ -1085,7 +1126,9 @@ export async function bulkResolveReports(
       return { success: false, error: errors.join("; ") || "No reports were resolved" };
     }
 
-    return { success: true };
+    const warnings = await settleNotificationPromises(notifPromises);
+
+    return { success: true, warnings: warnings.length ? warnings : undefined };
   } catch {
     return { success: false, error: "An unexpected error occurred" };
   }

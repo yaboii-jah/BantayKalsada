@@ -66,6 +66,7 @@ CREATE TYPE notification_type AS ENUM (
   'REPORT_REJECTED',
   'REPORT_RESOLVED',
   'REPORT_FLAGGED',
+  'REPORT_FLAGGED_OWNER',
   'FEEDBACK_ACKNOWLEDGED',
   'FEEDBACK_CLOSED',
   'FEEDBACK_NOTE_ADDED',
@@ -104,7 +105,7 @@ CREATE TYPE feedback_status AS ENUM ('OPEN', 'ACKNOWLEDGED', 'CLOSED');
 CREATE TYPE comment_status AS ENUM ('ACTIVE', 'REMOVED');
 ```
 
-> **Note:** `REPORT_EDITED` was added to `notification_type` via `ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'REPORT_EDITED'` (migration `20260809000003_add_report_edited_notification.sql`), which must run **outside a transaction** — `ALTER TYPE ... ADD VALUE` cannot execute inside one. `report_activity_action` is a new enum created by migration `20260809000001_create_report_activity_log.sql`.
+> **Note:** `REPORT_EDITED` was added to `notification_type` via `ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'REPORT_EDITED'` (migration `20260809000003_add_report_edited_notification.sql`), and `REPORT_FLAGGED_OWNER` via migration `20260819000001_add_notification_flagged_owner_type.sql` — both must run **outside a transaction** (`ALTER TYPE ... ADD VALUE` cannot execute inside one). `report_activity_action` is a new enum created by migration `20260809000001_create_report_activity_log.sql`.
 >
 > **Note:** `BROKEN_TRAFFIC_SIGN` is a valid enum value (matching the DB enum and `reportCategoryEnum` in `lib/validations/report.ts`) and can be selected on the submission and admin-edit forms. It is **deliberately excluded** from the browse filter (`filter-bar.tsx`), browse-map category labels (`browse-map.tsx`), and the `/guidelines` "what to report" list — those intentionally surface only the five primary categories (Pothole, Flooded Road, Road Accident, Road Rage, Other).
 
@@ -1191,6 +1192,7 @@ These rules are enforced at two levels: database constraints (defined above) and
 | `report_activity_log` | Append-only; every lifecycle event has an audit row | Server Action + `lib/report-activity.ts` (`logReportActivity` via service-role client) |
 | Admin edit boundary | `is_within_boundary` re-checked on edit only when lat/lng change; DB trigger guards every location write | Server Action (`editReport`) + DB trigger (`trg_reports_location_boundary`) |
 | `REPORT_EDITED` notification | In-app only — no email/SMS dispatch | Server Action (`editReport` → `createNotification`) |
+| `REPORT_FLAGGED_OWNER` notification | In-app only — sent to the report submitter when a citizen flags their report | Server Action (`flagReport` → `createNotification`); admins still receive `REPORT_FLAGGED` |
 
 ---
 

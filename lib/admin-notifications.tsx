@@ -51,6 +51,11 @@ export async function fetchReportWithSubmitter(reportId: string): Promise<Report
   return { ...report, submitter: submitter ?? undefined };
 }
 
+export interface ReportNotificationResult {
+  smsError?: string;
+  smsSkipped?: boolean;
+}
+
 export async function sendReportNotifications(
   reportId: string,
   reportTitle: string,
@@ -58,7 +63,7 @@ export async function sendReportNotifications(
   type: NotificationType,
   rejectionReason?: string,
   resolutionNotes?: string,
-): Promise<{ smsError?: string }> {
+): Promise<ReportNotificationResult> {
   const message = getMessageForType(type, reportTitle);
   const subject = getSubjectForType(type);
 
@@ -97,25 +102,27 @@ export async function sendReportNotifications(
     );
   }
 
-  if (submitter.phone && submitter.sms_notifications) {
-    const smsMessage = getSmsMessageForType(
-      type,
-      reportTitle,
-      rejectionReason,
-    );
-    const result = await sendSMS(submitter.phone, smsMessage);
-    if (!result.success) {
-      const maskedPhone = submitter.phone.replace(/.(?=.{4})/g, "*");
-      const errMsg = `SMS failed for ${maskedPhone}: ${result.error}`;
-      console.error(`Failed to send SMS for report ${reportId}:`, errMsg);
-      return { smsError: errMsg };
-    }
-  }
-
   const pushUrl = `/my-reports/${reportId}`;
   sendPushNotification(submitter.id, subject, message, pushUrl).catch((err) =>
     console.error(`Push failed for report ${reportId}:`, err),
   );
+
+  if (!submitter.phone || !submitter.sms_notifications) {
+    return { smsSkipped: true };
+  }
+
+  const smsMessage = getSmsMessageForType(
+    type,
+    reportTitle,
+    rejectionReason,
+  );
+  const result = await sendSMS(submitter.phone, smsMessage);
+  if (!result.success) {
+    const maskedPhone = submitter.phone.replace(/.(?=.{4})/g, "*");
+    const errMsg = `SMS failed for ${maskedPhone}: ${result.error}`;
+    console.error(`Failed to send SMS for report ${reportId}:`, errMsg);
+    return { smsError: errMsg };
+  }
 
   return {};
 }

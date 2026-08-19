@@ -283,12 +283,14 @@ The `notifications` table is populated by multiple Server Actions:
 | `updateFeedbackNote` | `app/admin/actions.ts` | `FEEDBACK_NOTE_ADDED` | Feedback submitter (null→value only) |
 | `addComment` | `app/actions.ts` | `COMMENT_ADDED` | Report owner (if commenter ≠ owner) |
 | `flagReport` | `app/actions.ts` | `REPORT_FLAGGED` | All admins (on each flag INSERT) |
+| `flagReport` | `app/actions.ts` | `REPORT_FLAGGED_OWNER` | Report submitter (in-app only) |
 | `createOfflineSubmitFailedNotification` | `app/actions.ts` | `OFFLINE_SUBMIT_FAILED` | Draft owner (on 3rd failed auto-attempt) |
 | `editReport` | `app/admin/actions.ts` | `REPORT_EDITED` | Report submitter (in-app only) |
 
 Link targets per type:
 - `REPORT_*` → `/my-reports/[report_id]`
 - `REPORT_EDITED` → `/my-reports/[report_id]` (same default target)
+- `REPORT_FLAGGED_OWNER` → `/my-reports/[report_id]` (submitter's own report)
 - `FEEDBACK_*` → `/my-feedback/[feedback_id]`
 - `COMMENT_ADDED` → `/reports/[report_id]` (public detail page)
 - `REPORT_FLAGGED` → `/admin/reports/[report_id]` (admin review page)

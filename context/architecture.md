@@ -119,7 +119,7 @@
 
 24. **Admin edits re-validate the boundary only when the pin changes.** `editReport` calls `is_within_boundary` only when `latitude`/`longitude` differ from the stored values; the `trg_reports_location_boundary` database trigger still guards every location write regardless.
 
-25. **`REPORT_EDITED` notifications are in-app only.** An admin edit notifies the submitter via the `notifications` table but never dispatches email or SMS — the edit action (`editReport`) is a separate path from the status-transition notification pipeline.
+25. **`REPORT_EDITED` and `REPORT_FLAGGED_OWNER` notifications are in-app only.** An admin edit notifies the submitter via the `notifications` table but never dispatches email or SMS — the edit action (`editReport`) is a separate path from the status-transition notification pipeline. Likewise, when a citizen flags a report, the report's owner receives an in-app-only `REPORT_FLAGGED_OWNER` notification (admins get `REPORT_FLAGGED`, also in-app only), and neither flag notification dispatches email/SMS/push.
 
 26. **Duplicate-candidate search never proposes already-linked reports.** `findDuplicateCandidates` excludes the report itself and any report whose `duplicate_of_id` is already set, and requires a title search of ≥ 3 characters (or nearby matches within 1500 m via `get_nearby_reports`).
 
