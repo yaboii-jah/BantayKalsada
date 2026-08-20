@@ -76,8 +76,8 @@ export function AdminFeedbackTable({
 
   return (
     <div>
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full min-w-[640px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">

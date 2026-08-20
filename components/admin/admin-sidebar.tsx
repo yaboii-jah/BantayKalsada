@@ -32,11 +32,13 @@ export function AdminSidebar({
   flagsCount,
   adminName,
   onCollapse,
+  onNavigate,
 }: {
   pendingCount: number;
   flagsCount: number;
   adminName: string;
   onCollapse?: () => void;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -44,6 +46,7 @@ export function AdminSidebar({
   const handleSignOut = async () => {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
+    onNavigate?.();
     router.refresh();
   };
 
@@ -79,6 +82,7 @@ export function AdminSidebar({
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive

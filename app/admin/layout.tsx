@@ -33,13 +33,18 @@ export default async function AdminLayout({
     .select("*", { count: "exact", head: true })
     .eq("status", "PENDING");
 
-  const { data: flaggedReports } = await adminClient
-    .from("report_flags")
-    .select("report_id");
-
-  const flagsCount = flaggedReports
-    ? new Set(flaggedReports.map((f) => f.report_id)).size
-    : 0;
+  let flagsCount = 0;
+  try {
+    const { data } = await adminClient.rpc("count_distinct_flagged_reports");
+    flagsCount = typeof data === "number" ? data : 0;
+  } catch {
+    const { data: flaggedReports } = await adminClient
+      .from("report_flags")
+      .select("report_id");
+    flagsCount = flaggedReports
+      ? new Set(flaggedReports.map((f) => f.report_id)).size
+      : 0;
+  }
 
   return (
     <AdminShell

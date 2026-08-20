@@ -685,6 +685,34 @@ export type Database = {
             }
             Returns: string
           }
+      avg_resolution_hours: { Args: never; Returns: number }
+      count_distinct_flagged_reports: { Args: never; Returns: number }
+      count_reports_by_barangay: {
+        Args: never
+        Returns: {
+          barangay: Database["public"]["Enums"]["barangay"]
+          count: number
+        }[]
+      }
+      count_reports_by_category: {
+        Args: never
+        Returns: {
+          category: Database["public"]["Enums"]["report_category"]
+          count: number
+        }[]
+      }
+      count_reports_by_status: {
+        Args: never
+        Returns: {
+          status: Database["public"]["Enums"]["report_status"]
+          count: number
+        }[]
+      }
+      count_reports_since: { Args: { since: string }; Returns: number }
+      daily_submissions_since: {
+        Args: { since: string }
+        Returns: { day: string; count: number }[]
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {

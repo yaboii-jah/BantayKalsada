@@ -63,7 +63,6 @@ export function AdminReportEditForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [resetKey] = useState(0);
 
   const {
     register,
@@ -167,7 +166,7 @@ export function AdminReportEditForm({
 
       <fieldset className="space-y-3">
         <Label>Severity</Label>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {reportSeverityEnum.options.map((value) => (
             <label
               key={value}
@@ -208,7 +207,6 @@ export function AdminReportEditForm({
       <div className="space-y-2">
         <Label>Photos</Label>
         <PhotoUpload
-          key={resetKey}
           onChange={(urls) => onPhotosChange(urls)}
           initialUrls={defaultValues.photo_urls}
         />
@@ -220,7 +218,6 @@ export function AdminReportEditForm({
       <div className="space-y-2">
         <Label>Location</Label>
         <LocationPickerWrapper
-          key={resetKey}
           value={{
             lat: defaultValues.latitude,
             lng: defaultValues.longitude,

@@ -91,7 +91,7 @@ export function ReportFilterBar({
           value={q}
           onChange={(e) => handleQueryChange(e.target.value)}
           placeholder="Search by title..."
-          className="h-9 w-56 rounded-md border border-border bg-card pl-8 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          className="h-9 w-full rounded-md border border-border bg-card pl-8 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary sm:w-56"
         />
       </div>
       <select

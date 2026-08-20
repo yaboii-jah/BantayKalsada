@@ -16,7 +16,7 @@ function SkeletonHeader() {
 
 export function AdminListSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       <SkeletonHeader />
       {Array.from({ length: 8 }).map((_, i) => (
         <div

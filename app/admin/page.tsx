@@ -1,8 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { StatusCountCards } from "@/components/admin/status-count-cards";
-import { AnalyticsCharts } from "@/components/admin/analytics-charts";
+import { AnalyticsChartsLazy } from "@/components/admin/analytics-charts-lazy";
 import type { AnalyticsData } from "@/components/admin/analytics-charts";
 import { Download } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 const CATEGORY_LABELS: Record<string, string> = {
   POTHOLE: "Pothole",
@@ -20,66 +22,54 @@ const BARANGAY_LABELS: Record<string, string> = {
   MUZON: "Muzon",
 };
 
-export default async function AdminDashboard() {
-  const adminClient = createAdminClient();
+const STATUS_KEYS = ["PENDING", "APPROVED", "REJECTED", "RESOLVED"] as const;
 
-  const { data: allReports } = await adminClient
-    .from("reports")
-    .select("submitted_at, category, status, resolved_at, barangay");
+interface Aggregates {
+  statusCounts: Record<string, number>;
+  dailyMap: Record<string, number>;
+  categoryCounts: { category: string; count: number }[];
+  barangayCounts: { barangay: string; count: number }[];
+  approvalRate: number;
+  avgResolutionHours: number;
+  reportsThisMonth: number;
+  totalReports: number;
+}
 
-  const reports = allReports ?? [];
+function phDate(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+}
 
-  const pending = reports.filter((r) => r.status === "PENDING").length;
-  const approved = reports.filter((r) => r.status === "APPROVED").length;
-  const rejected = reports.filter((r) => r.status === "REJECTED").length;
-  const resolved = reports.filter((r) => r.status === "RESOLVED").length;
-
-  const items = [
-    {
-      label: "Pending Reports",
-      count: pending,
-      href: "/admin/pending",
-      color: "pending" as const,
-    },
-    {
-      label: "Approved Reports",
-      count: approved,
-      href: "/admin/approved",
-      color: "approved" as const,
-    },
-    {
-      label: "Rejected Reports",
-      count: rejected,
-      href: "/admin/rejected",
-      color: "rejected" as const,
-    },
-    {
-      label: "Resolved Reports",
-      count: resolved,
-      href: "/admin/resolved",
-      color: "resolved" as const,
-    },
-  ];
-
-  function phDate(d: Date): string {
-    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
-  }
-
+function buildDailyMap(days: number): Record<string, number> {
   const dailyMap: Record<string, number> = {};
   const now = new Date();
-  for (let i = 29; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     dailyMap[phDate(d)] = 0;
   }
+  return dailyMap;
+}
+
+interface ReportSlice {
+  status: string;
+  category: string;
+  barangay: string | null;
+  submitted_at: string;
+  resolved_at: string | null;
+}
+
+function aggregateInJs(reports: ReportSlice[]): Aggregates {
+  const statusCounts: Record<string, number> = {};
+  STATUS_KEYS.forEach((k) => (statusCounts[k] = 0));
+  reports.forEach((r) => {
+    statusCounts[r.status] = (statusCounts[r.status] ?? 0) + 1;
+  });
+
+  const dailyMap = buildDailyMap(30);
   reports.forEach((r) => {
     const key = phDate(new Date(r.submitted_at));
     if (key in dailyMap) dailyMap[key]++;
   });
-  const dailySubmissions = Object.entries(dailyMap).map(([date, count]) => ({
-    date,
-    count,
-  }));
 
   const catMap: Record<string, number> = {};
   reports.forEach((r) => {
@@ -104,19 +94,14 @@ export default async function AdminDashboard() {
     }))
     .sort((a, b) => b.count - a.count);
 
-  const statusCounts = [
-    { status: "PENDING", count: pending },
-    { status: "APPROVED", count: approved },
-    { status: "REJECTED", count: rejected },
-    { status: "RESOLVED", count: resolved },
-  ];
-
+  const approved = statusCounts["APPROVED"] ?? 0;
+  const rejected = statusCounts["REJECTED"] ?? 0;
   const totalReviewed = approved + rejected;
   const approvalRate =
     totalReviewed > 0 ? Math.round((approved / totalReviewed) * 100) : 0;
 
   const resolvedReports = reports.filter(
-    (r): r is typeof r & { resolved_at: string } =>
+    (r): r is ReportSlice & { resolved_at: string } =>
       r.status === "RESOLVED" && r.resolved_at !== null,
   );
   let totalHours = 0;
@@ -130,25 +115,152 @@ export default async function AdminDashboard() {
       ? Math.round(totalHours / resolvedReports.length)
       : 0;
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthStart = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  ).toISOString();
   const reportsThisMonth = reports.filter(
     (r) => r.submitted_at >= monthStart,
   ).length;
 
-  const analyticsData: AnalyticsData = {
-    dailySubmissions,
-    categoryCounts,
+  return {
     statusCounts,
+    dailyMap,
+    categoryCounts,
     barangayCounts,
     approvalRate,
     avgResolutionHours,
     reportsThisMonth,
     totalReports: reports.length,
   };
+}
+
+async function fetchViaRpc(
+  adminClient: ReturnType<typeof createAdminClient>,
+): Promise<Aggregates | null> {
+  try {
+    const since30 = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString();
+    const monthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    ).toISOString();
+
+    const [statusRes, dailyRes, catRes, brgyRes, avgRes, monthRes] =
+      await Promise.all([
+        adminClient.rpc("count_reports_by_status"),
+        adminClient.rpc("daily_submissions_since", { since: since30 }),
+        adminClient.rpc("count_reports_by_category"),
+        adminClient.rpc("count_reports_by_barangay"),
+        adminClient.rpc("avg_resolution_hours"),
+        adminClient.rpc("count_reports_since", { since: monthStart }),
+      ]);
+
+    if (statusRes.error || dailyRes.error || catRes.error || brgyRes.error) {
+      return null;
+    }
+
+    const statusCounts: Record<string, number> = {};
+    STATUS_KEYS.forEach((k) => (statusCounts[k] = 0));
+    (statusRes.data as { status: string; count: number }[] | null)?.forEach(
+      (r) => {
+        statusCounts[r.status] = r.count;
+      },
+    );
+
+    const dailyMap = buildDailyMap(30);
+    (dailyRes.data as { day: string; count: number }[] | null)?.forEach((r) => {
+      const key = phDate(new Date(`${r.day}T00:00:00Z`));
+      if (key in dailyMap) dailyMap[key] = r.count;
+    });
+
+    const categoryCounts = (catRes.data as { category: string; count: number }[] | null)
+      ?.map((r) => ({ category: CATEGORY_LABELS[r.category] ?? r.category, count: r.count }))
+      .sort((a, b) => b.count - a.count) ?? [];
+
+    const barangayCounts = (brgyRes.data as { barangay: string | null; count: number }[] | null)
+      ?.map((r) => ({
+        barangay: r.barangay ? (BARANGAY_LABELS[r.barangay] ?? r.barangay) : "UNKNOWN",
+        count: r.count,
+      }))
+      .sort((a, b) => b.count - a.count) ?? [];
+
+    const approved = statusCounts["APPROVED"] ?? 0;
+    const rejected = statusCounts["REJECTED"] ?? 0;
+    const totalReviewed = approved + rejected;
+
+    return {
+      statusCounts,
+      dailyMap,
+      categoryCounts,
+      barangayCounts,
+      approvalRate: totalReviewed > 0 ? Math.round((approved / totalReviewed) * 100) : 0,
+      avgResolutionHours: typeof avgRes.data === "number" ? Math.round(avgRes.data) : 0,
+      reportsThisMonth: typeof monthRes.data === "number" ? monthRes.data : 0,
+      totalReports: STATUS_KEYS.reduce((sum, k) => sum + (statusCounts[k] ?? 0), 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchViaLegacy(
+  adminClient: ReturnType<typeof createAdminClient>,
+): Promise<Aggregates> {
+  const { data: allReports } = await adminClient
+    .from("reports")
+    .select("submitted_at, category, status, resolved_at, barangay");
+  return aggregateInJs(allReports ?? []);
+}
+
+export default async function AdminDashboard() {
+  const adminClient = createAdminClient();
+
+  const aggregates =
+    (await fetchViaRpc(adminClient)) ?? (await fetchViaLegacy(adminClient));
+
+  const items = STATUS_KEYS.map((status) => ({
+    label:
+      status === "PENDING"
+        ? "Pending Reports"
+        : status === "APPROVED"
+          ? "Approved Reports"
+          : status === "REJECTED"
+            ? "Rejected Reports"
+            : "Resolved Reports",
+    count: aggregates.statusCounts[status] ?? 0,
+    href:
+      status === "PENDING"
+        ? "/admin/pending"
+        : status === "APPROVED"
+          ? "/admin/approved"
+          : status === "REJECTED"
+            ? "/admin/rejected"
+            : "/admin/resolved",
+    color: status.toLowerCase() as "pending" | "approved" | "rejected" | "resolved",
+  }));
+
+  const analyticsData: AnalyticsData = {
+    dailySubmissions: Object.entries(aggregates.dailyMap).map(([date, count]) => ({
+      date,
+      count,
+    })),
+    categoryCounts: aggregates.categoryCounts,
+    statusCounts: STATUS_KEYS.map((status) => ({
+      status,
+      count: aggregates.statusCounts[status] ?? 0,
+    })),
+    barangayCounts: aggregates.barangayCounts,
+    approvalRate: aggregates.approvalRate,
+    avgResolutionHours: aggregates.avgResolutionHours,
+    reportsThisMonth: aggregates.reportsThisMonth,
+    totalReports: aggregates.totalReports,
+  };
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <a
           href="/api/admin/export"
@@ -159,7 +271,7 @@ export default async function AdminDashboard() {
         </a>
       </div>
       <StatusCountCards items={items} />
-      <AnalyticsCharts data={analyticsData} />
+      <AnalyticsChartsLazy data={analyticsData} />
     </div>
   );
 }

@@ -87,12 +87,12 @@ export function BulkActionBar({
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background px-6 py-3 shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background px-4 py-3 shadow-lg sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-muted-foreground">
             <strong className="text-foreground">{selectedCount}</strong> selected
           </span>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onDeselectAll}

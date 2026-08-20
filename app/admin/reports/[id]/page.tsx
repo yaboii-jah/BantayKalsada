@@ -104,7 +104,7 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
         />
       )}
       <div className="mb-6">
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {categoryLabels[report.category] ?? report.category}
           </span>
@@ -112,7 +112,7 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
             {severityLabels[report.severity]}
           </span>
           <ReportStatusBadge status={report.status} />
-          <span className="ml-auto text-sm text-muted-foreground">
+          <span className="ml-auto w-full text-right text-sm text-muted-foreground sm:w-auto">
             {formatReportDate(report.submitted_at)}
           </span>
         </div>

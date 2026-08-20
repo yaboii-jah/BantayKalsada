@@ -69,7 +69,7 @@ export default async function AdminPendingPage({ searchParams }: PageProps) {
 
   return (
     <div className="pb-20">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
           <Clock className="h-6 w-6 text-status-pending" />
           Pending Reports
@@ -109,7 +109,7 @@ export default async function AdminPendingPage({ searchParams }: PageProps) {
             </p>
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card">
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
             <AdminQueueTable
               rows={rows}
               bulkActions={{ actions: ["approve", "reject"] }}

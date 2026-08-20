@@ -71,7 +71,7 @@ export default async function AdminFeedbackPage({
         </span>
       </h1>
 
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
         {[
           { value: "all", label: "All" },
           { value: "OPEN", label: "Open" },
