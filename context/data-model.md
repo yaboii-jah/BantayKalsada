@@ -600,20 +600,26 @@ report_activity_log
 ## Indexes
 
 ```sql
--- reports: public feed and admin queue filtering by status
-CREATE INDEX idx_reports_status ON reports(status);
+-- reports: public feed and admin queue filtering by status (migration 20260820000001)
+CREATE INDEX reports_status_idx ON reports(status);
 
--- reports: filtering by category on the public feed
-CREATE INDEX idx_reports_category ON reports(category);
+-- reports: filtering by category on the public feed (migration 20260820000001)
+CREATE INDEX reports_category_idx ON reports(category);
 
--- reports: citizen's own report history lookup
+-- reports: admin queue filter by barangay (migration 20260820000001)
+CREATE INDEX reports_barangay_idx ON reports(barangay);
+
+-- reports: composite index for the most common admin queue query (status filter, date sort)
+CREATE INDEX reports_status_submitted_at_idx ON reports(status, submitted_at DESC);
+
+-- reports: trigram index for admin/citizen title search (migration 20260820000001; requires pg_trgm)
+CREATE INDEX reports_title_trgm_idx ON reports USING gin (title gin_trgm_ops);
+
+-- reports: citizen's own report history lookup (migration 20260820000002)
 CREATE INDEX idx_reports_submitted_by_id ON reports(submitted_by_id);
 
--- reports: admin pending queue sorted oldest first; public feed sorted newest first
+-- reports: admin pending queue / public feed sorted newest first (migration 20260820000002)
 CREATE INDEX idx_reports_submitted_at ON reports(submitted_at DESC);
-
--- reports: composite index for the most common public feed query (approved/resolved, sorted by date)
-CREATE INDEX idx_reports_status_submitted_at ON reports(status, submitted_at DESC);
 
 -- reports: spatial index for PostGIS ST_DWithin queries (nearby reports on submit)
 CREATE INDEX idx_reports_location ON reports USING GIST (location);
@@ -851,6 +857,86 @@ CREATE TRIGGER trg_reports_location_boundary
 
 ---
 
+### 6. Admin aggregate RPCs (dashboard + sidebar badge)
+
+Server-side aggregates for the admin dashboard and sidebar, called via `supabase.rpc()` in `app/admin/page.tsx` and `app/admin/layout.tsx`. The dashboard runs them in parallel and **falls back** to a full-table in-JS aggregation when they error (until migration `20260820000001` is applied); the layout falls back to a distinct-`report_id` Set fetch for the flags badge. All are `LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public`. Migration `20260820000001`.
+
+```sql
+-- Count of reports grouped by status.
+CREATE OR REPLACE FUNCTION count_reports_by_status()
+RETURNS TABLE(status report_status, count bigint)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
+AS $$
+  SELECT status, count(*)::bigint AS count
+  FROM reports
+  GROUP BY status;
+$$;
+
+-- Daily submission counts for a window (date_trunc 'day').
+CREATE OR REPLACE FUNCTION daily_submissions_since(since timestamptz)
+RETURNS TABLE(day date, count bigint)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
+AS $$
+  SELECT date_trunc('day', submitted_at)::date AS day, count(*)::bigint AS count
+  FROM reports
+  WHERE submitted_at >= since
+  GROUP BY 1
+  ORDER BY 1;
+$$;
+
+-- Count of reports grouped by category.
+CREATE OR REPLACE FUNCTION count_reports_by_category()
+RETURNS TABLE(category report_category, count bigint)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
+AS $$
+  SELECT category, count(*)::bigint AS count
+  FROM reports
+  GROUP BY category
+  ORDER BY count DESC;
+$$;
+
+-- Count of reports grouped by barangay.
+CREATE OR REPLACE FUNCTION count_reports_by_barangay()
+RETURNS TABLE(barangay public.barangay, count bigint)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
+AS $$
+  SELECT r.barangay, count(*)::bigint AS count
+  FROM reports r
+  GROUP BY r.barangay
+  ORDER BY count DESC;
+$$;
+
+-- Average time from submission to resolution, in hours (NULL when none).
+CREATE OR REPLACE FUNCTION avg_resolution_hours()
+RETURNS double precision
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
+AS $$
+  SELECT AVG(EXTRACT(EPOCH FROM (resolved_at - submitted_at)) / 3600.0)::double precision
+  FROM reports
+  WHERE status = 'RESOLVED' AND resolved_at IS NOT NULL;
+$$;
+
+-- Count of reports submitted within a window.
+CREATE OR REPLACE FUNCTION count_reports_since(since timestamptz)
+RETURNS bigint
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
+AS $$
+  SELECT count(*)::bigint
+  FROM reports
+  WHERE submitted_at >= since;
+$$;
+
+-- Count of distinctly flagged reports (sidebar badge).
+CREATE OR REPLACE FUNCTION count_distinct_flagged_reports()
+RETURNS bigint
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
+AS $$
+  SELECT count(DISTINCT report_id)::bigint
+  FROM report_flags;
+$$;
+```
+
+---
 ## Row Level Security Policies
 
 Enable RLS on all application-owned tables. Admin operations use the service role key (bypasses RLS) exclusively in server-side API route handlers — never in client-side code.

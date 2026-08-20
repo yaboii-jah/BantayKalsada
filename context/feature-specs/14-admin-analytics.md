@@ -4,6 +4,8 @@
 
 Add charts and key metrics to the existing admin dashboard (`/admin`) so administrators can see submission trends, category distribution, status breakdown, and moderation efficiency at a glance.
 
+> **Superseded data path (2026-08-20):** the original "single full-table query + in-JS aggregation" approach is now the *fallback*. The dashboard is `force-dynamic` and computes the same metrics via aggregate RPCs (`count_reports_by_status()`, `daily_submissions_since()`, `count_reports_by_category()`, `count_reports_by_barangay()`, `avg_resolution_hours()`, `count_reports_since()` — migration `20260820000001`), falling back to the in-JS aggregation below until the RPCs are applied. Charts render through `components/admin/analytics-charts-lazy.tsx` (`next/dynamic` `ssr:false` wrapper over `AnalyticsCharts`, skeleton while loading). The "No changes to / No new... database schema" note below no longer holds — the RPCs are new schema.
+
 ## Requirements
 
 1. **Server-computed data** — All metrics are computed server-side in the existing admin page server component. The client chart component receives pre-computed typed props — no client-side fetching.

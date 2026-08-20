@@ -9,7 +9,7 @@
 - **Empty/clear:** When the query param `?q=` is empty or absent, no search filter is applied. An X button appears in the input when a query is active — clicking it clears search and navigates to `/browse`.
 - **Pagination:** Search respects pagination. The `?q=` param is preserved in page links. Changing the query resets `page` to 1 (same behavior as category/status).
 - **Combined filters:** Search ANDs with category and status filters: `(title ILIKE OR desc ILIKE) AND category=X AND status IN (APPROVED, RESOLVED)`.
-- **No new database objects:** No migration, no new indexes, no generated columns. The `reports` table is small enough for sequential ILIKE scans at current scale.
+- **No new database objects (original scope):** The search feature itself shipped without a migration or new indexes — `reports` is small enough for sequential ILIKE scans at current scale. (2026-08-20: migration `20260820000001` later added a `pg_trgm` GIN index on `reports(title)` for the admin queue title search plus the status/category/barangay filter indexes; the `/browse` ILIKE scan remains sequential.)
 - **No ranking:** Results are ordered by `submitted_at DESC` regardless of relevance. PostgreSQL full-text search with `tsvector` ranking can be added later without changing the UI.
 - **Security:** Supabase's parameterized queries handle ILIKE patterns safely — no SQL injection risk.
 
@@ -89,7 +89,7 @@ User types "pothole edsa" in search input
 - [x] X clear button visible when query is active
 - [x] Changing `q` resets `page` to 1
 - [x] Empty/whitespace query treated as no filter
-- [x] No database changes (no migration, no new indexes)
+- [x] No database changes for this feature (migration `20260820000001` later added the admin title `pg_trgm` + filter indexes separately)
 - [x] No new packages or dependencies
 - [x] `npm run build` passes with zero errors
 

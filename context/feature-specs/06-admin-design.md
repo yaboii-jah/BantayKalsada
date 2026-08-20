@@ -15,6 +15,8 @@
 - Main content pages: Dashboard, Pending, Approved, Rejected, Resolved, Report Review
 - All pages are Server Components — data fetching happens server-side
 
+> **Updated (2026-08-20):** the sidebar is now a collapsible rail (persisted `localStorage["bk-admin-sidebar-hidden"]`, `PanelLeftClose`/`PanelLeftOpen`) and, below `lg`, renders as an **overlay drawer** that never pushes content (see `context/ui-context.md` → Admin Panel). The dashboard is dynamic (`export const dynamic = "force-dynamic"`) and its analytics use DB aggregate RPCs with lazy-loaded charts (`analytics-charts-lazy`). Admin main uses `bg-background bg-radial-glow` (not `bg-muted`) under the `body.admin-theme` dark palette.
+
 ### Sidebar Navigation
 
 - Vertical list: Dashboard, Pending (with count badge), Approved, Rejected, Resolved

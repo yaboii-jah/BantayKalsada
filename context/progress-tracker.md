@@ -41,7 +41,7 @@ change.
 - Admin palette refresh (2026-08-19) — admin-only deep blue-tinted near-black neutral scheme scoped to `body.admin-theme`; see "Admin Palette Refresh (2026-08-19)" below.
 - Admin sidebar toggle + queue pagination skeleton (2026-08-20) — sidebar show/hide (persisted) + `useTransition` skeleton on pagination/filter navigation; see "Admin Sidebar Toggle + Queue Pagination Skeleton (2026-08-20)" below.
 - Realtime (debounced) search (2026-08-20) — admin queue + citizen browse search bars filter as-you-type; see "Realtime Debounced Search (2026-08-20)" below.
-- Admin mobile responsiveness + performance pass (2026-08-20) — sidebar becomes a mobile overlay drawer (never pushes content), admin pages fixed for small screens, charts code-split, DB-backed aggregates/indexes; see "Admin Mobile Responsiveness + Performance Pass (2026-08-20)" below. Migration `20260820000001_admin_perf_aggregates_and_indexes.sql` created — **apply in the Supabase SQL editor** (pending user).
+- Admin mobile responsiveness + performance pass (2026-08-20) — sidebar becomes a mobile overlay drawer (never pushes content), admin pages fixed for small screens, charts code-split, DB-backed aggregates/indexes; see "Admin Mobile Responsiveness + Performance Pass (2026-08-20)" below. Migrations: `20260820000001` applied (user, 2026-08-20); `20260820000002_add_missing_reports_indexes.sql` created — **apply in the Supabase SQL editor** (pending user).
 
 ## Completed
 
@@ -54,7 +54,9 @@ Audit + remediation of admin mobile layout and admin performance. Verified: `npx
 - [x] **Lazy charts (P2)** — new `components/admin/analytics-charts-lazy.tsx` (client) `next/dynamic`-loads recharts (`ssr: false`) behind a pulse skeleton matching the chart grids; `app/admin/page.tsx` imports it + `export const dynamic = "force-dynamic"` (dashboard always fresh; recharts JS no longer in the initial admin bundle).
 - [x] **DB-backed aggregates + indexes (P1/P3/P4)** — migration `20260820000001_admin_perf_aggregates_and_indexes.sql`: RPCs `count_reports_by_status()`, `daily_submissions_since(since)`, `count_reports_by_category()`, `count_reports_by_barangay()`, `avg_resolution_hours()`, `count_reports_since(since)`, `count_distinct_flagged_reports()`; indexes `reports(status)`, `reports(status, submitted_at DESC)`, `reports(category)`, `reports(barangay)`, `pg_trgm` GIN on `reports(title)`. `app/admin/page.tsx` runs the RPCs in parallel and **falls back** to the previous full-table in-JS aggregation when the RPCs error (pre-migration safe); `app/admin/layout.tsx` flags badge uses `count_distinct_flagged_reports()` with fallback to the old distinct-`report_id` Set. `types/database.types.ts` hand-edited with the 7 new RPC signatures (supabase CLI unavailable).
 - [x] **Scope guardrails kept** — no `components/ui/*`, existing migrations, or config changes; bulk-action batching (P5) deferred (queue N+1 already capped by pagination).
-- [x] **Pending user:** apply `20260820000001_admin_perf_aggregates_and_indexes.sql` in the Supabase SQL editor. Until applied, the dashboard/layout fall back to the previous logic automatically.
+- [x] **Applied:** `20260820000001_admin_perf_aggregates_and_indexes.sql` applied by the user in the Supabase SQL editor (2026-08-20).
+- [x] **Docs + index completion (2026-08-20):** `data-model.md` reconciled to the actual applied index names (`reports_status_idx`, `reports_category_idx`, `reports_barangay_idx`, `reports_status_submitted_at_idx`, `reports_title_trgm_idx`) + new "6. Admin aggregate RPCs" section (all 7 functions); feature specs `09-search-design.md`, `14-admin-analytics.md`, `06-admin-design.md` updated with superseded/changed notes.
+- [x] **New migration:** `20260820000002_add_missing_reports_indexes.sql` creates the documented-but-never-created `idx_reports_submitted_by_id` + `idx_reports_submitted_at`. **Pending user:** apply in the Supabase SQL editor.
 
 ### Admin Palette Refresh (2026-08-19)
 
