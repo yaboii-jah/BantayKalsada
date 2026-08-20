@@ -496,7 +496,7 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   global-error.tsx       — last-resort root error boundary (own html/body in dark)
 
 components/
-  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager
+  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager, admin-theme (body-level dark palette scoping), report-filter-bar
   auth/                  — auth card, Google sign-in button
   browse/                — filter bar, pagination bar, photo gallery, browse map (all markers, heatmap, traffic + base-layer toggles)
   maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer, traffic-layer, taytay-boundary (all client-side, dynamic import)

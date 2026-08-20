@@ -4,6 +4,8 @@
 
 Dark-only theme. No theme toggle and no light mode — the `:root` tokens are the dark palette (`color-scheme: dark`) and `<html>` carries the `dark` class so shadcn `dark:` variant utilities resolve. The design language is a clean civic public service aesthetic — medium-dark slate backgrounds (not near-black), matching muted surfaces, high-contrast text, and a trustworthy blue primary accent. The tone is accessible and neutral: this is a public safety tool used by a broad, non-technical Filipino audience, not a developer tool or consumer entertainment product. Every visual decision should prioritize legibility, information clarity, and trust over decoration.
 
+**Admin-only palette:** Admin routes re-declare the neutral tokens (background, card/popover, muted/secondary/accent, border/input, sidebar) under `body.admin-theme` in `app/globals.css` as a deep blue-tinted near-black (`oklch(0.16 0.015 262)` background) — a deliberate brand refresh that separates the admin workspace from the citizen side. `--primary` (blue), `--status-*`, and `--destructive` are intentionally unchanged. The class is applied to `<body>` by `components/admin/admin-theme.tsx` (mounted in `app/admin/layout.tsx`); because custom properties cascade, this also covers portalled UI (Dialogs, `InlineSelect`, Sonner toasts, Tooltips) that mount to `document.body`. Non-admin routes never carry the class.
+
 ---
 
 ## Colors
@@ -105,7 +107,7 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 
 ### Admin Panel
 
-- **Layout**: Two-column split. Left sidebar: fixed width `w-64`, light gray background (`bg-muted`), right border (`border-border`), full viewport height. Main content area: fills remaining width, white background with the same faint radial glow as the user side (`bg-background bg-radial-glow`), scrollable. The white main canvas keeps admin form fields looking identical to the user-facing `/submit` form.
+- **Layout**: Two-column split. Left sidebar: fixed width `w-64`, deep blue-tinted surface (`bg-muted` under `body.admin-theme`), right border (`border-border`), full viewport height. Main content area: fills remaining width, deep blue-tinted background with the same faint radial glow as the user side (`bg-background bg-radial-glow`), scrollable. The admin palette (see Theme) is scoped to `<body>` so dialogs/popovers/toasts match too; the blue accent and status colors are shared with the user side unchanged.
 - **Sidebar navigation**: Vertical list of links — Dashboard, Pending (with a count badge), Approved, Rejected, Resolved, Feedback. Active link uses `bg-primary/10` background with `text-primary` color. Count badge on Pending uses `--status-pending` color.
 - **Admin report queue**: Full-width table using Shadcn/ui `Table`. Columns: Submitter name, Category, Title (truncated), Submitted date, Action link. Rows are clickable and navigate to the review page.
 - **Admin report review page**: Single centered column, `max-w-4xl`. Report detail displayed above the action buttons. Approve and Reject buttons are side by side at the bottom, right-aligned. Approve uses the success color; Reject uses the destructive color.

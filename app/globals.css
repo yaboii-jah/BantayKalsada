@@ -104,6 +104,35 @@
   );
 }
 
+/* Admin-only palette: deep blue-tinted near-black neutrals applied to <body>
+   while on admin routes (via components/admin/admin-theme.tsx). Custom
+   properties cascade to every descendant, including portals (Dialog,
+   InlineSelect, Sonner, Tooltips) that mount to document.body. --primary and
+   the semantic --status-* / --destructive tokens are intentionally unchanged. */
+body.admin-theme {
+  --background: oklch(0.16 0.015 262);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.20 0.02 262);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.20 0.02 262);
+  --popover-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.24 0.02 262);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.24 0.02 262);
+  --muted-foreground: oklch(0.75 0.01 262);
+  --accent: oklch(0.24 0.02 262);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.26 0.02 262);
+  --input: oklch(0.24 0.02 262);
+  --ring: oklch(0.45 0.02 262);
+  --sidebar: oklch(0.14 0.015 262);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.24 0.02 262);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.26 0.02 262);
+  --sidebar-ring: oklch(0.45 0.02 262);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

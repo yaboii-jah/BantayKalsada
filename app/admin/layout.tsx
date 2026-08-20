@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AdminTheme } from "@/components/admin/admin-theme";
 
 export default async function AdminLayout({
   children,
@@ -43,6 +44,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen">
+      <AdminTheme />
       <AdminSidebar
         pendingCount={pendingCount ?? 0}
         flagsCount={flagsCount}

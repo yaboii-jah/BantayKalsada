@@ -38,8 +38,15 @@ change.
 - Security hardening round 2 (2026-08-15 audit) — complete; see "Security Hardening (2026-08-15 Audit)" below.
 - Security + standards audit (2026-08-18) — remediation complete (S3–S5, T1, T2, T4 + hygiene; S1/S2 recorded as reproducibility gap and baselined); see "Security + Standards Audit Remediation" below. Migrations `20260818000001`/`20260818000002` applied to the live DB and verified (2026-08-18, dashboard SQL Editor, no errors).
 - Issues & suggestions batch (2026-08-19) — SMS reliability (surfaced warnings + rejection-reason truncation + parallelized bulk sends), admin filters (search/category/barangay) + newest-first pending, bulk-bar pagination clearance, notification-bell spinners, flag-owner notification, React #301 investigation; see "Issues & Suggestions Batch (2026-08-19)" below. Migration `20260819000001_add_notification_flagged_owner_type.sql` created — **apply in the Supabase SQL editor** (pending user).
+- Admin palette refresh (2026-08-19) — admin-only deep blue-tinted near-black neutral scheme scoped to `body.admin-theme`; see "Admin Palette Refresh (2026-08-19)" below.
 
 ## Completed
+
+### Admin Palette Refresh (2026-08-19)
+
+- [x] **Admin-only dark scheme** — new `body.admin-theme` token override in `app/globals.css` re-declares the neutral palette as deep blue-tinted near-black (`--background oklch(0.16 0.015 262)`, `--card/--popover 0.20`, `--muted/--secondary/--accent 0.24`, `--border/--input 0.26`, `--sidebar 0.14`, brighter `--muted-foreground 0.75`). `--primary` (blue), `--status-*`, and `--destructive` unchanged — semantic colors stay consistent with the citizen side.
+- [x] **Scoped to `<body>` so portals match** — new `components/admin/admin-theme.tsx` (client) adds/removes the `admin-theme` class on `document.body`; mounted in `app/admin/layout.tsx` (server layout, so the class only ever appears after the admin role guard passes). Custom properties cascade to Dialogs, `InlineSelect`, Sonner toasts, and Tooltips that portal to `document.body` — the whole admin panel is consistent. Cleanup on unmount ensures navigating admin → citizen removes the override.
+- [x] Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all pass. Manual check needed: walk all admin pages + rejection modal/InlineSelect/toast to confirm palette coverage and that the citizen side is unchanged.
 
 ### Issues & Suggestions Batch (2026-08-19)
 
