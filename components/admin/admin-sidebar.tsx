@@ -14,6 +14,7 @@ import {
   LogOut,
   ShieldCheck,
   Flag,
+  PanelLeftClose,
 } from "lucide-react";
 
 const navItems = [
@@ -30,10 +31,12 @@ export function AdminSidebar({
   pendingCount,
   flagsCount,
   adminName,
+  onCollapse,
 }: {
   pendingCount: number;
   flagsCount: number;
   adminName: string;
+  onCollapse?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -53,6 +56,16 @@ export function AdminSidebar({
             Bantay Kalsada
           </span>
         </div>
+        {onCollapse && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            aria-label="Hide sidebar"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+          >
+            <PanelLeftClose className="size-5" />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 space-y-1 p-3">

@@ -25,6 +25,7 @@ interface ReportFilterBarProps {
   search?: string;
   category?: string;
   barangay?: string;
+  onNavigate?: (next: { q: string; category?: string; barangay?: string }) => void;
 }
 
 const selectClassName =
@@ -34,12 +35,17 @@ export function ReportFilterBar({
   search = "",
   category = "",
   barangay = "",
+  onNavigate,
 }: ReportFilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [q, setQ] = useState(search);
 
   const navigate = (next: { q: string; category?: string; barangay?: string }) => {
+    if (onNavigate) {
+      onNavigate(next);
+      return;
+    }
     const params = new URLSearchParams();
     if (next.q && next.q.trim()) params.set("q", next.q.trim());
     if (next.category) params.set("category", next.category);

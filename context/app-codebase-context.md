@@ -37,7 +37,7 @@ The proxy creates a Supabase server client directly from the request cookies to 
 
 Every protected route group has a layout that independently verifies auth server-side:
 
-- `app/admin/layout.tsx` — calls `supabase.auth.getUser()` + queries `profiles.role === 'ADMIN'`. Redirects non-admins to `/browse`.
+- `app/admin/layout.tsx` — calls `supabase.auth.getUser()` + queries `profiles.role === 'ADMIN'`. Redirects non-admins to `/browse`. Renders `<AdminShell />` (client wrapper that mounts `<AdminTheme />` — adds the `admin-theme` class to `document.body`, scoping the admin-only dark palette to the whole panel including portalled dialogs/popovers — and owns the sidebar show/hide toggle persisted via `localStorage["bk-admin-sidebar-hidden"]`).
 - `app/(citizen)/layout.tsx` — the citizen group layout (shares PublicNav + PublicFooter). Auth check is inherited from the proxy, but the layout enforces the route group boundary.
 
 ### 3. Server Action-level (Mutation-level — final guard)
@@ -234,7 +234,7 @@ All mutations (submit report, approve, reject, resolve) use `"use server"` actio
 Email + notification insertion happens after the status update succeeds, wrapped in `.catch()` so failures are logged but never block the status transition. Report moderation is never gated on email deliverability. Three subsystems are involved:
 - `lib/email.ts` — Brevo client singleton (`@getbrevo/brevo` v5 SDK)
 - `lib/notifications.ts` — notification insert + message/subject helpers
-- `lib/admin-notifications.tsx` — orchestration layer (uses `.tsx` because it imports JSX from email templates)
+- `lib/admin-notifications.tsx` — orchestration layer (uses `.tsx` because it imports JSX from email templates). `sendReportNotifications` returns `{ smsError?, smsSkipped? }` so callers can surface SMS failures/skips; rejection SMS reasons are sanitized + truncated to ~120 chars.
 
 ### Auth Email Templates (Not in Repo)
 Verification and password-reset emails are managed inside the Supabase Dashboard — they are not in `emails/`. Only report status notification templates (approved, rejected, resolved) live in the codebase.
@@ -496,7 +496,7 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   global-error.tsx       — last-resort root error boundary (own html/body in dark)
 
 components/
-  admin/                 — sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager, admin-theme (body-level dark palette scoping), report-filter-bar
+  admin/                 — admin-shell (sidebar show/hide + theme mount), sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager, admin-theme (body-level dark palette scoping), report-filter-bar (optional onNavigate prop for transition-driven nav), admin-list-pending (useTransition pagination/filter skeleton wrapper), admin-list-skeleton
   auth/                  — auth card, Google sign-in button
   browse/                — filter bar, pagination bar, photo gallery, browse map (all markers, heatmap, traffic + base-layer toggles)
   maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer, traffic-layer, taytay-boundary (all client-side, dynamic import)
@@ -531,7 +531,7 @@ lib/
   email.ts               — Brevo client
   notifications.ts       — notification creation helpers (all types incl. FEEDBACK_*, COMMENT_ADDED, REPORT_FLAGGED, OFFLINE_SUBMIT_FAILED, REPORT_EDITED)
   report-activity.ts     — logReportActivity() audit helper (service-role client → report_activity_log)
-  admin-notifications.tsx— report + feedback lookup + email/SMS/push dispatch orchestration
+  admin-notifications.tsx— report + feedback lookup + email/SMS/push dispatch orchestration (returns { smsError?, smsSkipped? } so callers surface SMS failures)
   admin-feedback-notifications.tsx — feedback-specific notification dispatcher (acknowledge, close, note)
   sms.ts                 — PhilSMS client (sendSMS, normalizePhoneNumber, 3-attempt retry, sendTestSms)
   push.ts                — Web Push server (sendPushNotification, VAPID config, expired-sub cleanup)

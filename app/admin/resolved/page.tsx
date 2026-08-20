@@ -1,10 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { AdminQueueTable } from "@/components/admin/admin-queue-table";
-import { PaginationBar } from "@/components/browse/pagination-bar";
-import { ReportFilterBar } from "@/components/admin/report-filter-bar";
+import { AdminListPending } from "@/components/admin/admin-list-pending";
 import {
   parseReportFilterParams,
-  buildAdminListHref,
   hasReportFilters,
 } from "@/lib/admin-report-filters";
 import { CheckCheck, Download } from "lucide-react";
@@ -91,37 +89,31 @@ export default async function AdminResolvedPage({ searchParams }: PageProps) {
           </a>
         )}
       </div>
-      <ReportFilterBar
-        search={filters.q}
-        category={filters.category}
-        barangay={filters.barangay}
-      />
-      {rows.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <CheckCheck className="h-12 w-12 text-muted-foreground" />
-          <p className="text-lg font-medium text-foreground">
-            {hasReportFilters(filters) ? "No matching reports" : "No resolved reports"}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {hasReportFilters(filters)
-              ? "Try adjusting your search or filters."
-              : "Resolved reports will appear here."}
-          </p>
-        </div>
-      ) : (
-        <>
+      <AdminListPending
+        search={filters.q ?? ""}
+        category={filters.category ?? ""}
+        barangay={filters.barangay ?? ""}
+        currentPage={currentPage}
+        totalPages={totalPages}
+      >
+        {rows.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <CheckCheck className="h-12 w-12 text-muted-foreground" />
+            <p className="text-lg font-medium text-foreground">
+              {hasReportFilters(filters) ? "No matching reports" : "No resolved reports"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {hasReportFilters(filters)
+                ? "Try adjusting your search or filters."
+                : "Resolved reports will appear here."}
+            </p>
+          </div>
+        ) : (
           <div className="rounded-lg border border-border bg-card">
             <AdminQueueTable rows={rows} />
           </div>
-          <div className="mt-4">
-            <PaginationBar
-              currentPage={currentPage}
-              totalPages={totalPages}
-              buildHref={(page) => buildAdminListHref("/admin/resolved", page, filters)}
-            />
-          </div>
-        </>
-      )}
+        )}
+      </AdminListPending>
     </div>
   );
 }

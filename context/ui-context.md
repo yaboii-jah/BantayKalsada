@@ -33,10 +33,10 @@ These are project-specific tokens added to `app/globals.css` for use exclusively
 
 | Status      | CSS Variable           | Value     | Usage                          |
 | ----------- | ---------------------- | --------- | ------------------------------ |
-| `PENDING`   | `--status-pending`     | `#D97706` | Amber — awaiting admin review  |
-| `APPROVED`  | `--status-approved`    | `#16A34A` | Green — publicly visible       |
-| `REJECTED`  | `--status-rejected`    | `#DC2626` | Red — declined by admin        |
-| `RESOLVED`  | `--status-resolved`    | `#2563EB` | Calm blue — issue addressed    |
+| `PENDING`   | `--status-pending`     | `#f59e0b` | Amber — awaiting admin review  |
+| `APPROVED`  | `--status-approved`    | `#22c55e` | Green — publicly visible       |
+| `REJECTED`  | `--status-rejected`    | `#ef4444` | Red — declined by admin        |
+| `RESOLVED`  | `--status-resolved`    | `#3b82f6` | Calm blue — issue addressed    |
 
 Status badge backgrounds use a 10% opacity version of the status color (`--status-[name]/10`) with the full-opacity color for text and border.
 
@@ -108,6 +108,8 @@ Shadcn/ui on top of Tailwind CSS. All interactive UI primitives (buttons, inputs
 ### Admin Panel
 
 - **Layout**: Two-column split. Left sidebar: fixed width `w-64`, deep blue-tinted surface (`bg-muted` under `body.admin-theme`), right border (`border-border`), full viewport height. Main content area: fills remaining width, deep blue-tinted background with the same faint radial glow as the user side (`bg-background bg-radial-glow`), scrollable. The admin palette (see Theme) is scoped to `<body>` so dialogs/popovers/toasts match too; the blue accent and status colors are shared with the user side unchanged.
+- **Sidebar toggle**: The admin sidebar can be collapsed/re-expanded via `components/admin/admin-shell.tsx` (client wrapper mounted in `app/admin/layout.tsx`). A `PanelLeftClose` button in the sidebar header hides the rail; while hidden, a slim top bar (`border-b border-border bg-muted`) shows a `PanelLeftOpen` reopen button + "Bantay Kalsada" wordmark above the content. The collapsed preference persists across sessions via `localStorage["bk-admin-sidebar-hidden"]` (read through `useSyncExternalStore`, mirroring `install-prompt.tsx`).
+- **Admin queue navigation loading**: Pagination and filter/search navigation on the 4 queue pages (`pending`/`approved`/`rejected`/`resolved`) is handled by `components/admin/admin-list-pending.tsx` — a `useTransition`-driven client wrapper that shows a table-shaped skeleton (`components/admin/admin-list-skeleton.tsx`, pulse bars matching the table columns) while the next page/filter loads, keeping the pagination bar visible with the current page highlighted.
 - **Sidebar navigation**: Vertical list of links — Dashboard, Pending (with a count badge), Approved, Rejected, Resolved, Feedback. Active link uses `bg-primary/10` background with `text-primary` color. Count badge on Pending uses `--status-pending` color.
 - **Admin report queue**: Full-width table using Shadcn/ui `Table`. Columns: Submitter name, Category, Title (truncated), Submitted date, Action link. Rows are clickable and navigate to the review page.
 - **Admin report review page**: Single centered column, `max-w-4xl`. Report detail displayed above the action buttons. Approve and Reject buttons are side by side at the bottom, right-aligned. Approve uses the success color; Reject uses the destructive color.

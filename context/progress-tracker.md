@@ -39,6 +39,7 @@ change.
 - Security + standards audit (2026-08-18) — remediation complete (S3–S5, T1, T2, T4 + hygiene; S1/S2 recorded as reproducibility gap and baselined); see "Security + Standards Audit Remediation" below. Migrations `20260818000001`/`20260818000002` applied to the live DB and verified (2026-08-18, dashboard SQL Editor, no errors).
 - Issues & suggestions batch (2026-08-19) — SMS reliability (surfaced warnings + rejection-reason truncation + parallelized bulk sends), admin filters (search/category/barangay) + newest-first pending, bulk-bar pagination clearance, notification-bell spinners, flag-owner notification, React #301 investigation; see "Issues & Suggestions Batch (2026-08-19)" below. Migration `20260819000001_add_notification_flagged_owner_type.sql` created — **apply in the Supabase SQL editor** (pending user).
 - Admin palette refresh (2026-08-19) — admin-only deep blue-tinted near-black neutral scheme scoped to `body.admin-theme`; see "Admin Palette Refresh (2026-08-19)" below.
+- Admin sidebar toggle + queue pagination skeleton (2026-08-20) — sidebar show/hide (persisted) + `useTransition` skeleton on pagination/filter navigation; see "Admin Sidebar Toggle + Queue Pagination Skeleton (2026-08-20)" below.
 
 ## Completed
 
@@ -47,6 +48,13 @@ change.
 - [x] **Admin-only dark scheme** — new `body.admin-theme` token override in `app/globals.css` re-declares the neutral palette as deep blue-tinted near-black (`--background oklch(0.16 0.015 262)`, `--card/--popover 0.20`, `--muted/--secondary/--accent 0.24`, `--border/--input 0.26`, `--sidebar 0.14`, brighter `--muted-foreground 0.75`). `--primary` (blue), `--status-*`, and `--destructive` unchanged — semantic colors stay consistent with the citizen side.
 - [x] **Scoped to `<body>` so portals match** — new `components/admin/admin-theme.tsx` (client) adds/removes the `admin-theme` class on `document.body`; mounted in `app/admin/layout.tsx` (server layout, so the class only ever appears after the admin role guard passes). Custom properties cascade to Dialogs, `InlineSelect`, Sonner toasts, and Tooltips that portal to `document.body` — the whole admin panel is consistent. Cleanup on unmount ensures navigating admin → citizen removes the override.
 - [x] Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all pass. Manual check needed: walk all admin pages + rejection modal/InlineSelect/toast to confirm palette coverage and that the citizen side is unchanged.
+
+### Admin Sidebar Toggle + Queue Pagination Skeleton (2026-08-20)
+
+- [x] **Sidebar show/hide toggle** — new `components/admin/admin-shell.tsx` (client) mounted in `app/admin/layout.tsx` (server layout keeps the auth/role guard + counts; renders `<AdminShell>` instead of `AdminSidebar`/`AdminTheme`/`<main>` directly). `AdminSidebar` gained an optional `onCollapse` prop + `PanelLeftClose` button in its header; when hidden, a slim top bar (`PanelLeftOpen` reopen button + "Bantay Kalsada" wordmark) replaces the rail above the content. The collapsed preference persists via `localStorage["bk-admin-sidebar-hidden"]`, read through `useSyncExternalStore` (server snapshot = expanded; setter writes storage + dispatches a custom `bk-admin-sidebar-toggle` event; subscribe listens to the event + `storage`), mirroring the `install-prompt.tsx` pattern so it stays lint-clean (no `set-state-in-effect`).
+- [x] **Queue pagination + filter skeleton** — same-route `searchParams` navigation never reliably triggered `loading.tsx`, so the 4 queue pages (`pending`/`approved`/`rejected`/`resolved`) now wrap their list content in `components/admin/admin-list-pending.tsx` (client): one `useTransition` drives both pagination and filter/search navigation via `buildAdminListHref`; while pending, `components/admin/admin-list-skeleton.tsx` (table-shaped pulse bars) replaces the rows and the pagination buttons (PaginationBar's page-window logic inlined, button-driven, disabled while pending) stay visible with the current page highlighted. `ReportFilterBar` gained an optional `onNavigate` prop (used by `AdminListPending`; the internal `router.push` path is preserved as the default).
+- [x] Scope guardrails kept: `components/browse/pagination-bar.tsx` and the public/citizen consumers (browse, my-feedback, my-reports, admin-feedback-table) untouched; no `components/ui/*`, migrations, or config changes.
+- [x] Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all pass (32 routes). Manual check needed: hide/reopen sidebar (persists on reload), paginate a queue with >20 rows (skeleton shows), change filter/search (skeleton shows), empty-state + bulk-action bar + export unaffected.
 
 ### Issues & Suggestions Batch (2026-08-19)
 
@@ -83,7 +91,7 @@ Sourced from `current-issues-suggestions.md` (re-opened by the user). All implem
 - [x] **Install banner persists dismissal** — `components/install-prompt.tsx` now stores dismissal in `localStorage` (`bk-install-prompt-dismissed`); already hidden when `display-mode: standalone` and on `appinstalled`.
 - [x] **Offline submit modal** — `components/reports/report-form.tsx` opens a dimmed dialog (`bg-black/60` overlay via new `overlayClassName` prop on `DialogContent` in `components/ui/dialog.tsx`) with a CheckCircle icon, "Report saved offline" message, and OK button, in both offline queue paths (network-error catch + explicit offline submit). Success toast replaced by modal.
 - [x] **Offline route precaching** — `app/sw.ts` adds `/`, `/submit`, `/browse`, `/my-reports`, `/my-feedback`, `/account`, `/feedback` to `precacheEntries` so they're navigable offline without a prior online visit (HTML cached at SW install; app JS/CSS already fully precached). Also enabled `navigationPreload: true` (was `false`, stale vs `feature-specs/17-pwa-support.md`).
-- [ ] Verification: `npx tsc --noEmit` + `npm run lint` + production build (needs `npm install` — this checkout has no `node_modules`).
+- [x] Verification: `npx tsc --noEmit` + `npm run lint` + production build all pass (node_modules present; builds verified repeatedly through 2026-08-19).
 
 ### Mobile Submit Access + Offline/Auth Session Hardening
 

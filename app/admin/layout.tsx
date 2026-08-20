@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/service-role";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { AdminTheme } from "@/components/admin/admin-theme";
+import { AdminShell } from "@/components/admin/admin-shell";
 
 export default async function AdminLayout({
   children,
@@ -43,16 +42,12 @@ export default async function AdminLayout({
     : 0;
 
   return (
-    <div className="flex min-h-screen">
-      <AdminTheme />
-      <AdminSidebar
-        pendingCount={pendingCount ?? 0}
-        flagsCount={flagsCount}
-        adminName={profile.full_name}
-      />
-      <main className="flex-1 overflow-y-auto bg-background bg-radial-glow p-6">
-        {children}
-      </main>
-    </div>
+    <AdminShell
+      pendingCount={pendingCount ?? 0}
+      flagsCount={flagsCount}
+      adminName={profile.full_name}
+    >
+      {children}
+    </AdminShell>
   );
 }
