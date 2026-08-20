@@ -5,7 +5,7 @@
 - **Genre:** Utility — single input alongside existing filters. No page-level UI, no search results page. Search is a filter parameter, not a separate destination.
 - **Placement:** Filter bar in `/browse`, left of the existing category and status dropdowns. Input with magnifying glass icon.
 - **Search scope:** `title` and `description` columns of the `reports` table, searched via PostgreSQL `ILIKE` (case-insensitive pattern match). Both columns are searched simultaneously with `OR`.
-- **Trigger:** Enter key. The user types a query and presses Enter to navigate. Matches the existing filter bar interaction pattern (selection triggers navigation). No debounced auto-search.
+- **Trigger:** Realtime debounced auto-search (400ms) — as the user types, a pause triggers navigation (resets `page`). Enter still submits instantly. (2026-08-20: changed from Enter-only; debounce matches the interaction pattern of the selects which navigate on change.)
 - **Empty/clear:** When the query param `?q=` is empty or absent, no search filter is applied. An X button appears in the input when a query is active — clicking it clears search and navigates to `/browse`.
 - **Pagination:** Search respects pagination. The `?q=` param is preserved in page links. Changing the query resets `page` to 1 (same behavior as category/status).
 - **Combined filters:** Search ANDs with category and status filters: `(title ILIKE OR desc ILIKE) AND category=X AND status IN (APPROVED, RESOLVED)`.

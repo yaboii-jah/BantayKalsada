@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Search, X } from "lucide-react";
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 const CATEGORIES = [
   { value: "POTHOLE", label: "Pothole" },
@@ -40,6 +42,13 @@ export function ReportFilterBar({
   const router = useRouter();
   const pathname = usePathname();
   const [q, setQ] = useState(search);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const navigate = (next: { q: string; category?: string; barangay?: string }) => {
     if (onNavigate) {
@@ -55,12 +64,22 @@ export function ReportFilterBar({
     router.push(qs ? `${pathname}?${qs}` : pathname);
   };
 
+  const handleQueryChange = (value: string) => {
+    setQ(value);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (value.trim() === search) return;
+    timerRef.current = setTimeout(() => {
+      navigate({ q: value, category, barangay });
+    }, SEARCH_DEBOUNCE_MS);
+  };
+
   const hasFilters = Boolean(search || category || barangay);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        if (timerRef.current) clearTimeout(timerRef.current);
         navigate({ q });
       }}
       className="mb-4 flex flex-wrap items-center gap-2"
@@ -70,7 +89,7 @@ export function ReportFilterBar({
         <input
           type="search"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => handleQueryChange(e.target.value)}
           placeholder="Search by title..."
           className="h-9 w-56 rounded-md border border-border bg-card pl-8 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
         />
@@ -105,6 +124,7 @@ export function ReportFilterBar({
         <button
           type="button"
           onClick={() => {
+            if (timerRef.current) clearTimeout(timerRef.current);
             setQ("");
             navigate({ q: "" });
           }}

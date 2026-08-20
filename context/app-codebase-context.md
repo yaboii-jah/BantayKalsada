@@ -170,7 +170,7 @@ Two layers prevent unapproved reports from leaking:
 2. **Application filter** via `.in("status", ...)` — defense in depth
 
 The page renders a responsive card grid (1→5 columns) or a map with clustered markers, with:
-- Category + status filter bar, keyword search input, grid/map view toggle (all driven by URL search params: `?category=POTHOLE&status=APPROVED&q=pothole&view=map&page=2`)
+- Category + status filter bar, keyword search input (realtime, 400ms-debounced as-you-type), grid/map view toggle (all driven by URL search params: `?category=POTHOLE&status=APPROVED&q=pothole&view=map&page=2`)
   - Map view: shows all filtered results as Leaflet markers with clustering via `react-leaflet-cluster`; a purely client-side bounding box filter constrains markers and count to the current viewport as the user pans/zooms; a dynamic count bar displays "Showing X of Y reports in this area" with a Reset button
   - Map view overlays a severity-weighted hazard-density **heatmap under the existing clustered markers**, toggled by a single **Heat** on/off control (default on). The heatmap (when enabled) renders overall hazard density from **all** `APPROVED`/`RESOLVED` Taytay reports (severity-weighted: Minor=1, Urgent=2, Emergency=3) via `components/maps/heat-layer.tsx` (`leaflet.heat`, `useMap()`). The unfiltered point data is fetched server-side in `BrowseReports` (map view) and passed as `heatPoints` to `BrowseMapWrapper`. A separate **Traffic** toggle (Phase B) shows live road colors via TomTom Raster Flow Tiles proxied through `GET /api/traffic/tiles/{z}/{x}/{y}`. Toggle mounts/unmounts a Leaflet `TileLayer` directly — no lazy fetch, no cache table, no per-point API calls.
   - A **base map layer toggle** (first in the toggle row) switches between **Street** (OSM), **Terrain** (OpenTopoMap), and **Satellite** (ESRI World Imagery) tile sources. Uses a local dropdown (no Radix portal to avoid Leaflet event conflicts) with `key={baseMap}` on the `TileLayer` for clean remounting. Each source has its own `maxZoom` set per-source on both the `TileLayer` and `MapContainer`.
@@ -496,7 +496,7 @@ app/                     — Next.js App Router pages, layouts, loading states, 
   global-error.tsx       — last-resort root error boundary (own html/body in dark)
 
 components/
-  admin/                 — admin-shell (sidebar show/hide + theme mount), sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager, admin-theme (body-level dark palette scoping), report-filter-bar (optional onNavigate prop for transition-driven nav), admin-list-pending (useTransition pagination/filter skeleton wrapper), admin-list-skeleton
+  admin/                 — admin-shell (sidebar show/hide + theme mount), sidebar, queue table, action buttons, status count cards, analytics charts, bulk-action-bar, feedback-note-editor, admin-report-edit-form, duplicate-manager, admin-theme (body-level dark palette scoping), report-filter-bar (realtime 400ms-debounced search; optional onNavigate prop for transition-driven nav), admin-list-pending (useTransition pagination/filter skeleton wrapper), admin-list-skeleton
   auth/                  — auth card, Google sign-in button
   browse/                — filter bar, pagination bar, photo gallery, browse map (all markers, heatmap, traffic + base-layer toggles)
   maps/                 — Leaflet map, location picker, nearby reports layer, heat-layer, traffic-layer, taytay-boundary (all client-side, dynamic import)

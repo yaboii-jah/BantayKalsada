@@ -40,6 +40,7 @@ change.
 - Issues & suggestions batch (2026-08-19) — SMS reliability (surfaced warnings + rejection-reason truncation + parallelized bulk sends), admin filters (search/category/barangay) + newest-first pending, bulk-bar pagination clearance, notification-bell spinners, flag-owner notification, React #301 investigation; see "Issues & Suggestions Batch (2026-08-19)" below. Migration `20260819000001_add_notification_flagged_owner_type.sql` created — **apply in the Supabase SQL editor** (pending user).
 - Admin palette refresh (2026-08-19) — admin-only deep blue-tinted near-black neutral scheme scoped to `body.admin-theme`; see "Admin Palette Refresh (2026-08-19)" below.
 - Admin sidebar toggle + queue pagination skeleton (2026-08-20) — sidebar show/hide (persisted) + `useTransition` skeleton on pagination/filter navigation; see "Admin Sidebar Toggle + Queue Pagination Skeleton (2026-08-20)" below.
+- Realtime (debounced) search (2026-08-20) — admin queue + citizen browse search bars filter as-you-type; see "Realtime Debounced Search (2026-08-20)" below.
 
 ## Completed
 
@@ -55,6 +56,13 @@ change.
 - [x] **Queue pagination + filter skeleton** — same-route `searchParams` navigation never reliably triggered `loading.tsx`, so the 4 queue pages (`pending`/`approved`/`rejected`/`resolved`) now wrap their list content in `components/admin/admin-list-pending.tsx` (client): one `useTransition` drives both pagination and filter/search navigation via `buildAdminListHref`; while pending, `components/admin/admin-list-skeleton.tsx` (table-shaped pulse bars) replaces the rows and the pagination buttons (PaginationBar's page-window logic inlined, button-driven, disabled while pending) stay visible with the current page highlighted. `ReportFilterBar` gained an optional `onNavigate` prop (used by `AdminListPending`; the internal `router.push` path is preserved as the default).
 - [x] Scope guardrails kept: `components/browse/pagination-bar.tsx` and the public/citizen consumers (browse, my-feedback, my-reports, admin-feedback-table) untouched; no `components/ui/*`, migrations, or config changes.
 - [x] Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all pass (32 routes). Manual check needed: hide/reopen sidebar (persists on reload), paginate a queue with >20 rows (skeleton shows), change filter/search (skeleton shows), empty-state + bulk-action bar + export unaffected.
+
+### Realtime Debounced Search (2026-08-20)
+
+- [x] **Admin queue search (`components/admin/report-filter-bar.tsx`)** — the title search no longer waits for Enter/submit. `onChange` updates the controlled `q` state and schedules a **400ms** debounced `navigate({ q, category, barangay })` (skipped when the trimmed value already equals the current `search` prop). Enter still submits instantly, the Clear (X) button clears the pending timer + navigates immediately, and a mount-only effect cleans up the timer on unmount (no set-state-in-effect). When rendered through `AdminListPending`, debounced search fires `onNavigate` → transition → the queue skeleton shows while the filtered page loads.
+- [x] **Citizen browse search (`components/browse/filter-bar.tsx`)** — input converted from uncontrolled (`defaultValue`) to controlled `q` state; `onChange` debounces **400ms** → `router.push(buildHref("q", value.trim()))` (drops `page`). Enter still instant, Clear now actually empties the box (it left the text before because the input was uncontrolled) and navigates immediately; unmount cleanup added. The `/browse` `Suspense key={suspenseKey}` already flashes the grid/map skeleton on `q` changes.
+- [x] Both bars keep category/status/barangay selects instant; no server or schema changes; `duplicate-manager.tsx` search was already realtime (controlled). Known limitation carried over: browser back/forward does not re-sync typed search text into the URL (same as before).
+- [x] Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all pass (32 routes). Manual check needed: type in `/browse` and `/admin/pending` search → pause → results filter with skeleton; Enter instant; Clear empties input + resets; pagination + bulk bar + export unaffected.
 
 ### Issues & Suggestions Batch (2026-08-19)
 

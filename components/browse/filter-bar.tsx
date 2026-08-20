@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, Search, X, LayoutGrid, Map } from "lucide-react";
 import { InlineSelect } from "@/components/ui/inline-select";
 
+const SEARCH_DEBOUNCE_MS = 400;
+
 const categories = [
   { value: "all", label: "All categories" },
   { value: "POTHOLE", label: "Pothole" },
@@ -57,6 +59,14 @@ export function FilterBar({ view }: { view: string }) {
   const currentStatus = searchParams.get("status") ?? "all";
   const currentBarangay = searchParams.get("barangay") ?? "all";
   const currentQ = searchParams.get("q") ?? "";
+  const [q, setQ] = useState(currentQ);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   function buildHref(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -67,6 +77,20 @@ export function FilterBar({ view }: { view: string }) {
     }
     params.delete("page");
     return `?${params.toString()}`;
+  }
+
+  function searchNow(value: string) {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    router.push(buildHref("q", value.trim()));
+  }
+
+  function handleQueryChange(value: string) {
+    setQ(value);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (value.trim() === currentQ) return;
+    timerRef.current = setTimeout(() => {
+      router.push(buildHref("q", value.trim()));
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   return (
@@ -108,21 +132,25 @@ export function FilterBar({ view }: { view: string }) {
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                defaultValue={currentQ}
+                value={q}
+                onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder="Search by keyword..."
                 aria-label="Search reports"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    const value = (e.target as HTMLInputElement).value.trim();
-                    router.push(buildHref("q", value));
+                    const value = (e.target as HTMLInputElement).value;
+                    searchNow(value);
                   }
                 }}
-                className={`h-8 w-48 rounded-lg border border-input bg-transparent pl-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${currentQ ? "pr-8" : "pr-2.5"}`}
+                className={`h-8 w-48 rounded-lg border border-input bg-transparent pl-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${q ? "pr-8" : "pr-2.5"}`}
               />
-              {currentQ && (
+              {q && (
                 <button
                   type="button"
-                  onClick={() => router.push(buildHref("q", ""))}
+                  onClick={() => {
+                    setQ("");
+                    searchNow("");
+                  }}
                   className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:text-foreground"
                   aria-label="Clear search"
                 >
