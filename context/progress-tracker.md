@@ -42,8 +42,30 @@ change.
 - Admin sidebar toggle + queue pagination skeleton (2026-08-20) — sidebar show/hide (persisted) + `useTransition` skeleton on pagination/filter navigation; see "Admin Sidebar Toggle + Queue Pagination Skeleton (2026-08-20)" below.
 - Realtime (debounced) search (2026-08-20) — admin queue + citizen browse search bars filter as-you-type; see "Realtime Debounced Search (2026-08-20)" below.
 - Admin mobile responsiveness + performance pass (2026-08-20) — sidebar becomes a mobile overlay drawer (never pushes content), admin pages fixed for small screens, charts code-split, DB-backed aggregates/indexes; see "Admin Mobile Responsiveness + Performance Pass (2026-08-20)" below. Migrations: `20260820000001` applied (user, 2026-08-20); `20260820000002_add_missing_reports_indexes.sql` created — **apply in the Supabase SQL editor** (pending user).
+- Admin list mobile overflow fix (2026-08-21) — report/flag/feedback lists were cropped with no sideways scroll on phones; root cause was the admin flex column missing `min-w-0` (wide `whitespace-nowrap` tables expanded it past the viewport, then `body { overflow-x: clip }` clipped the excess). Fixed with `min-w-0` in `admin-shell.tsx` + responsive column hiding; see "Admin List Mobile Overflow Fix (2026-08-21)" below.
+- Admin mobile sticky header + report-map fill fix (2026-08-21) — admin top bar now sticks while scrolling; `ReportMap` fills its parent height instead of forcing 16:9 (fixes blank gap under the map on `/admin/reports/[id]` mobile); see "Admin Mobile Sticky Header + Report Map Fill Fix (2026-08-21)" below.
 
 ## Completed
+
+### Admin Mobile Sticky Header + Report Map Fill Fix (2026-08-21)
+
+User-reported: (1) the admin mobile top bar scrolled away with the page; (2) on `/admin/reports/[id]` mobile, the map left a blank gap before the location/coordinates bar.
+
+- [x] **Sticky header** — `components/admin/admin-shell.tsx` header gained `sticky top-0 z-[1100]`. The shell uses `min-h-screen` (not a locked `h-screen`), so the page scrolls and the header previously scrolled away. `z-[1100]` matches the public-nav convention because Leaflet panes/controls use global z-index up to 1000 (the leaflet container creates no stacking context). Drawer z-indexes raised above it: backdrop `z-40` → `z-[1200]`, aside `z-50` → `z-[1250]`, so the drawer still slides over the header.
+- [x] **Map fill fix** — root cause: the admin review page wraps the map in a fixed `h-[300px]` box but `ReportMap` sized itself `aspect-[16/9]` → ~185px tall on a phone (blank gap; clipped on wide desktop). `components/maps/report-map.tsx` MapContainer className changed to `h-full w-full rounded-lg`; loading fallback in `report-map-wrapper.tsx` changed to `h-full w-full`. Admin page keeps its `h-[300px]` wrapper — map now fills it exactly.
+- [x] **Other consumers preserved** — public `/reports/[id]` and citizen `/my-reports/[id]` had no height wrapper (relied on the aspect ratio); each now wraps `<ReportMapWrapper>` in `<div className="aspect-video w-full">` to keep their previous proportions (`h-full` would otherwise collapse to 0).
+- [x] Verified: `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes. Manual check needed: header stays pinned when scrolling past the map on `/admin/reports/[id]`; drawer opens above the header at 360px; admin map fills its card with no blank gap; public/citizen report maps render at the same size as before.
+
+### Admin List Mobile Overflow Fix (2026-08-21)
+
+User-reported: on mobile, the admin report queues, flags queue, and feedback inbox were cropped and could not scroll sideways.
+
+- [x] **Root cause** — `components/admin/admin-shell.tsx` content column (`flex min-h-screen flex-1 flex-col`) lacked `min-w-0`. As a flex item its automatic minimum size is the min-content width of its contents, so the 8–9-column `whitespace-nowrap` queue tables (~700px+) forced the column wider than a phone viewport; `app/globals.css` `body { overflow-x: clip }` then clipped the overflow with no scrollbar. The inner `overflow-x-auto` containers (Shadcn Table container, feedback table wrapper) never engaged because their ancestors had already grown.
+- [x] **Fix 1 (root)** — added `min-w-0` to the content column wrapper and `<main>` in `admin-shell.tsx`. No changes to any list page.
+- [x] **Fix 2 (column hiding)** — `components/admin/admin-queue-table.tsx`: Barangay column hidden below `sm`, Category below `md`, Rejection Reason below `lg` (`hidden … table-cell` on header + cells, kept in sync). Remaining columns scroll horizontally inside the card via the Table's built-in `overflow-x-auto`.
+- [x] **Fix 3 (feedback table)** — `app/admin/feedback/admin-feedback-table.tsx`: Type column hidden below `sm`; forced width changed from `min-w-[640px]` to `w-full sm:min-w-[640px]` so the remaining 3 columns fit a phone without scrolling.
+- [x] Flags queue needed no change — it is a stacked list that fits once the shell stops expanding.
+- [x] Verified: `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes. Manual check needed: at ~360px, each queue scrolls horizontally inside its card, feedback table fits/scrolls, flags list fits, bulk-action bar + pagination + export unaffected, desktop unchanged.
 
 ### Admin Mobile Responsiveness + Performance Pass (2026-08-20)
 

@@ -167,11 +167,13 @@ export default async function MyReportDetailPage({
         <h2 className="mb-3 text-sm font-semibold text-foreground">
           Location
         </h2>
-        <ReportMapWrapper
-          latitude={report.latitude}
-          longitude={report.longitude}
-          locationLabel={report.location_label}
-        />
+        <div className="aspect-video w-full">
+          <ReportMapWrapper
+            latitude={report.latitude}
+            longitude={report.longitude}
+            locationLabel={report.location_label}
+          />
+        </div>
       </div>
 
       <ReportTimeline

@@ -77,10 +77,10 @@ export function AdminFeedbackTable({
   return (
     <div>
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[640px]">
+        <table className="w-full sm:min-w-[640px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+              <th className="hidden px-4 py-3 text-left text-xs font-medium text-muted-foreground sm:table-cell">
                 Type
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
@@ -100,7 +100,7 @@ export function AdminFeedbackTable({
                 key={feedback.id}
                 className="border-b border-border last:border-b-0 hover:bg-muted/30"
               >
-                <td className="px-4 py-3">
+                <td className="hidden px-4 py-3 sm:table-cell">
                   <Link
                     href={`/admin/feedback/${feedback.id}`}
                     className="block text-sm text-foreground"

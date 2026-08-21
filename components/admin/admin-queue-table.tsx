@@ -127,11 +127,13 @@ export function AdminQueueTable({
             )}
             {showStatus && <TableHead>Status</TableHead>}
             <TableHead>Submitter</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Barangay</TableHead>
+            <TableHead className="hidden md:table-cell">Category</TableHead>
+            <TableHead className="hidden sm:table-cell">Barangay</TableHead>
             <TableHead className="max-w-[200px]">Title</TableHead>
             <TableHead>Date</TableHead>
-            {showRejectionReason && <TableHead>Rejection Reason</TableHead>}
+            {showRejectionReason && (
+              <TableHead className="hidden lg:table-cell">Rejection Reason</TableHead>
+            )}
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
@@ -161,10 +163,10 @@ export function AdminQueueTable({
               <TableCell className="font-medium">
                 {row.submitter_name}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground md:table-cell">
                 {categoryLabels[row.category] ?? row.category}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground sm:table-cell">
                 {row.barangay ? (barangayLabels[row.barangay] ?? row.barangay) : "—"}
               </TableCell>
               <TableCell className="max-w-[200px] truncate text-muted-foreground">
@@ -174,7 +176,7 @@ export function AdminQueueTable({
                 {formatReportDate(row.submitted_at)}
               </TableCell>
               {showRejectionReason && (
-                <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                <TableCell className="hidden max-w-[200px] truncate text-muted-foreground lg:table-cell">
                   {row.rejection_reason ?? "—"}
                 </TableCell>
               )}

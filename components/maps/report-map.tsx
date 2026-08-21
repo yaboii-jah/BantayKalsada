@@ -24,7 +24,7 @@ export function ReportMap({
     <MapContainer
       center={[latitude, longitude]}
       zoom={15}
-      className="aspect-[16/9] w-full rounded-lg"
+      className="h-full w-full rounded-lg"
       scrollWheelZoom={true}
     >
       <TileLayer

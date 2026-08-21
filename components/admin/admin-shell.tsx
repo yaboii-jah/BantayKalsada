@@ -81,7 +81,7 @@ export function AdminShell({
       <div className="lg:hidden">
         <div
           className={cn(
-            "fixed inset-0 z-40 bg-black/60 transition-opacity",
+            "fixed inset-0 z-[1200] bg-black/60 transition-opacity",
             mobileOpen ? "opacity-100" : "pointer-events-none opacity-0",
           )}
           onClick={() => setMobileOpen(false)}
@@ -89,7 +89,7 @@ export function AdminShell({
         />
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-200 ease-out",
+            "fixed inset-y-0 left-0 z-[1250] w-64 transition-transform duration-200 ease-out",
             mobileOpen ? "translate-x-0" : "-translate-x-full",
           )}
           inert={!mobileOpen}
@@ -105,10 +105,10 @@ export function AdminShell({
         </aside>
       </div>
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header
           className={cn(
-            "flex items-center gap-3 border-b border-border bg-muted px-4 py-3",
+            "sticky top-0 z-[1100] flex items-center gap-3 border-b border-border bg-muted px-4 py-3",
             hidden ? "" : "lg:hidden",
           )}
         >
@@ -134,7 +134,7 @@ export function AdminShell({
             Bantay Kalsada
           </span>
         </header>
-        <main className="flex-1 overflow-y-auto bg-background bg-radial-glow p-4 sm:p-6">
+        <main className="min-w-0 flex-1 overflow-y-auto bg-background bg-radial-glow p-4 sm:p-6">
           {children}
         </main>
       </div>

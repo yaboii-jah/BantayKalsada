@@ -7,7 +7,7 @@ const ReportMapInner = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex aspect-[16/9] items-center justify-center rounded-lg bg-muted">
+      <div className="flex h-full w-full items-center justify-center bg-muted">
         <p className="text-sm text-muted-foreground">Loading map…</p>
       </div>
     ),
