@@ -77,11 +77,12 @@ export function ActionButtons({
   }
 
   return (
-    <div className="flex gap-3">
+    <div className="flex w-full gap-3 sm:w-auto">
       <Button
         onClick={handleApprove}
         disabled={isSubmitting}
         size="lg"
+        className="flex-1 sm:flex-initial"
       >
         {isSubmitting ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -136,6 +137,7 @@ function ResolveButton({
     <>
       <Button
         size="lg"
+        className="w-full sm:w-auto"
         onClick={() => setOpen(true)}
         disabled={disabled}
       >
@@ -236,6 +238,7 @@ function RejectButton({
       <Button
         variant="destructive"
         size="lg"
+        className="flex-1 sm:flex-initial"
         onClick={() => setOpen(true)}
         disabled={disabled}
       >

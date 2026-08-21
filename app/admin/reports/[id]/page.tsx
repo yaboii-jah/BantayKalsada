@@ -6,6 +6,7 @@ import { ReportMapWrapper } from "@/components/maps/report-map-wrapper";
 import { AdminReportActions } from "./admin-report-actions";
 import { ReportTimeline } from "@/components/reports/report-timeline";
 import { DuplicateBanner } from "@/components/reports/duplicate-banner";
+import { BackButton } from "@/components/back-button";
 import { formatReportDate } from "@/lib/date-utils";
 import { MapPin, Calendar, User, AlertCircle, Building2, CheckCheck, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -97,6 +98,7 @@ export default async function AdminReportReviewPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-4xl">
+      <BackButton fallbackHref="/admin/pending" />
       {report.duplicate_of_id && (
         <DuplicateBanner
           duplicateOfId={report.duplicate_of_id}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { PanelLeftOpen } from "lucide-react";
+import { Menu, PanelLeftOpen, ShieldCheck } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminTheme } from "@/components/admin/admin-theme";
 import { cn } from "@/lib/utils";
@@ -108,10 +108,16 @@ export function AdminShell({
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header
           className={cn(
-            "sticky top-0 z-[1100] flex items-center gap-3 border-b border-border bg-muted px-4 py-3",
+            "sticky top-0 z-[1100] flex items-center justify-between gap-3 border-b border-border bg-muted px-4 py-3",
             hidden ? "" : "lg:hidden",
           )}
         >
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="size-6 text-primary" />
+            <span className="text-sm font-semibold text-foreground">
+              Bantay Kalsada
+            </span>
+          </div>
           {/* Mobile hamburger — opens the drawer */}
           <button
             type="button"
@@ -119,7 +125,7 @@ export function AdminShell({
             aria-label="Open menu"
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-card hover:text-foreground lg:hidden"
           >
-            <PanelLeftOpen className="size-5" />
+            <Menu className="size-5" />
           </button>
           {/* Desktop reopen — restores the rail */}
           <button
@@ -130,9 +136,6 @@ export function AdminShell({
           >
             <PanelLeftOpen className="size-5" />
           </button>
-          <span className="text-sm font-semibold text-foreground">
-            Bantay Kalsada
-          </span>
         </header>
         <main className="min-w-0 flex-1 overflow-y-auto bg-background bg-radial-glow p-4 sm:p-6">
           {children}

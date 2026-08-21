@@ -44,8 +44,37 @@ change.
 - Admin mobile responsiveness + performance pass (2026-08-20) — sidebar becomes a mobile overlay drawer (never pushes content), admin pages fixed for small screens, charts code-split, DB-backed aggregates/indexes; see "Admin Mobile Responsiveness + Performance Pass (2026-08-20)" below. Migrations: `20260820000001` applied (user, 2026-08-20); `20260820000002_add_missing_reports_indexes.sql` created — **apply in the Supabase SQL editor** (pending user).
 - Admin list mobile overflow fix (2026-08-21) — report/flag/feedback lists were cropped with no sideways scroll on phones; root cause was the admin flex column missing `min-w-0` (wide `whitespace-nowrap` tables expanded it past the viewport, then `body { overflow-x: clip }` clipped the excess). Fixed with `min-w-0` in `admin-shell.tsx` + responsive column hiding; see "Admin List Mobile Overflow Fix (2026-08-21)" below.
 - Admin mobile sticky header + report-map fill fix (2026-08-21) — admin top bar now sticks while scrolling; `ReportMap` fills its parent height instead of forcing 16:9 (fixes blank gap under the map on `/admin/reports/[id]` mobile); see "Admin Mobile Sticky Header + Report Map Fill Fix (2026-08-21)" below.
+- Admin back button (2026-08-21) — shared `BackButton` added to the admin report review page; see "Admin Back Button (2026-08-21)" below.
+- Admin mobile header restyle (2026-08-21) — logo + wordmark left, hamburger right (matches citizen nav); see "Admin Mobile Header Restyle (2026-08-21)" below.
+- Admin review action-bar spacing + full-width buttons (2026-08-21) — fixed cramped spacing on `/admin/reports/[id]` and stretched action buttons full-width on mobile; see "Admin Review Action-Bar Spacing + Full-Width Buttons (2026-08-21)" below.
 
 ## Completed
+
+### Admin Review Action-Bar Spacing + Full-Width Buttons (2026-08-21)
+
+User-reported: the bottom action area of `/admin/reports/[id]` (Duplicate manager / Edit report / Approve / Reject) was cramped on mobile — the `border-t` container had no vertical padding, so buttons hugged the divider and the timeline's actor avatar above.
+
+- [x] **Spacing** — `app/admin/reports/[id]/admin-report-actions.tsx` container: `gap-3` → `gap-x-3 gap-y-4` + added `pt-4 pb-2`.
+- [x] **Full-width on mobile (below `sm`), compact from `sm` up:**
+  - Duplicate manager / Unlink triggers (`components/admin/duplicate-manager.tsx`): wrapper `w-full sm:w-auto`, buttons `flex-1 sm:flex-initial`.
+  - Edit report link: `buttonVariants({ ..., className: "w-full sm:w-auto" })`.
+  - Approve / Reject (`components/admin/action-buttons.tsx`): wrapper `flex w-full gap-3 sm:w-auto`, both buttons `flex-1 sm:flex-initial` → side-by-side 50% rows on mobile (keeps the documented side-by-side convention).
+  - Mark as Resolved (`ResolveButton`, APPROVED reports): `w-full sm:w-auto`.
+- [x] Verified: `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes. Manual check needed at ~360px across PENDING / APPROVED / duplicate-linked states: stacked full-width rows with clear spacing; desktop unchanged (right-aligned compact row).
+
+### Admin Mobile Header Restyle (2026-08-21)
+
+User-requested: on admin mobile, the sidebar toggle should be a hamburger on the right, with "Bantay Kalsada" + logo on the left — mirroring the citizen nav layout.
+
+- [x] `components/admin/admin-shell.tsx` header restructured to `justify-between`: left = `ShieldCheck` logo (admin's existing sidebar branding) + "Bantay Kalsada" wordmark; right = lucide `Menu` hamburger (`lg:hidden`, opens the drawer — same icon as the citizen side). The desktop collapsed-rail reopen button (`PanelLeftOpen`, `hidden lg:inline-flex`) stays on the right and only appears when the rail is hidden.
+- [x] Drawer still slides from the left (unchanged); sticky/z-index behavior from the earlier fix untouched.
+- [x] Verified: `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes. Manual check needed: at 360px, wordmark left / hamburger right, drawer opens over the header; desktop collapsed-rail reopen still works.
+
+### Admin Back Button (2026-08-21)
+
+- [x] `app/admin/reports/[id]/page.tsx` — added the shared `BackButton` (`components/back-button.tsx`, `router.back()` with fallback) as the first element in the review-page container, above the duplicate banner. Fallback `/admin/pending`. Chosen over a plain Link because the review page's origin varies (4 queues, flags queue, notification deep-links).
+- [x] Audit of other admin pages: `/admin/reports/[id]/edit` ("Back to report") and `/admin/feedback/[id]` ("Back to Feedback Inbox") already have deterministic Link-based back navigation — left as-is. Queues/flags/inbox/dashboard are top-level sidebar sections and need no back button.
+- [x] Verified: `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes.
 
 ### Admin Mobile Sticky Header + Report Map Fill Fix (2026-08-21)
 

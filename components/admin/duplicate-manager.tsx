@@ -124,13 +124,25 @@ export function DuplicateManager({
 
   return (
     <>
-      <div className={cn(className, "flex items-center gap-2")}>
-        <Button type="button" variant="outline" size="lg" onClick={handleOpen}>
+      <div className={cn(className, "flex w-full items-center gap-2 sm:w-auto")}>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="flex-1 sm:flex-initial"
+          onClick={handleOpen}
+        >
           <Copy className="mr-1 size-4" />
           Duplicate manager
         </Button>
         {duplicateOfId && (
-          <Button type="button" variant="outline" size="lg" onClick={handleUnlink}>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1 sm:flex-initial"
+            onClick={handleUnlink}
+          >
             <Unlink className="mr-1 size-4" />
             Unlink
           </Button>

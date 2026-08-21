@@ -20,7 +20,7 @@ export function AdminReportActions({
   duplicateOfId: string | null;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
+    <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-4 border-t border-border pt-4 pb-2">
       <DuplicateManager
         reportId={reportId}
         duplicateOfId={duplicateOfId}
@@ -28,7 +28,11 @@ export function AdminReportActions({
       />
       <Link
         href={`/admin/reports/${reportId}/edit`}
-        className={buttonVariants({ variant: "outline", size: "lg" })}
+        className={buttonVariants({
+          variant: "outline",
+          size: "lg",
+          className: "w-full sm:w-auto",
+        })}
       >
         <Pencil className="size-4" />
         Edit report
