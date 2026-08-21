@@ -218,6 +218,8 @@ Leaflet and React Leaflet are NEVER rendered server-side. Every component that i
 
 **Leaflet marker icon fix:** In bundler environments, Leaflet's default marker icon breaks because CSS-expected image paths don't exist. Fixed in `components/maps/report-map.tsx` by calling `L.Icon.Default.mergeOptions()` with explicit unpkg CDN URLs. The location picker (`location-picker.tsx`) uses a custom `L.icon()` and was unaffected.
 
+**ReportMap sizing convention:** `ReportMap` fills its parent (`h-full w-full` on the `MapContainer`, same for the dynamic-import loading fallback in `report-map-wrapper.tsx`) — it sets no height of its own. Each consumer provides the box: the admin review page wraps it in a fixed `h-[300px]` card; the public `/reports/[id]` and citizen `/my-reports/[id]` pages wrap it in `<div className="aspect-video w-full">`. A consumer without an explicit-height wrapper collapses the map to 0 — always pair `<ReportMapWrapper>` with a sized container.
+
 **Cloudinary CDN fix:** The user's ISP cannot reach `res.cloudinary.com` (default CDN). `lib/cloudinary-url.ts` exports `getDisplayUrl()` that rewrites to `res-3.cloudinary.com` (Asia/Pacific regional CDN). Applied in `report-card.tsx` and `photo-gallery.tsx`.
 
 ---
@@ -265,7 +267,7 @@ A codebase-wide security audit produced 9 findings; fixes 1–8 are implemented,
 ### Performance Fixes Documented
 - **RLS policy fix:** `createSupabaseServerClient()` returns an `authenticated` session when the user is logged in. The original browse RLS policy only covered `anon`, causing 0 rows for logged-in users. Fixed by adding `authenticated` to the public-read policy.
 - **`formatReportDate` bug:** Original implementation used a loop with wrong iteration order and wrong count calculation (dividing by minutes-per-unit instead of milliseconds). Rewritten as a clean cascade: <1m → "Just now", <1h → minutes, <24h → hours, <30d → days, 30d+ → formatted fil-PH date.
-- **Nav z-index:** Public nav uses `z-[1100]` to stay above Leaflet layers (zoom controls use z-1000, location picker uses z-1000).
+- **Nav z-index:** Public nav uses `z-[1100]` to stay above Leaflet layers (zoom controls use z-1000, location picker uses z-1000). The admin mobile top bar is `sticky top-0 z-[1100]` for the same reason; the admin drawer (backdrop `z-[1200]`, aside `z-[1250]`) sits above it.
 
 ---
 

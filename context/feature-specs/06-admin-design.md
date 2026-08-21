@@ -17,6 +17,8 @@
 
 > **Updated (2026-08-20):** the sidebar is now a collapsible rail (persisted `localStorage["bk-admin-sidebar-hidden"]`, `PanelLeftClose`/`PanelLeftOpen`) and, below `lg`, renders as an **overlay drawer** that never pushes content (see `context/ui-context.md` → Admin Panel). The dashboard is dynamic (`export const dynamic = "force-dynamic"`) and its analytics use DB aggregate RPCs with lazy-loaded charts (`analytics-charts-lazy`). Admin main uses `bg-background bg-radial-glow` (not `bg-muted`) under the `body.admin-theme` dark palette.
 
+> **Updated (2026-08-21):** the mobile top bar mirrors the citizen nav — `ShieldCheck` logo + wordmark left, lucide `Menu` hamburger right (the `PanelLeftOpen` reopen button only appears on desktop when the rail is hidden). The bar is `sticky top-0 z-[1100]`; drawer z-indexes are `z-[1200]` (backdrop) / `z-[1250]` (aside). The admin content column carries `min-w-0`; queue tables hide low-priority columns below `sm`/`md`/`lg` and the filter bar stacks vertically on mobile. See `context/progress-tracker.md` (2026-08-21 entries) and `context/ui-context.md` → Admin Panel.
+
 ### Sidebar Navigation
 
 - Vertical list: Dashboard, Pending (with count badge), Approved, Rejected, Resolved

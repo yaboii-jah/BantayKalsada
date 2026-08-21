@@ -31,7 +31,7 @@ interface ReportFilterBarProps {
 }
 
 const selectClassName =
-  "h-9 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary";
+  "h-9 w-full rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary sm:w-auto";
 
 export function ReportFilterBar({
   search = "",
@@ -82,7 +82,7 @@ export function ReportFilterBar({
         if (timerRef.current) clearTimeout(timerRef.current);
         navigate({ q });
       }}
-      className="mb-4 flex flex-wrap items-center gap-2"
+      className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
     >
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -94,6 +94,7 @@ export function ReportFilterBar({
           className="h-9 w-full rounded-md border border-border bg-card pl-8 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary sm:w-56"
         />
       </div>
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
       <select
         value={category}
         onChange={(e) => navigate({ q: search, category: e.target.value, barangay })}
@@ -128,12 +129,13 @@ export function ReportFilterBar({
             setQ("");
             navigate({ q: "" });
           }}
-          className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="col-span-2 inline-flex h-9 items-center justify-center gap-1 rounded-md px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <X className="size-4" />
           Clear
         </button>
       )}
+      </div>
     </form>
   );
 }

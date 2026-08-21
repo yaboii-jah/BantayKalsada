@@ -63,10 +63,10 @@ export default async function AdminFeedbackPage({
 
   return (
     <div>
-      <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold text-foreground">
-        <MessageSquare className="h-6 w-6 text-primary" />
-        Feedback Inbox
-        <span className="text-base font-normal text-muted-foreground">
+      <h1 className="mb-6 flex min-w-0 items-center gap-2 text-xl font-bold text-foreground sm:text-2xl">
+        <MessageSquare className="h-6 w-6 shrink-0 text-primary" />
+        <span className="truncate">Feedback Inbox</span>
+        <span className="shrink-0 text-base font-normal text-muted-foreground">
           ({totalCount})
         </span>
       </h1>

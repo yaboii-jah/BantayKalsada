@@ -70,11 +70,11 @@ export default async function AdminApprovedPage({ searchParams }: PageProps) {
   return (
     <div className="pb-20">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-          <CheckCircle className="h-6 w-6 text-status-approved" />
-          Approved Reports
+        <h1 className="flex min-w-0 items-center gap-2 text-xl font-bold text-foreground sm:text-2xl">
+          <CheckCircle className="h-6 w-6 shrink-0 text-status-approved" />
+          <span className="truncate">Approved Reports</span>
           {totalCount !== null && (
-            <span className="text-base font-normal text-muted-foreground">
+            <span className="shrink-0 text-base font-normal text-muted-foreground">
               ({totalCount})
             </span>
           )}
@@ -82,7 +82,7 @@ export default async function AdminApprovedPage({ searchParams }: PageProps) {
         {totalCount !== null && totalCount > 0 && (
           <a
             href="/api/admin/export?status=APPROVED"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Download className="h-4 w-4" />
             Export CSV

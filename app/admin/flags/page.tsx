@@ -50,11 +50,11 @@ export default async function AdminFlagsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-          <Flag className="h-6 w-6 text-yellow-600" />
-          Flagged Reports
+        <h1 className="flex min-w-0 items-center gap-2 text-xl font-bold text-foreground sm:text-2xl">
+          <Flag className="h-6 w-6 shrink-0 text-yellow-600" />
+          <span className="truncate">Flagged Reports</span>
           {rows.length > 0 && (
-            <span className="text-base font-normal text-muted-foreground">
+            <span className="shrink-0 text-base font-normal text-muted-foreground">
               ({rows.length})
             </span>
           )}

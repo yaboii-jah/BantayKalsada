@@ -47,8 +47,19 @@ change.
 - Admin back button (2026-08-21) — shared `BackButton` added to the admin report review page; see "Admin Back Button (2026-08-21)" below.
 - Admin mobile header restyle (2026-08-21) — logo + wordmark left, hamburger right (matches citizen nav); see "Admin Mobile Header Restyle (2026-08-21)" below.
 - Admin review action-bar spacing + full-width buttons (2026-08-21) — fixed cramped spacing on `/admin/reports/[id]` and stretched action buttons full-width on mobile; see "Admin Review Action-Bar Spacing + Full-Width Buttons (2026-08-21)" below.
+- Admin queue header + filter bar mobile layout (2026-08-21) — stacked toolbar layout on all 4 report queues + feedback inbox; see "Admin Queue Header + Filter Bar Mobile Layout (2026-08-21)" below.
 
 ## Completed
+
+### Admin Queue Header + Filter Bar Mobile Layout (2026-08-21)
+
+User-requested: a cleaner mobile layout for the admin queue header area (title / Export CSV / search / dropdowns), applied to all pages sharing the same header structure.
+
+- [x] **`components/admin/report-filter-bar.tsx`** — mobile: vertical stack (`flex flex-col gap-2`) with a full-width search input, then a `grid grid-cols-2 gap-2` row for the category/barangay selects (each `w-full sm:w-auto`); the Clear button spans both columns when filters are active. `sm:` and up: unchanged single wrapped row.
+- [x] **Queue page headers** (`app/admin/pending|approved|rejected|resolved/page.tsx`) — `h1` gained `min-w-0` + truncating title span + `text-xl sm:text-2xl`; icon and count span `shrink-0`; Export CSV anchor `shrink-0`. Title and Export CSV now share one row on mobile instead of wrapping.
+- [x] **Feedback inbox** (`app/admin/feedback/page.tsx`) — same `h1` treatment; status tab pills left as-is (compact, wrap acceptably).
+- [x] **Flags queue** (`app/admin/flags/page.tsx`) — same `h1` treatment added as the last admin list page with the old header style.
+- [x] Verified: `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes. Manual check needed at ~360px: header fits one row with truncated title, search full-width, selects side-by-side 50/50, Clear spans both columns, desktop rows unchanged.
 
 ### Admin Review Action-Bar Spacing + Full-Width Buttons (2026-08-21)
 
